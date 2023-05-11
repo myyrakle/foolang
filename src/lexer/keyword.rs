@@ -40,6 +40,7 @@ pub enum Keyword {
 
     Unsafe,
 
+    Void,      // void
     _Self,     // self
     _SelfType, // Self
 }
