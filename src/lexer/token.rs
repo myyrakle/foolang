@@ -1,26 +1,23 @@
-use super::keyword::Keyword;
+use super::{keyword::Keyword, operator::OperatorToken};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Keyword(Keyword),
-
-    Arrow, // ->
+    Operator(OperatorToken),
 
     // primary expression
     Identifier(String),
     Integer(i64),
     Float(f64),
     String(String),
-
-    // Operator(OperatorToken),
+    Comment(String),
 
     // general syntax
+    Arrow,            // ->
     Comma,            // ,
-    Period,           // .
     SemiColon,        // ;
     LeftParentheses,  // (
     RightParentheses, // )
-    Backslash,        // \
 
     // exception handling
     EOF,
