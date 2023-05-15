@@ -1,8 +1,11 @@
 use std::error::Error;
 
-use crate::utils::logger::Logger;
+use crate::{error::all_error::AllError, utils::logger::Logger};
 
-use super::{general::GeneralToken, keyword::Keyword, primary::PrimaryToken, token::Token};
+use super::{
+    general::GeneralToken, keyword::Keyword, operator::OperatorToken, primary::PrimaryToken,
+    token::Token,
+};
 
 #[derive(Debug)]
 pub struct Tokenizer {
@@ -46,7 +49,10 @@ impl Tokenizer {
     }
 
     pub fn is_special_character(&self) -> bool {
-        ['+', '-', '*', '/', ',', '>', '<', '=', '!', '\\'].contains(&self.last_char)
+        [
+            '+', '-', '*', '/', '%', '|', ',', '>', '<', '=', '!', '\\', '.', '&', '^', '~', '?',
+        ]
+        .contains(&self.last_char)
     }
 
     pub fn is_quote(&self) -> bool {
@@ -95,7 +101,7 @@ impl Tokenizer {
 
     // 주어진 텍스트에서 토큰을 순서대로 획득해 반환합니다.
     // 끝을 만날 경우 Token::EOF를 반환합니다.
-    pub fn get_token(&mut self) -> Result<Token, Box<dyn Error + Send>> {
+    pub fn get_token(&mut self) -> Result<Token, AllError> {
         // 화이트 스페이스 삼킴
         while self.is_whitespace() && !self.is_eof() {
             self.read_char();
@@ -175,9 +181,9 @@ impl Tokenizer {
                 let number = number_string.parse::<f64>();
 
                 match number {
-                    Ok(number) => Token::Float(number),
+                    Ok(number) => PrimaryToken::Float(number).into(),
                     Err(_) => {
-                        return Err(LexingError::boxed(format!(
+                        return Err(AllError::LexerError(format!(
                             "invalid floating point number format: {}",
                             number_string
                         )))
@@ -187,9 +193,9 @@ impl Tokenizer {
                 let number = number_string.parse::<i64>();
 
                 match number {
-                    Ok(number) => Token::Integer(number),
+                    Ok(number) => PrimaryToken::Integer(number).into(),
                     Err(_) => {
-                        return Err(LexingError::boxed(format!(
+                        return Err(AllError::LexerError(format!(
                             "invalid integer number format: {}",
                             number_string
                         )))
@@ -200,30 +206,15 @@ impl Tokenizer {
         // 특수문자일 경우
         else if self.is_special_character() {
             match self.last_char {
-                ',' => Token::Comma,
-                '\\' => Token::Backslash,
+                ',' => GeneralToken::Comma.into(),
                 '-' => {
-                    // 다음 문자가 또 -일 경우 행 단위 주석으로 처리
                     self.read_char();
 
-                    if self.last_char == '-' {
-                        let mut comment = vec![];
-
-                        while !self.is_eof() {
-                            self.read_char();
-
-                            if self.last_char == '\n' {
-                                break;
-                            } else {
-                                comment.push(self.last_char);
-                            }
-                        }
-
-                        let comment: String = comment.into_iter().collect();
-                        Token::CodeComment(comment)
+                    if self.last_char == '=' {
+                        OperatorToken::MinusAssign.into()
                     } else {
                         self.unread_char();
-                        Token::Operator(OperatorToken::Minus)
+                        OperatorToken::Minus.into()
                     }
                 }
                 '/' => {
@@ -249,20 +240,94 @@ impl Tokenizer {
                         }
 
                         let comment: String = comment.into_iter().collect();
-                        Token::CodeComment(comment)
+                        PrimaryToken::Comment(comment).into()
+                    } else if self.last_char == '=' {
+                        OperatorToken::SlashAssign.into()
                     } else {
                         self.unread_char();
-                        Token::Operator(OperatorToken::Slash)
+                        OperatorToken::Slash.into()
                     }
                 }
-                '+' => Token::Operator(OperatorToken::Plus),
-                '*' => Token::Operator(OperatorToken::Asterisk),
-                '!' => Token::Operator(OperatorToken::Not), // TODO: != 연산자 처리
-                '=' => Token::Operator(OperatorToken::Eq),
-                '<' => Token::Operator(OperatorToken::Lt), // TODO: <= 연산자 처리
-                '>' => Token::Operator(OperatorToken::Gt), // TODO: >= 연산자 처리
+                '+' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::PlusAssign.into()
+                    } else {
+                        self.unread_char();
+                        OperatorToken::Plus.into()
+                    }
+                }
+                '*' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::StarAssign.into()
+                    } else {
+                        self.unread_char();
+                        OperatorToken::Star.into()
+                    }
+                }
+                '!' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::NotEqual.into()
+                    } else {
+                        self.unread_char();
+                        OperatorToken::Not.into()
+                    }
+                }
+                '=' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::Equal.into()
+                    } else {
+                        self.unread_char();
+                        OperatorToken::Assign.into()
+                    }
+                }
+                '<' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::LessThanOrEqual.into()
+                    } else if self.last_char == '<' {
+                        self.read_char();
+
+                        if self.last_char == '=' {
+                            OperatorToken::LeftShiftAssign.into()
+                        } else {
+                            self.unread_char();
+                            OperatorToken::LeftShift.into()
+                        }
+                    } else {
+                        self.unread_char();
+                        OperatorToken::LessThan.into()
+                    }
+                }
+                '>' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::GreaterThanOrEqual.into()
+                    } else if self.last_char == '>' {
+                        self.read_char();
+
+                        if self.last_char == '=' {
+                            OperatorToken::RightShiftAssign.into()
+                        } else {
+                            self.unread_char();
+                            OperatorToken::RightShift.into()
+                        }
+                    } else {
+                        self.unread_char();
+                        OperatorToken::GreaterThan.into()
+                    }
+                }
                 _ => {
-                    return Err(LexingError::boxed(format!(
+                    return Err(AllError::LexerError(format!(
                         "unexpected operator: {:?}",
                         self.last_char
                     )))
@@ -355,7 +420,7 @@ impl Tokenizer {
         else if self.is_eof() {
             Token::EOF
         } else {
-            return Err(LexingError::boxed(format!(
+            return Err(AllError::LexerError(format!(
                 "unexpected character: {:?}",
                 self.last_char
             )));
@@ -366,8 +431,8 @@ impl Tokenizer {
         Ok(token)
     }
 
-    // Tokenizer 생성 없이 토큰 목록을 가져올 수 있는 유틸 함수입니다.
-    pub fn string_to_tokens(text: String) -> Result<Vec<Token>, Box<dyn Error + Send>> {
+    // Tokenizer 생성 없이 토큰 목록을 가져올 수 있는 boilerplate 함수입니다.
+    pub fn string_to_tokens(text: String) -> Result<Vec<Token>, AllError> {
         let mut tokenizer = Tokenizer::new(text);
 
         let mut tokens = vec![];
