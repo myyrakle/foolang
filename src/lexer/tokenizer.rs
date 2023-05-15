@@ -1,6 +1,8 @@
 use std::error::Error;
 
-use super::token::Token;
+use crate::utils::logger::Logger;
+
+use super::{general::GeneralToken, keyword::Keyword, primary::PrimaryToken, token::Token};
 
 #[derive(Debug)]
 pub struct Tokenizer {
@@ -11,7 +13,7 @@ pub struct Tokenizer {
 
 impl Tokenizer {
     pub fn new(text: String) -> Self {
-        Logger::info(format!("SQL echo: {:?}", text));
+        Logger::info(format!("echo: {:?}", text));
         Self {
             last_char: ' ',
             buffer: text.chars().collect(),
@@ -111,8 +113,38 @@ impl Tokenizer {
 
             let identifier: String = identifier.into_iter().collect::<String>();
 
-            let token = match identifier.to_uppercase().as_str() {
-                _ => Token::Identifier(identifier),
+            let token = match identifier.as_str() {
+                "let" => Token::Keyword(Keyword::Let).into(),
+                "const" => Token::Keyword(Keyword::Const).into(),
+                "mut" => Token::Keyword(Keyword::Mut).into(),
+                "static" => Token::Keyword(Keyword::Static).into(),
+                "fn" => Token::Keyword(Keyword::Fn).into(),
+                "return" => Token::Keyword(Keyword::Return).into(),
+                "if" => Token::Keyword(Keyword::If).into(),
+                "else" => Token::Keyword(Keyword::Else).into(),
+                "match" => Token::Keyword(Keyword::Match).into(),
+                "break" => Token::Keyword(Keyword::Break).into(),
+                "continue" => Token::Keyword(Keyword::Continue).into(),
+                "as" => Token::Keyword(Keyword::As).into(),
+                "in" => Token::Keyword(Keyword::In).into(),
+                "for" => Token::Keyword(Keyword::For).into(),
+                "while" => Token::Keyword(Keyword::While).into(),
+                "loop" => Token::Keyword(Keyword::Loop).into(),
+                "async" => Token::Keyword(Keyword::Async).into(),
+                "await" => Token::Keyword(Keyword::Await).into(),
+                "use" => Token::Keyword(Keyword::Use).into(),
+                "struct" => Token::Keyword(Keyword::Struct).into(),
+                "class" => Token::Keyword(Keyword::Class).into(),
+                "impl" => Token::Keyword(Keyword::Impl).into(),
+                "true" => Token::Keyword(Keyword::True).into(),
+                "false" => Token::Keyword(Keyword::False).into(),
+                "where" => Token::Keyword(Keyword::Where).into(),
+                "type" => Token::Keyword(Keyword::Type).into(),
+                "unsafe" => Token::Keyword(Keyword::Unsafe).into(),
+                "void" => Token::Keyword(Keyword::Void).into(),
+                "self" => Token::Keyword(Keyword::_Self).into(),
+                "Self" => Token::Keyword(Keyword::_SelfType).into(),
+                _ => PrimaryToken::Identifier(identifier).into(),
             };
 
             return Ok(token);
@@ -250,7 +282,7 @@ impl Tokenizer {
 
                 let identifier: String = identifier.into_iter().collect::<String>();
 
-                Token::Identifier(identifier)
+                PrimaryToken::Identifier(identifier).into()
             } else if self.last_char == '\'' {
                 let mut string = vec![];
 
@@ -276,7 +308,7 @@ impl Tokenizer {
 
                 let string: String = string.into_iter().collect::<String>();
 
-                Token::String(string)
+                PrimaryToken::String(string).into()
             } else {
                 Token::UnknownCharacter(self.last_char)
             }
@@ -305,22 +337,18 @@ impl Tokenizer {
 
             let string: String = string.into_iter().collect::<String>();
 
-            Token::Identifier(string)
+            PrimaryToken::Identifier(string).into()
         }
         // 세미콜론
         else if self.is_semicolon() {
-            Token::SemiColon
-        }
-        // 마침표
-        else if self.is_dot() {
-            Token::Period
+            GeneralToken::SemiColon.into()
         }
         // 괄호
         else if self.is_parentheses() {
             if self.last_char == '(' {
-                Token::LeftParentheses
+                GeneralToken::LeftParentheses.into()
             } else {
-                Token::RightParentheses
+                GeneralToken::RightParentheses.into()
             }
         }
         // 아무것도 해당되지 않을 경우 예외처리
