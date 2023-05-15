@@ -1,3 +1,5 @@
+use super::token::Token;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Keyword {
     Let,
@@ -43,4 +45,10 @@ pub enum Keyword {
     Void,      // void
     _Self,     // self
     _SelfType, // Self
+}
+
+impl From<Keyword> for Token {
+    fn from(token: Keyword) -> Self {
+        Token::Keyword(token)
+    }
 }

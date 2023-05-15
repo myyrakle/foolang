@@ -1,3 +1,5 @@
+use super::token::Token;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum OperatorToken {
     // comparison operators
@@ -46,4 +48,10 @@ pub enum OperatorToken {
     Dot,      // .
     Range,    // ..
     Question, // ?
+}
+
+impl From<OperatorToken> for Token {
+    fn from(token: OperatorToken) -> Self {
+        Token::Operator(token)
+    }
 }
