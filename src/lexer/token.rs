@@ -1,16 +1,10 @@
-use super::{keyword::Keyword, operator::OperatorToken};
+use super::{keyword::Keyword, operator::OperatorToken, primary::PrimaryToken};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Keyword(Keyword),
     Operator(OperatorToken),
-
-    // primary expression
-    Identifier(String),
-    Integer(i64),
-    Float(f64),
-    String(String),
-    Comment(String),
+    Primary(PrimaryToken),
 
     // general syntax
     Arrow,            // ->
