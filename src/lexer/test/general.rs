@@ -10,3 +10,12 @@ pub fn arrow() {
 
     assert_eq!(tokens, vec![GeneralToken::Arrow.into()]);
 }
+
+#[test]
+pub fn comma() {
+    let text = r#","#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![GeneralToken::Comma.into()]);
+}
