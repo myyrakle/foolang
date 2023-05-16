@@ -44,9 +44,9 @@ impl Tokenizer {
         self.last_char == '_'
     }
 
-    pub fn is_backslash(&self) -> bool {
-        self.last_char == '\\'
-    }
+    // pub fn is_backslash(&self) -> bool {
+    //     self.last_char == '\\'
+    // }
 
     pub fn is_operator_character(&self) -> bool {
         [
@@ -207,6 +207,8 @@ impl Tokenizer {
 
                     if self.last_char == '=' {
                         OperatorToken::MinusAssign.into()
+                    } else if self.last_char == '>' {
+                        GeneralToken::Arrow.into()
                     } else {
                         self.unread_char();
                         OperatorToken::Minus.into()
@@ -343,6 +345,16 @@ impl Tokenizer {
                     } else {
                         self.unread_char();
                         OperatorToken::BitwiseOr.into()
+                    }
+                }
+                '^' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::XorAssign.into()
+                    } else {
+                        self.unread_char();
+                        OperatorToken::BitwiseXor.into()
                     }
                 }
                 _ => {
