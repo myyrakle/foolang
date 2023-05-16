@@ -55,3 +55,18 @@ pub fn right_parentheses() {
 
     assert_eq!(tokens, vec![GeneralToken::RightParentheses.into()]);
 }
+
+#[test]
+pub fn parentheses() {
+    let text = r#"()"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(
+        tokens,
+        vec![
+            GeneralToken::LeftParentheses.into(),
+            GeneralToken::RightParentheses.into()
+        ]
+    );
+}
