@@ -145,3 +145,21 @@ pub fn xor_assign() {
 
     assert_eq!(tokens, vec![OperatorToken::XorAssign.into()]);
 }
+
+#[test]
+pub fn bitwise_not() {
+    let text = r#"~"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::BitwiseNot.into()]);
+}
+
+#[test]
+pub fn not_assign() {
+    let text = r#"~="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::NotAssign.into()]);
+}
