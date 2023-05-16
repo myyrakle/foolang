@@ -33,7 +33,7 @@ pub fn string() {
 }
 
 #[test]
-pub fn comment() {
+pub fn line_comment() {
     let text = r#"// 123.234"#.to_owned();
 
     let tokens = Tokenizer::string_to_tokens(text).unwrap();
@@ -41,5 +41,17 @@ pub fn comment() {
     assert_eq!(
         tokens,
         vec![PrimaryToken::Comment(" 123.234".to_owned()).into()]
+    );
+}
+
+#[test]
+pub fn block_comment() {
+    let text = r#"/* 123.234 */"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(
+        tokens,
+        vec![PrimaryToken::Comment(" 123.234 ".to_owned()).into()]
     );
 }
