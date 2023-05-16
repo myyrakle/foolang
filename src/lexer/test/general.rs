@@ -103,3 +103,12 @@ pub fn brace() {
         ]
     );
 }
+
+#[test]
+pub fn left_bracket() {
+    let text = r#"["#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![GeneralToken::LeftBracket.into()]);
+}
