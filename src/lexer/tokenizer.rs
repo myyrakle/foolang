@@ -245,6 +245,16 @@ impl Tokenizer {
                         OperatorToken::Slash.into()
                     }
                 }
+                '%' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::ModuloAssign.into()
+                    } else {
+                        self.unread_char();
+                        OperatorToken::Modulo.into()
+                    }
+                }
                 '+' => {
                     self.read_char();
 
