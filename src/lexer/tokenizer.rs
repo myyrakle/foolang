@@ -84,6 +84,10 @@ impl Tokenizer {
 
     // 보관했던 문자 하나를 다시 버퍼에 돌려놓습니다.
     pub fn unread_char(&mut self) {
+        if self.is_eof() {
+            return ();
+        }
+
         if self.buffer_index == 0 {
             self.last_char = ' ';
         } else {
@@ -254,12 +258,14 @@ impl Tokenizer {
                     }
                 }
                 '+' => {
+                    println!("??");
                     self.read_char();
 
                     if self.last_char == '=' {
                         OperatorToken::PlusAssign.into()
                     } else {
                         self.unread_char();
+                        println!("{}", self.is_eof());
                         OperatorToken::Plus.into()
                     }
                 }
