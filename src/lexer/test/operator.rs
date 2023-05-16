@@ -181,3 +181,21 @@ pub fn left_shift_assign() {
 
     assert_eq!(tokens, vec![OperatorToken::LeftShiftAssign.into()]);
 }
+
+#[test]
+pub fn right_shift() {
+    let text = r#">>"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::RightShift.into()]);
+}
+
+#[test]
+pub fn right_shift_assign() {
+    let text = r#">>="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::RightShiftAssign.into()]);
+}
