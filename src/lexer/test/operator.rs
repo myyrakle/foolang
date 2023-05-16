@@ -217,3 +217,39 @@ pub fn not_equal() {
 
     assert_eq!(tokens, vec![OperatorToken::NotEqual.into()]);
 }
+
+#[test]
+pub fn less_than() {
+    let text = r#"<"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::LessThan.into()]);
+}
+
+#[test]
+pub fn less_than_or_equal() {
+    let text = r#"<="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::LessThanOrEqual.into()]);
+}
+
+#[test]
+pub fn greater_than() {
+    let text = r#">"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::GreaterThan.into()]);
+}
+
+#[test]
+pub fn greater_than_or_equal() {
+    let text = r#">="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::GreaterThanOrEqual.into()]);
+}
