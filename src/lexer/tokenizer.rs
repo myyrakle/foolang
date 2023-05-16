@@ -378,6 +378,16 @@ impl Tokenizer {
                         OperatorToken::BitwiseXor.into()
                     }
                 }
+                '~' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::NotAssign.into()
+                    } else {
+                        self.unread_char();
+                        OperatorToken::BitwiseNot.into()
+                    }
+                }
                 _ => {
                     return Err(AllError::LexerError(format!(
                         "unexpected operator: {:?}",
