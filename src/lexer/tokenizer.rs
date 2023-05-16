@@ -413,7 +413,7 @@ impl Tokenizer {
 
                 let identifier: String = identifier.into_iter().collect::<String>();
 
-                PrimaryToken::Identifier(identifier).into()
+                PrimaryToken::String(identifier).into()
             } else if self.last_char == '\'' {
                 let mut string = vec![];
 
