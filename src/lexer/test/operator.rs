@@ -289,3 +289,30 @@ pub fn not() {
 
     assert_eq!(tokens, vec![OperatorToken::Not.into()]);
 }
+
+#[test]
+pub fn dot() {
+    let text = r#"."#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::Dot.into()]);
+}
+
+#[test]
+pub fn range() {
+    let text = r#".."#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::Range.into()]);
+}
+
+#[test]
+pub fn question() {
+    let text = r#"?"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::Question.into()]);
+}
