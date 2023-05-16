@@ -55,3 +55,21 @@ pub fn star_assign() {
 
     assert_eq!(tokens, vec![OperatorToken::StarAssign.into()]);
 }
+
+#[test]
+pub fn slash() {
+    let text = r#"/"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::Slash.into()]);
+}
+
+#[test]
+pub fn slash_assign() {
+    let text = r#"/="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::SlashAssign.into()]);
+}
