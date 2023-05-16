@@ -70,3 +70,12 @@ pub fn parentheses() {
         ]
     );
 }
+
+#[test]
+pub fn left_brace() {
+    let text = r#"{"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![GeneralToken::LeftBrace.into()]);
+}
