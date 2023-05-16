@@ -19,3 +19,12 @@ pub fn float() {
 
     assert_eq!(tokens, vec![PrimaryToken::Float(123.234).into()]);
 }
+
+#[test]
+pub fn string() {
+    let text = r#""123.234""#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![PrimaryToken::String("123.234".to_owned()).into()]);
+}
