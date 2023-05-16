@@ -48,9 +48,16 @@ impl Tokenizer {
         self.last_char == '\\'
     }
 
-    pub fn is_special_character(&self) -> bool {
+    pub fn is_operator_character(&self) -> bool {
         [
             '+', '-', '*', '/', '%', '|', ',', '>', '<', '=', '!', '\\', '.', '&', '^', '~', '?',
+        ]
+        .contains(&self.last_char)
+    }
+
+    pub fn is_general_syntax_character(&self) -> bool {
+        [
+            '(', ')', '{', '}', '[', ']', ',', ';', ':', '@', '`', '$', '#',
         ]
         .contains(&self.last_char)
     }
@@ -59,20 +66,8 @@ impl Tokenizer {
         ['\'', '"'].contains(&self.last_char)
     }
 
-    pub fn is_semicolon(&self) -> bool {
-        self.last_char == ';'
-    }
-
     pub fn is_dot(&self) -> bool {
         self.last_char == '.'
-    }
-
-    pub fn is_backtick(&self) -> bool {
-        self.last_char == '`'
-    }
-
-    pub fn is_parentheses(&self) -> bool {
-        self.last_char == '(' || self.last_char == ')'
     }
 
     pub fn is_eof(&self) -> bool {
@@ -204,7 +199,7 @@ impl Tokenizer {
             }
         }
         // 특수문자일 경우
-        else if self.is_special_character() {
+        else if self.is_operator_character() {
             match self.last_char {
                 ',' => GeneralToken::Comma.into(),
                 '-' => {
@@ -377,43 +372,25 @@ impl Tokenizer {
             } else {
                 Token::UnknownCharacter(self.last_char)
             }
-        } else if self.is_backtick() {
-            let mut string = vec![];
-
-            self.read_char();
-            while !self.is_eof() {
-                if self.last_char == '`' {
-                    self.read_char();
-
-                    // `` 의 형태일 경우 `로 이스케이프
-                    // 아닐 경우 문자열 종료
-                    if self.last_char == '`' {
-                        string.push(self.last_char);
-                    } else {
-                        self.unread_char();
-                        break;
-                    }
-                } else {
-                    string.push(self.last_char);
+        } else if self.is_general_syntax_character() {
+            match self.last_char {
+                '(' => GeneralToken::LeftParentheses.into(),
+                ')' => GeneralToken::RightParentheses.into(),
+                '{' => GeneralToken::LeftBrace.into(),
+                '}' => GeneralToken::RightBrace.into(),
+                '[' => GeneralToken::LeftBracket.into(),
+                ']' => GeneralToken::RightBracket.into(),
+                ';' => GeneralToken::SemiColon.into(),
+                ':' => GeneralToken::Colon.into(),
+                '@' => GeneralToken::At.into(),
+                '`' => GeneralToken::Backtick.into(),
+                ',' => GeneralToken::Comma.into(),
+                _ => {
+                    return Err(AllError::LexerError(format!(
+                        "unexpected token: {:?}",
+                        self.last_char
+                    )))
                 }
-
-                self.read_char();
-            }
-
-            let string: String = string.into_iter().collect::<String>();
-
-            PrimaryToken::Identifier(string).into()
-        }
-        // 세미콜론
-        else if self.is_semicolon() {
-            GeneralToken::SemiColon.into()
-        }
-        // 괄호
-        else if self.is_parentheses() {
-            if self.last_char == '(' {
-                GeneralToken::LeftParentheses.into()
-            } else {
-                GeneralToken::RightParentheses.into()
             }
         }
         // 아무것도 해당되지 않을 경우 예외처리

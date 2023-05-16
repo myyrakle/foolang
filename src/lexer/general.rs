@@ -6,8 +6,15 @@ pub enum GeneralToken {
     Arrow,            // ->
     Comma,            // ,
     SemiColon,        // ;
+    Colon,            // :
     LeftParentheses,  // (
     RightParentheses, // )
+    LeftBrace,        // {
+    RightBrace,       // }
+    LeftBracket,      // [
+    RightBracket,     // ]
+    At,               // @
+    Backtick,         // `
 }
 
 impl From<GeneralToken> for Token {
