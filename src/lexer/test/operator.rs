@@ -199,3 +199,21 @@ pub fn right_shift_assign() {
 
     assert_eq!(tokens, vec![OperatorToken::RightShiftAssign.into()]);
 }
+
+#[test]
+pub fn equal() {
+    let text = r#"=="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::Equal.into()]);
+}
+
+#[test]
+pub fn not_equal() {
+    let text = r#"!="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::NotEqual.into()]);
+}
