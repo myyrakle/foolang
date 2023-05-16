@@ -10,3 +10,12 @@ pub fn plus() {
 
     assert_eq!(tokens, vec![OperatorToken::Plus.into()]);
 }
+
+#[test]
+pub fn plus_assign() {
+    let text = r#"+="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::PlusAssign.into()]);
+}
