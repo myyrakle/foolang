@@ -37,3 +37,21 @@ pub fn minus_assign() {
 
     assert_eq!(tokens, vec![OperatorToken::MinusAssign.into()]);
 }
+
+#[test]
+pub fn star() {
+    let text = r#"*"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::Star.into()]);
+}
+
+#[test]
+pub fn star_assign() {
+    let text = r#"*="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::StarAssign.into()]);
+}
