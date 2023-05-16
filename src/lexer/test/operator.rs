@@ -100,3 +100,31 @@ pub fn ampersand() {
 
     assert_eq!(tokens, vec![OperatorToken::Ampersand.into()]);
 }
+
+#[test]
+pub fn and_assign() {
+    let text = r#"&="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::AndAssign.into()]);
+}
+
+#[test]
+pub fn bitwise_or() {
+    let text = r#"|"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::BitwiseOr.into()]);
+}
+
+#[test]
+pub fn or_assign() {
+    let text = r#"|="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::OrAssign.into()]);
+}
+
