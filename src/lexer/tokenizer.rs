@@ -275,6 +275,17 @@ impl Tokenizer {
                         OperatorToken::Not.into()
                     }
                 }
+                '?' => OperatorToken::Question.into(),
+                '.' => {
+                    self.read_char();
+
+                    if self.last_char == '.' {
+                        OperatorToken::Range.into()
+                    } else {
+                        self.unread_char();
+                        OperatorToken::Dot.into()
+                    }
+                }
                 '=' => {
                     self.read_char();
 
