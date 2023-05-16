@@ -91,3 +91,12 @@ pub fn modulo_assign() {
 
     assert_eq!(tokens, vec![OperatorToken::ModuloAssign.into()]);
 }
+
+#[test]
+pub fn ampersand() {
+    let text = r#"&"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::Ampersand.into()]);
+}
