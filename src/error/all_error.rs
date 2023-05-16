@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AllError {
     #[error("Lexer error: {0}")]
