@@ -145,3 +145,12 @@ pub fn at() {
 
     assert_eq!(tokens, vec![GeneralToken::At.into()]);
 }
+
+#[test]
+pub fn backtick() {
+    let text = r#"`"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![GeneralToken::Backtick.into()]);
+}
