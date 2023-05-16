@@ -321,6 +321,30 @@ impl Tokenizer {
                         OperatorToken::GreaterThan.into()
                     }
                 }
+                '&' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::AndAssign.into()
+                    } else if self.last_char == '&' {
+                        OperatorToken::And.into()
+                    } else {
+                        self.unread_char();
+                        OperatorToken::Ampersand.into()
+                    }
+                }
+                '|' => {
+                    self.read_char();
+
+                    if self.last_char == '=' {
+                        OperatorToken::OrAssign.into()
+                    } else if self.last_char == '|' {
+                        OperatorToken::Or.into()
+                    } else {
+                        self.unread_char();
+                        OperatorToken::BitwiseOr.into()
+                    }
+                }
                 _ => {
                     return Err(AllError::LexerError(format!(
                         "unexpected operator: {:?}",
@@ -370,7 +394,10 @@ impl Tokenizer {
 
                 PrimaryToken::String(string).into()
             } else {
-                Token::UnknownCharacter(self.last_char)
+                return Err(AllError::LexerError(format!(
+                    "unexpected character: {:?}",
+                    self.last_char
+                )));
             }
         } else if self.is_general_syntax_character() {
             match self.last_char {

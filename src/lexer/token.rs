@@ -11,6 +11,4 @@ pub enum Token {
 
     // exception handling
     EOF,
-    Error(String),
-    UnknownCharacter(char),
 }
