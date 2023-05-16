@@ -28,6 +28,39 @@
 
 ## 분기문
 
+- if
+
+```
+if boolean-expression {
+    ...
+}
+```
+
+- if-else
+
+```
+if boolean-expression {
+    ...
+}
+else {
+    ...
+}
+```
+
+- if-else-if-else
+
+```
+if boolean-expression {
+    ...
+}
+else if boolean-expression {
+    ...
+}
+else {
+    ...
+}
+```
+
 ---
 
 ## 반복문
