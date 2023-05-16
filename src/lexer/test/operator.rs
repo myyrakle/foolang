@@ -82,3 +82,12 @@ pub fn modulo() {
 
     assert_eq!(tokens, vec![OperatorToken::Modulo.into()]);
 }
+
+#[test]
+pub fn modulo_assign() {
+    let text = r#"%="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::ModuloAssign.into()]);
+}
