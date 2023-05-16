@@ -262,3 +262,30 @@ pub fn greater_than_or_equal() {
 
     assert_eq!(tokens, vec![OperatorToken::GreaterThanOrEqual.into()]);
 }
+
+#[test]
+pub fn and() {
+    let text = r#"&&"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::And.into()]);
+}
+
+#[test]
+pub fn or() {
+    let text = r#"||"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::Or.into()]);
+}
+
+#[test]
+pub fn not() {
+    let text = r#"!"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::Not.into()]);
+}
