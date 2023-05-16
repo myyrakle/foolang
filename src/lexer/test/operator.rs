@@ -73,3 +73,12 @@ pub fn slash_assign() {
 
     assert_eq!(tokens, vec![OperatorToken::SlashAssign.into()]);
 }
+
+#[test]
+pub fn modulo() {
+    let text = r#"%"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::Modulo.into()]);
+}
