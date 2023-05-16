@@ -163,3 +163,21 @@ pub fn not_assign() {
 
     assert_eq!(tokens, vec![OperatorToken::NotAssign.into()]);
 }
+
+#[test]
+pub fn left_shift() {
+    let text = r#"<<"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::LeftShift.into()]);
+}
+
+#[test]
+pub fn left_shift_assign() {
+    let text = r#"<<="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::LeftShiftAssign.into()]);
+}
