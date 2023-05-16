@@ -112,3 +112,12 @@ pub fn left_bracket() {
 
     assert_eq!(tokens, vec![GeneralToken::LeftBracket.into()]);
 }
+
+#[test]
+pub fn right_bracket() {
+    let text = r#"]"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![GeneralToken::RightBracket.into()]);
+}
