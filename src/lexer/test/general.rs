@@ -88,3 +88,18 @@ pub fn right_brace() {
 
     assert_eq!(tokens, vec![GeneralToken::RightBrace.into()]);
 }
+
+#[test]
+pub fn brace() {
+    let text = r#"{}"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(
+        tokens,
+        vec![
+            GeneralToken::LeftBrace.into(),
+            GeneralToken::RightBrace.into()
+        ]
+    );
+}
