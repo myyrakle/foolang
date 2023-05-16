@@ -128,3 +128,20 @@ pub fn or_assign() {
     assert_eq!(tokens, vec![OperatorToken::OrAssign.into()]);
 }
 
+#[test]
+pub fn bitwise_xor() {
+    let text = r#"^"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::BitwiseXor.into()]);
+}
+
+#[test]
+pub fn xor_assign() {
+    let text = r#"^="#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![OperatorToken::XorAssign.into()]);
+}
