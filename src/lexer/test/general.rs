@@ -28,3 +28,12 @@ pub fn semicolon() {
 
     assert_eq!(tokens, vec![GeneralToken::SemiColon.into()]);
 }
+
+#[test]
+pub fn colon() {
+    let text = r#":"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![GeneralToken::Colon.into()]);
+}
