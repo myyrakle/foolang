@@ -37,3 +37,12 @@ pub fn colon() {
 
     assert_eq!(tokens, vec![GeneralToken::Colon.into()]);
 }
+
+#[test]
+pub fn left_parentheses() {
+    let text = r#"("#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(tokens, vec![GeneralToken::LeftParentheses.into()]);
+}
