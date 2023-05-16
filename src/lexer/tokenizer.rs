@@ -240,6 +240,21 @@ impl Tokenizer {
 
                         let comment: String = comment.into_iter().collect();
                         PrimaryToken::Comment(comment).into()
+                    } else if self.last_char == '/' {
+                        let mut comment = vec![];
+
+                        while !self.is_eof() {
+                            self.read_char();
+
+                            if self.last_char == '\n' {
+                                break;
+                            } else {
+                                comment.push(self.last_char);
+                            }
+                        }
+
+                        let comment: String = comment.into_iter().collect();
+                        PrimaryToken::Comment(comment).into()
                     } else if self.last_char == '=' {
                         OperatorToken::SlashAssign.into()
                     } else {
@@ -446,7 +461,9 @@ impl Tokenizer {
                     self.last_char
                 )));
             }
-        } else if self.is_general_syntax_character() {
+        }
+        // 기타 문자 부호들 처리
+        else if self.is_general_syntax_character() {
             match self.last_char {
                 '(' => GeneralToken::LeftParentheses.into(),
                 ')' => GeneralToken::RightParentheses.into(),
