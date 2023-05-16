@@ -17,3 +17,21 @@ pub fn binary_expression() {
         ]
     );
 }
+
+#[test]
+pub fn binary_expression_more() {
+    let text = r#"1+20*55"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(
+        tokens,
+        vec![
+            PrimaryToken::Integer(1).into(),
+            OperatorToken::Plus.into(),
+            PrimaryToken::Integer(20).into(),
+            OperatorToken::Star.into(),
+            PrimaryToken::Integer(55).into()
+        ]
+    );
+}
