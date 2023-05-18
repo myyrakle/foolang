@@ -1,8 +1,9 @@
 use self::{
-    call::CallExpression, literal::LiteralExpression, unary::UnaryExpression,
-    variable::VariableExpression,
+    binary::BinaryExpression, call::CallExpression, literal::LiteralExpression,
+    unary::UnaryExpression, variable::VariableExpression,
 };
 
+mod binary;
 mod call;
 mod literal;
 mod unary;
