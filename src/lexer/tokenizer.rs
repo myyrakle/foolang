@@ -499,13 +499,17 @@ impl Tokenizer {
         Ok(token)
     }
 
+    pub fn has_next(&self) -> bool {
+        !self.is_eof()
+    }
+
     // Tokenizer 생성 없이 토큰 목록을 가져올 수 있는 boilerplate 함수입니다.
     pub fn string_to_tokens(text: String) -> Result<Vec<Token>, AllError> {
         let mut tokenizer = Tokenizer::new(text);
 
         let mut tokens = vec![];
 
-        while !tokenizer.is_eof() {
+        while tokenizer.has_next() {
             tokens.push(tokenizer.get_token()?);
         }
 
