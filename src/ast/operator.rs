@@ -1,7 +1,7 @@
 use self::{binary::BinaryOperator, unary::UnaryOperator};
 
-mod binary;
-mod unary;
+pub mod binary;
+pub mod unary;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operator {
