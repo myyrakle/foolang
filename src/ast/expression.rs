@@ -1,6 +1,7 @@
-use self::{call::CallExpression, variable::VariableExpression};
+use self::{call::CallExpression, literal::LiteralExpression, variable::VariableExpression};
 
 mod call;
+mod literal;
 mod variable;
 
 #[derive(Debug, Clone, PartialEq)]
