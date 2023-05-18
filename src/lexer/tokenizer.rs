@@ -22,23 +22,23 @@ impl Tokenizer {
         }
     }
 
-    pub fn is_whitespace(&self) -> bool {
+    fn is_whitespace(&self) -> bool {
         self.last_char == ' ' || self.last_char == '\n' || self.last_char == '\t'
     }
 
-    pub fn is_digit(&self) -> bool {
+    fn is_digit(&self) -> bool {
         self.last_char.is_ascii_digit()
     }
 
-    pub fn is_alphabet(&self) -> bool {
+    fn is_alphabet(&self) -> bool {
         self.last_char.is_alphabetic()
     }
 
-    pub fn is_alphabet_or_number(&self) -> bool {
+    fn is_alphabet_or_number(&self) -> bool {
         self.last_char.is_alphanumeric()
     }
 
-    pub fn is_underscore(&self) -> bool {
+    fn is_underscore(&self) -> bool {
         self.last_char == '_'
     }
 
@@ -46,34 +46,34 @@ impl Tokenizer {
     //     self.last_char == '\\'
     // }
 
-    pub fn is_operator_character(&self) -> bool {
+    fn is_operator_character(&self) -> bool {
         [
             '+', '-', '*', '/', '%', '|', ',', '>', '<', '=', '!', '\\', '.', '&', '^', '~', '?',
         ]
         .contains(&self.last_char)
     }
 
-    pub fn is_general_syntax_character(&self) -> bool {
+    fn is_general_syntax_character(&self) -> bool {
         [
             '(', ')', '{', '}', '[', ']', ',', ';', ':', '@', '`', '$', '#',
         ]
         .contains(&self.last_char)
     }
 
-    pub fn is_quote(&self) -> bool {
+    fn is_quote(&self) -> bool {
         ['\'', '"'].contains(&self.last_char)
     }
 
-    pub fn is_dot(&self) -> bool {
+    fn is_dot(&self) -> bool {
         self.last_char == '.'
     }
 
-    pub fn is_eof(&self) -> bool {
+    fn is_eof(&self) -> bool {
         self.buffer_index >= self.buffer.len()
     }
 
     // 버퍼에서 문자 하나를 읽어서 last_char에 보관합니다.
-    pub fn read_char(&mut self) {
+    fn read_char(&mut self) {
         if self.buffer_index >= self.buffer.len() {
             self.last_char = ' ';
         } else {
@@ -83,7 +83,7 @@ impl Tokenizer {
     }
 
     // 보관했던 문자 하나를 다시 버퍼에 돌려놓습니다.
-    pub fn unread_char(&mut self) {
+    fn unread_char(&mut self) {
         if self.is_eof() {
             return ();
         }
