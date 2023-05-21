@@ -7,6 +7,7 @@ pub enum PrimaryToken {
     Integer(i64),
     Float(f64),
     String(String),
+    Boolean(bool),
     Comment(String),
 }
 

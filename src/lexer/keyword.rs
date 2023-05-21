@@ -33,9 +33,6 @@ pub enum Keyword {
     Class,
     Impl,
 
-    True,
-    False,
-
     Where,
 
     Type,
