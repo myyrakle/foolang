@@ -1,7 +1,6 @@
+use action::build::execute_build;
 use command::{Command, SubCommand};
 use error::all_error::AllError;
-
-use crate::lexer::tokenizer::Tokenizer;
 
 mod action;
 mod ast;
@@ -22,27 +21,8 @@ async fn main() -> Result<(), AllError> {
 
     match command.action {
         SubCommand::Build(action) => {
-            let text = if let Ok(text) = tokio::fs::read_to_string(&action.value.filename).await {
-                text
-            } else {
-                return Err(AllError::FileNotFound(action.value.filename));
-            };
-
-            let tokens = Tokenizer::string_to_tokens(text)?;
-
-            let mut parser = parser::Parser::new();
-            parser.set_tokens(tokens);
-            let statements = parser.parse()?;
-
-            let mut codegen = codegen::CodeGenerator::new();
-            codegen.set_statements(statements);
-            let codes = codegen.generate()?;
-
-            let mut builder = builder::Builder::new();
-            builder.set_filenames(codes);
-            let code = builder.build()?;
-
-            println!("output: {}", code);
+            let executable_filename = execute_build(action).await?;
+            println!("executable: {}", executable_filename);
         }
     }
 
