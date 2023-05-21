@@ -4,6 +4,7 @@ use error::all_error::AllError;
 use crate::lexer::tokenizer::Tokenizer;
 
 mod ast;
+mod builder;
 mod codegen;
 mod command;
 mod constant;
@@ -26,14 +27,14 @@ async fn main() -> Result<(), AllError> {
                 return Err(AllError::FileNotFound(action.value.filename));
             };
 
-            let mut tokens = Tokenizer::string_to_tokens(text)?;
+            let tokens = Tokenizer::string_to_tokens(text)?;
 
             let mut parser = parser::Parser::new();
             parser.set_tokens(tokens);
             let statements = parser.parse()?;
 
-            // let mut codegen = codegen::Codegen::new();
-            // codegen.set_statements(statements);
+            let mut codegen = codegen::CodeGenerator::new();
+            codegen.set_statements(statements);
             // let code = codegen.generate()?;
         }
     }

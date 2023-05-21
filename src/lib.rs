@@ -1,4 +1,5 @@
 mod ast;
+mod builder;
 mod codegen;
 mod command;
 mod constant;

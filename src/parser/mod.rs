@@ -33,15 +33,15 @@ impl Parser {
         self.tokens = tokens;
     }
 
-    pub fn prev(&mut self) {
+    fn prev(&mut self) {
         self.current -= 1;
     }
 
-    pub fn next(&mut self) {
+    fn next(&mut self) {
         self.current += 1;
     }
 
-    pub fn get_current_token(&self) -> Option<Token> {
+    fn get_current_token(&self) -> Option<Token> {
         self.tokens.get(self.current).map(|e| e.to_owned())
     }
 }
