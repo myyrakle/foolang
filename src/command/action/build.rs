@@ -5,7 +5,7 @@ use clap::Args;
 #[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOption {
     #[clap(name = "filename")]
-    pub filename: Option<String>,
+    pub filename: String,
 }
 
 #[derive(Clone, Debug, Args)]

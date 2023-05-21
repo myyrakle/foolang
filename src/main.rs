@@ -1,4 +1,7 @@
-use crate::lexer::{operator::OperatorToken, tokenizer::Tokenizer};
+use command::{Command, SubCommand};
+use error::all_error::AllError;
+
+use crate::lexer::tokenizer::Tokenizer;
 
 mod ast;
 mod codegen;
@@ -9,4 +12,34 @@ mod lexer;
 mod parser;
 mod utils;
 
-fn main() {}
+use clap::Parser;
+
+#[tokio::main]
+async fn main() -> Result<(), AllError> {
+    let command = Command::parse();
+
+    match command.action {
+        SubCommand::BuildAction(action) => {
+            let text = if let Ok(text) = tokio::fs::read_to_string(&action.value.filename).await {
+                text
+            } else {
+                return Err(AllError::FileNotFound(action.value.filename));
+            };
+
+            let mut tokenizer = Tokenizer::new();
+            let tokens = tokenizer.tokenize(&action.file_path).await?;
+
+            let mut parser = parser::Parser::new();
+            parser.set_tokens(tokens);
+            let statements = parser.parse()?;
+
+            let mut codegen = codegen::Codegen::new();
+            codegen.set_statements(statements);
+            let code = codegen.generate()?;
+
+            println!("{}", code);
+        }
+    }
+
+    Ok(())
+}

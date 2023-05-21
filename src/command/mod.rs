@@ -10,4 +10,6 @@ pub struct Command {
 }
 
 #[derive(clap::Subcommand, Debug)]
-pub enum SubCommand {}
+pub enum SubCommand {
+    BuildAction(action::build::Action),
+}

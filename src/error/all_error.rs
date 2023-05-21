@@ -8,4 +8,8 @@ pub enum AllError {
     ParserError(String),
     #[error("Codegen error: {0}")]
     CodegenError(String),
+    #[error("IO error: {0}")]
+    IOError(String),
+    #[error("FileNotFound error: {0}")]
+    FileNotFound(String),
 }
