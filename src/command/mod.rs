@@ -11,5 +11,5 @@ pub struct Command {
 
 #[derive(clap::Subcommand, Debug)]
 pub enum SubCommand {
-    BuildAction(action::build::Action),
+    Build(action::build::Action),
 }

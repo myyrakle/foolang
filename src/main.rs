@@ -19,25 +19,22 @@ async fn main() -> Result<(), AllError> {
     let command = Command::parse();
 
     match command.action {
-        SubCommand::BuildAction(action) => {
+        SubCommand::Build(action) => {
             let text = if let Ok(text) = tokio::fs::read_to_string(&action.value.filename).await {
                 text
             } else {
                 return Err(AllError::FileNotFound(action.value.filename));
             };
 
-            let mut tokenizer = Tokenizer::new();
-            let tokens = tokenizer.tokenize(&action.file_path).await?;
+            let mut tokens = Tokenizer::string_to_tokens(text)?;
 
             let mut parser = parser::Parser::new();
             parser.set_tokens(tokens);
             let statements = parser.parse()?;
 
-            let mut codegen = codegen::Codegen::new();
-            codegen.set_statements(statements);
-            let code = codegen.generate()?;
-
-            println!("{}", code);
+            // let mut codegen = codegen::Codegen::new();
+            // codegen.set_statements(statements);
+            // let code = codegen.generate()?;
         }
     }
 
