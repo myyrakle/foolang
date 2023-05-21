@@ -5,7 +5,7 @@ use super::{Parser, ParserContext};
 impl Parser {
     pub(super) fn parse_variable_definition(
         &mut self,
-        context: ParserContext,
+        _context: ParserContext,
     ) -> Result<Statement, AllError> {
         todo!()
     }

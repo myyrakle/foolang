@@ -44,6 +44,10 @@ impl Parser {
     fn get_current_token(&self) -> Option<Token> {
         self.tokens.get(self.current).map(|e| e.to_owned())
     }
+
+    fn get_next_token(&self) -> Option<Token> {
+        self.tokens.get(self.current + 1).map(|e| e.to_owned())
+    }
 }
 
 impl Default for Parser {
@@ -66,7 +70,7 @@ impl Parser {
                     }
                     Token::Primary(_) => {
                         let statement = self.parse_expression(self.context.clone())?;
-                        statements.push(statement);
+                        statements.push(statement.into());
                     }
                     _ => {}
                 }

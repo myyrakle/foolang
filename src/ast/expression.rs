@@ -3,6 +3,8 @@ use self::{
     unary::UnaryExpression, variable::VariableExpression,
 };
 
+use super::statement::Statement;
+
 mod binary;
 mod call;
 mod literal;
@@ -16,4 +18,10 @@ pub enum Expression {
     Literal(LiteralExpression),
     Variable(VariableExpression),
     Call(CallExpression),
+}
+
+impl From<Expression> for Statement {
+    fn from(expression: Expression) -> Self {
+        Statement::Expression(expression)
+    }
 }
