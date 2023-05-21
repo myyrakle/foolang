@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Parser {
+pub(crate) struct Parser {
     tokens: Vec<Token>,
     current: usize, // index of current token
     context: ParserContext,
@@ -53,7 +53,7 @@ impl Default for Parser {
 }
 
 impl Parser {
-    pub fn parse(&mut self) -> Result<Vec<Statement>, AllError> {
+    pub(crate) fn parse(&mut self) -> Result<Vec<Statement>, AllError> {
         let mut statements = vec![];
 
         // top-level parser loop

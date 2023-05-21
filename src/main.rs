@@ -3,6 +3,7 @@ use error::all_error::AllError;
 
 use crate::lexer::tokenizer::Tokenizer;
 
+mod action;
 mod ast;
 mod builder;
 mod codegen;
@@ -35,7 +36,13 @@ async fn main() -> Result<(), AllError> {
 
             let mut codegen = codegen::CodeGenerator::new();
             codegen.set_statements(statements);
-            // let code = codegen.generate()?;
+            let codes = codegen.generate()?;
+
+            let mut builder = builder::Builder::new();
+            builder.set_filenames(codes);
+            let code = builder.build()?;
+
+            println!("output: {}", code);
         }
     }
 
