@@ -20,11 +20,4 @@ impl Token {
             _ => false,
         }
     }
-
-    pub fn is_unary_operator(&self) -> bool {
-        match self {
-            Token::Operator(operator) => operator.is_unary_operator(),
-            _ => false,
-        }
-    }
 }

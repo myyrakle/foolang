@@ -6,7 +6,6 @@ pub enum LiteralExpression {
     Integer(i64),
     Float(f64),
     Boolean(bool),
-    Null,
 }
 
 impl From<PrimaryToken> for LiteralExpression {
