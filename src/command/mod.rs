@@ -1,3 +1,5 @@
+pub mod action;
+
 use clap::Parser;
 
 #[derive(Parser, Debug)]
