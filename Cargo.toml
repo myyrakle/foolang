@@ -19,5 +19,5 @@ required-features = ["foo"]
 
 [features]
 default = ["foo"]
-rrdb = ["cli"]
+foo = ["cli"]
 cli = ["atty", "structopt"]
