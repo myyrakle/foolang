@@ -10,11 +10,5 @@ mod parser;
 mod utils;
 
 fn main() {
-    let text = r#"+"#.to_owned();
 
-    let tokens = Tokenizer::string_to_tokens(text).unwrap();
-
-    assert_eq!(tokens, vec![OperatorToken::Plus.into()]);
-
-    println!("Hello, world!");
 }
