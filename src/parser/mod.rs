@@ -1,8 +1,12 @@
 pub mod context;
 pub use context::ParserContext;
 
+pub mod expression;
+pub use expression::*;
+
 use crate::{
     ast::statement::Statement,
+    error::all_error::AllError,
     lexer::{keyword::Keyword, token::Token},
 };
 
@@ -46,7 +50,7 @@ impl Default for Parser {
 }
 
 impl Parser {
-    pub fn parse(&mut self, _input: &str) -> Result<Vec<Statement>, String> {
+    pub fn parse(&mut self) -> Result<Vec<Statement>, AllError> {
         let mut statements = vec![];
 
         // top-level parser loop
@@ -54,7 +58,10 @@ impl Parser {
             if let Some(current_token) = self.get_current_token() {
                 match current_token {
                     Token::Keyword(Keyword::Let) => {}
-                    Token::Primary(primary) => {}
+                    Token::Primary(_) => {
+                        let statement = self.parse_expression(self.context.clone())?;
+                        statements.push(statement);
+                    }
                     _ => {}
                 }
             } else {
