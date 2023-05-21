@@ -12,3 +12,19 @@ pub enum Token {
     // exception handling
     EOF,
 }
+
+impl Token {
+    pub fn is_binary_operator(&self) -> bool {
+        match self {
+            Token::Operator(operator) => operator.is_binary_operator(),
+            _ => false,
+        }
+    }
+
+    pub fn is_unary_operator(&self) -> bool {
+        match self {
+            Token::Operator(operator) => operator.is_unary_operator(),
+            _ => false,
+        }
+    }
+}
