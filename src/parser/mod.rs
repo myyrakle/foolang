@@ -4,6 +4,9 @@ pub use context::ParserContext;
 pub mod expression;
 pub use expression::*;
 
+pub mod variable;
+pub use variable::*;
+
 use crate::{
     ast::statement::Statement,
     error::all_error::AllError,
@@ -57,7 +60,10 @@ impl Parser {
         loop {
             if let Some(current_token) = self.get_current_token() {
                 match current_token {
-                    Token::Keyword(Keyword::Let) => {}
+                    Token::Keyword(Keyword::Let | Keyword::Const) => {
+                        let statement = self.parse_variable_definition(self.context.clone())?;
+                        statements.push(statement);
+                    }
                     Token::Primary(_) => {
                         let statement = self.parse_expression(self.context.clone())?;
                         statements.push(statement);
