@@ -42,10 +42,18 @@ impl Parser {
         // 현재 연산자의 우선순위
         let current_precedence = operator.get_precedence();
 
-        let rhs = self.parse_expression(_context)?;
-
         // rhs에 괄호 연산자가 있는 경우
         let mut rhs_has_parentheses = false;
+
+        let rhs = self.parse_expression(_context)?;
+
+        // 소괄호가 있다면 벗기고 플래그값 설정
+        let rhs = if let Expression::Parentheses(paren) = rhs {
+            rhs_has_parentheses = true;
+            *paren.expression
+        } else {
+            rhs
+        };
 
         // rhs에 또 binary operation이 중첩되는 경우 처리
         if let Expression::Binary(rhs_binary_expression) = rhs.clone() {

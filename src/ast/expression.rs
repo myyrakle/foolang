@@ -54,4 +54,11 @@ impl Expression {
             _ => false,
         }
     }
+
+    pub fn is_parentheses(&self) -> bool {
+        match self {
+            Expression::Parentheses(_) => true,
+            _ => false,
+        }
+    }
 }
