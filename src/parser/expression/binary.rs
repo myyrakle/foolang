@@ -4,7 +4,7 @@ use crate::{
         operator::binary::BinaryOperator,
     },
     error::all_error::AllError,
-    lexer::{operator::OperatorToken, primary::PrimaryToken, token::Token},
+    lexer::token::Token,
 };
 
 use super::{Parser, ParserContext};
@@ -49,17 +49,17 @@ impl Parser {
 
         // rhs에 또 binary operation이 중첩되는 경우 처리
         if let Expression::Binary(rhs_binary_expression) = rhs.clone() {
-            let next_precedence = rhs_binary_expression.operator.get_precedence();
-
             if lhs.is_unary() {
                 let lhs = Box::new(lhs);
 
-                let new_lhs = BinaryExpression {
-                    lhs,
-                    rhs: rhs_binary_expression.lhs,
-                    operator,
-                }
-                .into();
+                let new_lhs = Box::new(
+                    BinaryExpression {
+                        lhs,
+                        rhs: rhs_binary_expression.lhs,
+                        operator,
+                    }
+                    .into(),
+                );
                 Ok(BinaryExpression {
                     lhs: new_lhs,
                     rhs: rhs_binary_expression.rhs,
@@ -67,7 +67,29 @@ impl Parser {
                 }
                 .into())
             } else {
-                todo!();
+                let next_precedence = rhs_binary_expression.operator.get_precedence();
+
+                let lhs = Box::new(lhs);
+                let rhs = Box::new(rhs);
+
+                // 오른쪽 연산자의 우선순위가 더 크거나, 소괄호가 있을 경우 오른쪽을 먼저 묶어서 바인딩
+                if next_precedence > current_precedence || rhs_has_parentheses {
+                    Ok(BinaryExpression { lhs, rhs, operator }.into())
+                }
+                // 아니라면 왼쪽으로 묶어서 바인딩
+                else {
+                    let new_lhs = BinaryExpression {
+                        lhs,
+                        rhs: rhs_binary_expression.lhs,
+                        operator,
+                    };
+                    Ok(BinaryExpression {
+                        lhs: Box::new(new_lhs.into()),
+                        rhs: rhs_binary_expression.rhs,
+                        operator: rhs_binary_expression.operator,
+                    }
+                    .into())
+                }
             }
         } else {
             let lhs = Box::new(lhs);

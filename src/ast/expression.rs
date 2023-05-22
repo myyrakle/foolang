@@ -2,12 +2,13 @@ use crate::lexer::primary::PrimaryToken;
 
 use self::{
     binary::BinaryExpression, call::CallExpression, literal::LiteralExpression,
-    unary::UnaryExpression, variable::VariableExpression,
+    parentheses::ParenthesesExpression, unary::UnaryExpression, variable::VariableExpression,
 };
 
 pub(crate) mod binary;
 pub(crate) mod call;
 pub(crate) mod literal;
+pub(crate) mod parentheses;
 pub(crate) mod unary;
 pub(crate) mod variable;
 
@@ -18,6 +19,7 @@ pub enum Expression {
     Literal(LiteralExpression),
     Variable(VariableExpression),
     Call(CallExpression),
+    Parentheses(ParenthesesExpression),
     Comment(String),
 }
 
