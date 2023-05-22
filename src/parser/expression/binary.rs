@@ -1,5 +1,8 @@
 use crate::{
-    ast::{expression::Expression, operator::binary::BinaryOperator},
+    ast::{
+        expression::{binary::BinaryExpression, Expression},
+        operator::binary::BinaryOperator,
+    },
     error::all_error::AllError,
     lexer::{operator::OperatorToken, primary::PrimaryToken, token::Token},
 };
@@ -36,19 +39,41 @@ impl Parser {
             )));
         };
 
-        match current_token {
-            Token::Operator(operator) => {
-                self.next();
-                let rhs = self.parse_expression(_context)?;
-                let binary_expression = Expression::Binary(BinaryExpression {
-                    lhs: Box::new(lhs),
-                    operator,
-                    rhs: Box::new(rhs),
-                });
+        // 현재 연산자의 우선순위
+        let current_precedence = operator.get_precedence();
 
-                Ok(binary_expression)
+        let rhs = self.parse_expression(_context)?;
+
+        // rhs에 괄호 연산자가 있는 경우
+        let mut rhs_has_parentheses = false;
+
+        // rhs에 또 binary operation이 중첩되는 경우 처리
+        if let Expression::Binary(rhs_binary_expression) = rhs.clone() {
+            let next_precedence = rhs_binary_expression.operator.get_precedence();
+
+            if lhs.is_unary() {
+                let lhs = Box::new(lhs);
+
+                let new_lhs = BinaryExpression {
+                    lhs,
+                    rhs: rhs_binary_expression.lhs,
+                    operator,
+                }
+                .into();
+                Ok(BinaryExpression {
+                    lhs: new_lhs,
+                    rhs: rhs_binary_expression.rhs,
+                    operator: rhs_binary_expression.operator,
+                }
+                .into())
+            } else {
+                todo!();
             }
-            _ => todo!(),
+        } else {
+            let lhs = Box::new(lhs);
+            let rhs = Box::new(rhs);
+
+            Ok(BinaryExpression { lhs, rhs, operator }.into())
         }
     }
 }

@@ -32,3 +32,18 @@ impl From<PrimaryToken> for Expression {
         Expression::Literal(token.into())
     }
 }
+
+impl From<BinaryExpression> for Expression {
+    fn from(binary: BinaryExpression) -> Self {
+        Expression::Binary(binary)
+    }
+}
+
+impl Expression {
+    pub fn is_unary(&self) -> bool {
+        match self {
+            Expression::Unary(_) => true,
+            _ => false,
+        }
+    }
+}
