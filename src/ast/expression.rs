@@ -39,6 +39,12 @@ impl From<BinaryExpression> for Expression {
     }
 }
 
+impl From<UnaryExpression> for Expression {
+    fn from(unary: UnaryExpression) -> Self {
+        Expression::Unary(unary)
+    }
+}
+
 impl Expression {
     pub fn is_unary(&self) -> bool {
         match self {
