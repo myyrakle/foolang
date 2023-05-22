@@ -5,8 +5,6 @@ use self::{
     unary::UnaryExpression, variable::VariableExpression,
 };
 
-use super::statement::Statement;
-
 pub(crate) mod binary;
 pub(crate) mod call;
 pub(crate) mod literal;
