@@ -13,3 +13,9 @@ pub enum Statement {
     DefineFunction(FunctionDefinitionStatement),
     Return(Expression),
 }
+
+impl From<Expression> for Statement {
+    fn from(expression: Expression) -> Self {
+        Statement::Expression(expression)
+    }
+}

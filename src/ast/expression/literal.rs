@@ -14,6 +14,7 @@ impl From<PrimaryToken> for LiteralExpression {
             PrimaryToken::String(string) => Self::String(string),
             PrimaryToken::Integer(integer) => Self::Integer(integer),
             PrimaryToken::Float(float) => Self::Float(float),
+            PrimaryToken::Boolean(boolean) => Self::Boolean(boolean),
             _ => panic!("Cannot convert {:?} to LiteralExpression", token),
         }
     }

@@ -140,7 +140,7 @@ impl Tokenizer {
                 "class" => Token::Keyword(Keyword::Class).into(),
                 "impl" => Token::Keyword(Keyword::Impl).into(),
                 "true" => Token::Primary(PrimaryToken::Boolean(true)).into(),
-                "false" => Token::Keyword(PrimaryToken::Boolean(false)).into(),
+                "false" => Token::Primary(PrimaryToken::Boolean(false)).into(),
                 "where" => Token::Keyword(Keyword::Where).into(),
                 "type" => Token::Keyword(Keyword::Type).into(),
                 "unsafe" => Token::Keyword(Keyword::Unsafe).into(),
