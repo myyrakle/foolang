@@ -27,14 +27,14 @@ impl Parser {
             )));
         }
 
-        let operator:BinaryOperator = if let Token::Operator(operator) = current_token {
+        let operator: BinaryOperator = if let Token::Operator(operator) = current_token {
             operator.into()
         } else {
             return Err(AllError::ParserError(format!(
                 "Expected binary operator, found {:?}",
                 current_token
             )));
-        }
+        };
 
         match current_token {
             Token::Operator(operator) => {

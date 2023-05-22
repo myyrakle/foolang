@@ -37,3 +37,24 @@ impl From<OperatorToken> for BinaryOperator {
         }
     }
 }
+
+impl BinaryOperator {
+    // 연산자 우선순위
+    pub fn get_precedence(&self) -> u8 {
+        match self {
+            Self::Add => 1,
+            Self::Subtract => 1,
+            Self::Multiply => 2,
+            Self::Divide => 2,
+            Self::Modulo => 2,
+            Self::Equal => 3,
+            Self::NotEqual => 3,
+            Self::LessThan => 3,
+            Self::LessThanOrEqual => 3,
+            Self::GreaterThan => 3,
+            Self::GreaterThanOrEqual => 3,
+            Self::And => 4,
+            Self::Or => 4,
+        }
+    }
+}
