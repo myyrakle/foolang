@@ -7,7 +7,7 @@ pub(crate) use unary::*;
 use crate::{
     ast::expression::Expression,
     error::all_error::AllError,
-    lexer::{primary::PrimaryToken, token::Token},
+    lexer::{general::GeneralToken, primary::PrimaryToken, token::Token},
 };
 
 use super::{Parser, ParserContext};
@@ -56,6 +56,28 @@ impl Parser {
                     Err(AllError::ParserError(format!(
                         "Expected unary operator, found {:?}",
                         operator
+                    )))
+                }
+            }
+            Token::GeneralToken(GeneralToken::LeftParentheses) => {
+                self.next();
+                let expression = self.parse_expression(_context)?;
+
+                let current_token = if let Some(token) = self.get_current_token() {
+                    token
+                } else {
+                    return Err(AllError::ParserError(
+                        "Unexpected end of tokens".to_string(),
+                    ));
+                };
+
+                if let Token::GeneralToken(GeneralToken::RightParentheses) = current_token {
+                    self.next();
+                    Ok(Expression::Parentheses(expression.into()))
+                } else {
+                    Err(AllError::ParserError(format!(
+                        "Expected ')', found {:?}",
+                        current_token
                     )))
                 }
             }
