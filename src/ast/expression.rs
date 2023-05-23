@@ -54,6 +54,12 @@ impl From<ParenthesesExpression> for Expression {
     }
 }
 
+impl From<VariableExpression> for Expression {
+    fn from(variable: VariableExpression) -> Self {
+        Expression::Variable(variable)
+    }
+}
+
 #[allow(dead_code)]
 impl Expression {
     pub fn is_unary(&self) -> bool {
