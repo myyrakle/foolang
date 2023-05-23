@@ -47,6 +47,12 @@ impl From<UnaryExpression> for Expression {
     }
 }
 
+impl From<ParenthesesExpression> for Expression {
+    fn from(parentheses: ParenthesesExpression) -> Self {
+        Expression::Parentheses(parentheses)
+    }
+}
+
 impl Expression {
     pub fn is_unary(&self) -> bool {
         match self {
