@@ -4,7 +4,6 @@ pub use context::ParserContext;
 pub mod expression;
 
 pub mod variable;
-pub use variable::*;
 
 use crate::{
     ast::statement::Statement,

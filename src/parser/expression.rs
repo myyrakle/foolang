@@ -1,6 +1,8 @@
 pub(crate) mod binary;
+pub(crate) mod function_call;
 pub(crate) mod parentheses;
 pub(crate) mod unary;
+pub(crate) mod variable;
 
 use crate::{
     ast::expression::Expression,
@@ -27,6 +29,24 @@ impl Parser {
             Token::Primary(PrimaryToken::Comment(comment)) => {
                 self.next();
                 return Ok(Expression::Comment(comment));
+            }
+            Token::Primary(PrimaryToken::Identifier(_)) => {
+                if let Some(next_token) = self.get_next_token() {
+                    if let Token::GeneralToken(GeneralToken::LeftParentheses) = next_token {
+                        let function_call_expression =
+                            self.parse_function_call_expression(_context)?;
+
+                        Ok(function_call_expression)
+                    } else {
+                        let variable_expression = self.parse_variable_expression(_context)?;
+
+                        Ok(variable_expression)
+                    }
+                } else {
+                    let variable_expression = self.parse_variable_expression(_context)?;
+
+                    Ok(variable_expression)
+                }
             }
             Token::Primary(primary) => {
                 if let Some(next_token) = self.get_next_token() {
