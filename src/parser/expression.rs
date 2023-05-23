@@ -1,6 +1,9 @@
 pub(crate) mod binary;
 pub(crate) use binary::*;
 
+pub(crate) mod unary;
+pub(crate) use unary::*;
+
 use crate::{
     ast::expression::Expression,
     error::all_error::AllError,
@@ -42,6 +45,18 @@ impl Parser {
                 } else {
                     self.next();
                     Ok(primary.into())
+                }
+            }
+            Token::Operator(operator) => {
+                if operator.is_unary_operator() {
+                    let unary_expression = self.parse_unary_expression(_context)?;
+
+                    Ok(unary_expression)
+                } else {
+                    Err(AllError::ParserError(format!(
+                        "Expected unary operator, found {:?}",
+                        operator
+                    )))
                 }
             }
             _ => todo!(),
