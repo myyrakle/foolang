@@ -1,8 +1,6 @@
 pub(crate) mod binary;
-pub(crate) use binary::*;
-
+pub(crate) mod parentheses;
 pub(crate) mod unary;
-pub(crate) use unary::*;
 
 use crate::{
     ast::expression::Expression,
@@ -60,26 +58,9 @@ impl Parser {
                 }
             }
             Token::GeneralToken(GeneralToken::LeftParentheses) => {
-                self.next();
-                let expression = self.parse_expression(_context)?;
+                let parentheses_expression = self.parse_parentheses_expression(_context)?;
 
-                let current_token = if let Some(token) = self.get_current_token() {
-                    token
-                } else {
-                    return Err(AllError::ParserError(
-                        "Unexpected end of tokens".to_string(),
-                    ));
-                };
-
-                if let Token::GeneralToken(GeneralToken::RightParentheses) = current_token {
-                    self.next();
-                    Ok(Expression::Parentheses(expression.into()))
-                } else {
-                    Err(AllError::ParserError(format!(
-                        "Expected ')', found {:?}",
-                        current_token
-                    )))
-                }
+                Ok(parentheses_expression)
             }
             _ => todo!(),
         }

@@ -2,7 +2,6 @@ pub mod context;
 pub use context::ParserContext;
 
 pub mod expression;
-pub use expression::*;
 
 pub mod variable;
 pub use variable::*;
@@ -33,6 +32,7 @@ impl Parser {
         self.tokens = tokens;
     }
 
+    #[allow(dead_code)]
     fn prev(&mut self) {
         self.current -= 1;
     }
