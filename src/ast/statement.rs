@@ -6,6 +6,7 @@ use super::expression::Expression;
 pub mod define_function;
 pub mod define_variable;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Expression(Expression),

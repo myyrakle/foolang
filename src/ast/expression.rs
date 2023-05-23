@@ -12,6 +12,7 @@ pub(crate) mod parentheses;
 pub(crate) mod unary;
 pub(crate) mod variable;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Binary(BinaryExpression),
@@ -53,10 +54,18 @@ impl From<ParenthesesExpression> for Expression {
     }
 }
 
+#[allow(dead_code)]
 impl Expression {
     pub fn is_unary(&self) -> bool {
         match self {
             Expression::Unary(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_binary(&self) -> bool {
+        match self {
+            Expression::Binary(_) => true,
             _ => false,
         }
     }
