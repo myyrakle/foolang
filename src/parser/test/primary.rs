@@ -56,3 +56,37 @@ pub fn string() {
         vec![Expression::Literal(LiteralExpression::String("123.234".to_owned())).into()]
     );
 }
+
+#[test]
+pub fn boolean_true() {
+    let text = r#"true"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    let mut parser = Parser::new();
+    parser.set_tokens(tokens);
+
+    let statements = parser.parse().unwrap();
+
+    assert_eq!(
+        statements,
+        vec![Expression::Literal(LiteralExpression::Boolean(true)).into()]
+    );
+}
+
+#[test]
+pub fn boolean_false() {
+    let text = r#"false"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    let mut parser = Parser::new();
+    parser.set_tokens(tokens);
+
+    let statements = parser.parse().unwrap();
+
+    assert_eq!(
+        statements,
+        vec![Expression::Literal(LiteralExpression::Boolean(false)).into()]
+    );
+}
