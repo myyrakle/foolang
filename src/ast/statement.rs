@@ -20,3 +20,9 @@ impl From<Expression> for Statement {
         Statement::Expression(expression)
     }
 }
+
+impl From<VariableDefinitionStatement> for Statement {
+    fn from(statement: VariableDefinitionStatement) -> Self {
+        Statement::DefineVariable(statement)
+    }
+}
