@@ -418,8 +418,8 @@ impl Tokenizer {
                 '=' => {
                     self.read_char();
 
-                    match self.last_char.unwrap() {
-                        '=' => OperatorToken::Equal.into(),
+                    match self.last_char {
+                        Some('=') => OperatorToken::Equal.into(),
                         _ => {
                             self.unread_char();
                             OperatorToken::Assign.into()
