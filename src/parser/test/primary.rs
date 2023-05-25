@@ -96,7 +96,6 @@ pub fn variable() {
     let text = r#"a"#.to_owned();
 
     let tokens = Tokenizer::string_to_tokens(text).unwrap();
-    println!("test");
 
     let mut parser = Parser::new();
     parser.set_tokens(tokens);

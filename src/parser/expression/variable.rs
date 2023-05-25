@@ -47,6 +47,7 @@ impl Parser {
                 )))
             }
         } else {
+            self.next();
             Ok(variable_expression.into())
         }
     }

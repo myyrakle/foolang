@@ -34,13 +34,13 @@ pub fn string() {
 
 #[test]
 pub fn identifier() {
-    let text = r#"abc"#.to_owned();
+    let text = r#"a"#.to_owned();
 
     let tokens = Tokenizer::string_to_tokens(text).unwrap();
 
     assert_eq!(
         tokens,
-        vec![PrimaryToken::Identifier("abc".to_owned()).into()]
+        vec![PrimaryToken::Identifier("a".to_owned()).into()]
     );
 }
 
