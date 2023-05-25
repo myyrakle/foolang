@@ -52,6 +52,7 @@ impl Parser {
                 if let Some(next_token) = self.get_next_token() {
                     if next_token.is_binary_operator() {
                         self.next();
+
                         let binary_expression =
                             self.parse_binary_expression(Expression::from(primary), _context)?;
 

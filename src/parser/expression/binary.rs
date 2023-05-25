@@ -45,6 +45,7 @@ impl Parser {
         // rhs에 괄호 연산자가 있는 경우
         let mut rhs_has_parentheses = false;
 
+        self.next();
         let rhs = self.parse_expression(_context)?;
 
         // 소괄호가 있다면 벗기고 플래그값 설정
