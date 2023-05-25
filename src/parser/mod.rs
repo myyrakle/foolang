@@ -60,27 +60,23 @@ impl Parser {
         let mut statements = vec![];
 
         // top-level parser loop
-        loop {
-            if let Some(current_token) = self.get_current_token() {
-                match current_token {
-                    Token::Keyword(Keyword::Let | Keyword::Const) => {
-                        let statement = self.parse_declare_variable(self.context.clone())?;
-                        statements.push(statement);
-                    }
-                    Token::Primary(_) => {
-                        let statement = self.parse_expression(self.context.clone())?;
-                        statements.push(statement.into());
-                    }
-                    Token::GeneralToken(GeneralToken::LeftParentheses) => {
-                        let statement = self.parse_expression(self.context.clone())?;
-                        statements.push(statement.into());
-                    }
-                    _ => {
-                        unimplemented!("not implemented yet")
-                    }
+        while let Some(current_token) = self.get_current_token() {
+            match current_token {
+                Token::Keyword(Keyword::Let | Keyword::Const) => {
+                    let statement = self.parse_declare_variable(self.context.clone())?;
+                    statements.push(statement);
                 }
-            } else {
-                break;
+                Token::Primary(_) => {
+                    let statement = self.parse_expression(self.context.clone())?;
+                    statements.push(statement.into());
+                }
+                Token::GeneralToken(GeneralToken::LeftParentheses) => {
+                    let statement = self.parse_expression(self.context.clone())?;
+                    statements.push(statement.into());
+                }
+                _ => {
+                    unimplemented!("not implemented yet")
+                }
             }
         }
 
