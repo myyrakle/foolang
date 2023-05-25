@@ -451,13 +451,13 @@ impl Tokenizer {
                 '>' => {
                     self.read_char();
 
-                    match self.last_char.unwrap() {
-                        '=' => OperatorToken::GreaterThanOrEqual.into(),
-                        '>' => {
+                    match self.last_char {
+                        Some('=') => OperatorToken::GreaterThanOrEqual.into(),
+                        Some('>') => {
                             self.read_char();
 
-                            match self.last_char.unwrap() {
-                                '=' => OperatorToken::RightShiftAssign.into(),
+                            match self.last_char {
+                                Some('=') => OperatorToken::RightShiftAssign.into(),
                                 _ => {
                                     self.unread_char();
                                     OperatorToken::RightShift.into()
