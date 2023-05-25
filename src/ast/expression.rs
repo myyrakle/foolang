@@ -60,6 +60,12 @@ impl From<VariableExpression> for Expression {
     }
 }
 
+impl From<CallExpression> for Expression {
+    fn from(call: CallExpression) -> Self {
+        Expression::Call(call)
+    }
+}
+
 #[allow(dead_code)]
 impl Expression {
     pub fn is_unary(&self) -> bool {
