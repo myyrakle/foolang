@@ -429,13 +429,13 @@ impl Tokenizer {
                 '<' => {
                     self.read_char();
 
-                    match self.last_char.unwrap() {
-                        '=' => OperatorToken::LessThanOrEqual.into(),
-                        '<' => {
+                    match self.last_char {
+                        Some('=') => OperatorToken::LessThanOrEqual.into(),
+                        Some('<') => {
                             self.read_char();
 
-                            match self.last_char.unwrap() {
-                                '=' => OperatorToken::LeftShiftAssign.into(),
+                            match self.last_char {
+                                Some('=') => OperatorToken::LeftShiftAssign.into(),
                                 _ => {
                                     self.unread_char();
                                     OperatorToken::LeftShift.into()
