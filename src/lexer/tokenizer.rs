@@ -273,14 +273,12 @@ impl Tokenizer {
                     }
                 }
                 '+' => {
-                    println!("??");
                     self.read_char();
 
                     if self.last_char == '=' {
                         OperatorToken::PlusAssign.into()
                     } else {
                         self.unread_char();
-                        println!("{}", self.is_eof());
                         OperatorToken::Plus.into()
                     }
                 }
