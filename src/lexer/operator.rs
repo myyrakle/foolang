@@ -40,7 +40,6 @@ pub enum OperatorToken {
     AndAssign,        // &=
     OrAssign,         // |=
     XorAssign,        // ^=
-    NotAssign,        // ~=
     LeftShiftAssign,  // <<=
     RightShiftAssign, // >>=
 
@@ -86,7 +85,6 @@ impl OperatorToken {
             | OperatorToken::AndAssign
             | OperatorToken::OrAssign
             | OperatorToken::XorAssign
-            | OperatorToken::NotAssign
             | OperatorToken::LeftShiftAssign
             | OperatorToken::RightShiftAssign => true,
             _ => false,

@@ -165,15 +165,6 @@ pub fn bitwise_not() {
 }
 
 #[test]
-pub fn not_assign() {
-    let text = r#"~="#.to_owned();
-
-    let tokens = Tokenizer::string_to_tokens(text).unwrap();
-
-    assert_eq!(tokens, vec![OperatorToken::NotAssign.into()]);
-}
-
-#[test]
 pub fn left_shift() {
     let text = r#"<<"#.to_owned();
 

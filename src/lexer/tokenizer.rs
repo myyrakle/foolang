@@ -9,63 +9,87 @@ use super::{
 pub struct Tokenizer {
     buffer: Vec<char>,
     buffer_index: usize,
-    last_char: char,
+    last_char: Option<char>,
 }
 
 impl Tokenizer {
     pub fn new(text: String) -> Self {
         Logger::info(format!("echo: {:?}", text));
         Self {
-            last_char: ' ',
+            last_char: None,
             buffer: text.chars().collect(),
             buffer_index: 0,
         }
     }
 
     fn is_whitespace(&self) -> bool {
-        self.last_char == ' ' || self.last_char == '\n' || self.last_char == '\t'
+        match self.last_char {
+            Some(' ') | Some('\n') | Some('\t') => true,
+            _ => false,
+        }
     }
 
     fn is_digit(&self) -> bool {
-        self.last_char.is_ascii_digit()
+        match self.last_char {
+            Some(c) => c.is_ascii_digit(),
+            _ => false,
+        }
     }
 
     fn is_alphabet(&self) -> bool {
-        self.last_char.is_alphabetic()
+        match self.last_char {
+            Some(c) => c.is_ascii_alphabetic(),
+            _ => false,
+        }
     }
 
     fn is_alphabet_or_number(&self) -> bool {
-        self.last_char.is_alphanumeric()
+        match self.last_char {
+            Some(c) => c.is_ascii_alphanumeric(),
+            _ => false,
+        }
     }
 
     fn is_underscore(&self) -> bool {
-        self.last_char == '_'
+        match self.last_char {
+            Some('_') => true,
+            _ => false,
+        }
     }
 
-    // pub fn is_backslash(&self) -> bool {
-    //     self.last_char == '\\'
-    // }
-
     fn is_operator_character(&self) -> bool {
-        [
-            '+', '-', '*', '/', '%', '|', ',', '>', '<', '=', '!', '\\', '.', '&', '^', '~', '?',
-        ]
-        .contains(&self.last_char)
+        match self.last_char {
+            Some(c) => [
+                '+', '-', '*', '/', '%', '|', ',', '>', '<', '=', '!', '\\', '.', '&', '^', '~',
+                '?',
+            ]
+            .contains(&c),
+            _ => false,
+        }
     }
 
     fn is_general_syntax_character(&self) -> bool {
-        [
-            '(', ')', '{', '}', '[', ']', ',', ';', ':', '@', '`', '$', '#',
-        ]
-        .contains(&self.last_char)
+        match self.last_char {
+            Some(c) => [
+                '(', ')', '{', '}', '[', ']', ',', ';', ':', '@', '`', '$', '#',
+            ]
+            .contains(&c),
+            _ => false,
+        }
     }
 
     fn is_quote(&self) -> bool {
-        ['\'', '"'].contains(&self.last_char)
+        match self.last_char {
+            Some(c) => ['\'', '"'].contains(&c),
+            _ => false,
+        }
     }
 
     fn is_dot(&self) -> bool {
-        self.last_char == '.'
+        match self.last_char {
+            Some('.') => true,
+            _ => false,
+        }
     }
 
     fn is_eof(&self) -> bool {
@@ -74,12 +98,8 @@ impl Tokenizer {
 
     // 버퍼에서 문자 하나를 읽어서 last_char에 보관합니다.
     fn read_char(&mut self) {
-        if self.buffer_index >= self.buffer.len() {
-            self.last_char = ' ';
-        } else {
-            self.last_char = self.buffer[self.buffer_index];
-            self.buffer_index += 1;
-        }
+        self.last_char = self.buffer.get(self.buffer_index).map(|e| e.to_owned());
+        self.buffer_index += 1;
     }
 
     // 보관했던 문자 하나를 다시 버퍼에 돌려놓습니다.
@@ -88,12 +108,8 @@ impl Tokenizer {
             return ();
         }
 
-        if self.buffer_index == 0 {
-            self.last_char = ' ';
-        } else {
-            self.buffer_index -= 1;
-            self.last_char = self.buffer[self.buffer_index];
-        }
+        self.buffer_index -= 1;
+        self.last_char = self.buffer.get(self.buffer_index).map(|e| e.to_owned());
     }
 
     // 주어진 텍스트에서 토큰을 순서대로 획득해 반환합니다.
@@ -106,11 +122,11 @@ impl Tokenizer {
 
         // 첫번째 글짜가 알파벳일 경우 식별자 및 키워드로 인식
         let token = if self.is_alphabet() || self.is_underscore() {
-            let mut identifier = vec![self.last_char];
+            let mut identifier = vec![self.last_char.unwrap()];
 
             self.read_char();
             while self.is_alphabet_or_number() || self.is_underscore() {
-                identifier.push(self.last_char);
+                identifier.push(self.last_char.unwrap());
                 self.read_char();
             }
 
@@ -154,16 +170,18 @@ impl Tokenizer {
         }
         // 첫번째 글자가 숫자일 경우 정수 및 실수값으로 인식
         else if self.is_digit() {
-            let mut number_string = vec![self.last_char];
+            let mut number_string = vec![self.last_char.unwrap()];
 
             // 숫자나 .이 나올 때까지만 버퍼에서 읽어서 number_string에 저장
             loop {
+                if self.is_eof() {
+                    break;
+                }
+
                 self.read_char();
                 if self.is_digit() || self.is_dot() {
-                    number_string.push(self.last_char);
+                    number_string.push(self.last_char.unwrap());
                     continue;
-                } else if self.is_eof() {
-                    break;
                 } else {
                     self.unread_char();
                     break;
@@ -202,18 +220,18 @@ impl Tokenizer {
         }
         // 특수문자일 경우
         else if self.is_operator_character() {
-            match self.last_char {
+            match self.last_char.unwrap() {
                 ',' => GeneralToken::Comma.into(),
                 '-' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::MinusAssign.into()
-                    } else if self.last_char == '>' {
-                        GeneralToken::Arrow.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::Minus.into()
+                    match self.last_char.unwrap() {
+                        '>' => GeneralToken::Arrow.into(),
+                        '=' => OperatorToken::MinusAssign.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::Minus.into()
+                        }
                     }
                 }
                 '/' => {
@@ -221,190 +239,254 @@ impl Tokenizer {
 
                     self.read_char();
 
-                    if self.last_char == '*' {
-                        let mut comment = vec![];
+                    match self.last_char {
+                        Some('*') => {
+                            let mut comment = vec![];
 
-                        self.read_char();
-                        while !self.is_eof() {
-                            if self.last_char == '*' {
-                                self.read_char();
-                                if self.last_char == '/' {
-                                    break;
+                            self.read_char();
+                            while !self.is_eof() {
+                                match self.last_char {
+                                    Some('*') => {
+                                        self.read_char();
+                                        if self.last_char == Some('/') {
+                                            break;
+                                        }
+                                    }
+                                    Some(c) => {
+                                        comment.push(c);
+                                    }
+                                    None => {
+                                        return Err(AllError::LexerError(
+                                            "unexpected EOF".to_string(),
+                                        ))
+                                    }
                                 }
-                            } else {
-                                comment.push(self.last_char);
+
+                                self.read_char();
                             }
 
-                            self.read_char();
+                            let comment: String = comment.into_iter().collect();
+                            PrimaryToken::Comment(comment).into()
                         }
+                        Some('/') => {
+                            let mut comment = vec![];
 
-                        let comment: String = comment.into_iter().collect();
-                        PrimaryToken::Comment(comment).into()
-                    } else if self.last_char == '/' {
-                        let mut comment = vec![];
+                            while !self.is_eof() {
+                                self.read_char();
 
-                        while !self.is_eof() {
-                            self.read_char();
-
-                            if self.last_char == '\n' {
-                                break;
-                            } else {
-                                comment.push(self.last_char);
+                                match self.last_char {
+                                    Some('\n') => {
+                                        break;
+                                    }
+                                    Some(c) => {
+                                        comment.push(c);
+                                    }
+                                    None => {
+                                        return Err(AllError::LexerError(
+                                            "unexpected EOF".to_string(),
+                                        ))
+                                    }
+                                }
                             }
-                        }
 
-                        let comment: String = comment.into_iter().collect();
-                        PrimaryToken::Comment(comment).into()
-                    } else if self.last_char == '=' {
-                        OperatorToken::SlashAssign.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::Slash.into()
+                            let comment: String = comment.into_iter().collect();
+                            PrimaryToken::Comment(comment).into()
+                        }
+                        Some('=') => OperatorToken::SlashAssign.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::Slash.into()
+                        }
                     }
+
+                    // if self.last_char == '*' {
+                    //     let mut comment = vec![];
+
+                    //     self.read_char();
+                    //     while !self.is_eof() {
+                    //         if self.last_char == '*' {
+                    //             self.read_char();
+                    //             if self.last_char == '/' {
+                    //                 break;
+                    //             }
+                    //         } else {
+                    //             comment.push(self.last_char);
+                    //         }
+
+                    //         self.read_char();
+                    //     }
+
+                    //     let comment: String = comment.into_iter().collect();
+                    //     PrimaryToken::Comment(comment).into()
+                    // } else if self.last_char == '/' {
+                    //     let mut comment = vec![];
+
+                    //     while !self.is_eof() {
+                    //         self.read_char();
+
+                    //         if self.last_char == '\n' {
+                    //             break;
+                    //         } else {
+                    //             comment.push(self.last_char);
+                    //         }
+                    //     }
+
+                    //     let comment: String = comment.into_iter().collect();
+                    //     PrimaryToken::Comment(comment).into()
+                    // } else if self.last_char == '=' {
+                    //     OperatorToken::SlashAssign.into()
+                    // } else {
+                    //     self.unread_char();
+                    //     OperatorToken::Slash.into()
+                    // }
                 }
                 '%' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::ModuloAssign.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::Modulo.into()
+                    match self.last_char {
+                        Some('=') => OperatorToken::ModuloAssign.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::Modulo.into()
+                        }
                     }
                 }
                 '+' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::PlusAssign.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::Plus.into()
+                    match self.last_char {
+                        Some('=') => OperatorToken::PlusAssign.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::Plus.into()
+                        }
                     }
                 }
                 '*' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::StarAssign.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::Star.into()
+                    match self.last_char {
+                        Some('=') => OperatorToken::StarAssign.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::Star.into()
+                        }
                     }
                 }
                 '!' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::NotEqual.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::Not.into()
+                    match self.last_char {
+                        Some('=') => OperatorToken::NotEqual.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::Not.into()
+                        }
                     }
                 }
                 '?' => OperatorToken::Question.into(),
                 '.' => {
                     self.read_char();
 
-                    if self.last_char == '.' {
-                        OperatorToken::Range.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::Dot.into()
+                    match self.last_char {
+                        Some('.') => OperatorToken::Range.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::Dot.into()
+                        }
                     }
                 }
                 '=' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::Equal.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::Assign.into()
+                    match self.last_char.unwrap() {
+                        '=' => OperatorToken::Equal.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::Equal.into()
+                        }
                     }
                 }
                 '<' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::LessThanOrEqual.into()
-                    } else if self.last_char == '<' {
-                        self.read_char();
+                    match self.last_char.unwrap() {
+                        '=' => OperatorToken::LessThanOrEqual.into(),
+                        '<' => {
+                            self.read_char();
 
-                        if self.last_char == '=' {
-                            OperatorToken::LeftShiftAssign.into()
-                        } else {
-                            self.unread_char();
-                            OperatorToken::LeftShift.into()
+                            match self.last_char.unwrap() {
+                                '=' => OperatorToken::LeftShiftAssign.into(),
+                                _ => {
+                                    self.unread_char();
+                                    OperatorToken::LeftShift.into()
+                                }
+                            }
                         }
-                    } else {
-                        self.unread_char();
-                        OperatorToken::LessThan.into()
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::LessThan.into()
+                        }
                     }
                 }
                 '>' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::GreaterThanOrEqual.into()
-                    } else if self.last_char == '>' {
-                        self.read_char();
+                    match self.last_char.unwrap() {
+                        '=' => OperatorToken::GreaterThanOrEqual.into(),
+                        '>' => {
+                            self.read_char();
 
-                        if self.last_char == '=' {
-                            OperatorToken::RightShiftAssign.into()
-                        } else {
-                            self.unread_char();
-                            OperatorToken::RightShift.into()
+                            match self.last_char.unwrap() {
+                                '=' => OperatorToken::RightShiftAssign.into(),
+                                _ => {
+                                    self.unread_char();
+                                    OperatorToken::RightShift.into()
+                                }
+                            }
                         }
-                    } else {
-                        self.unread_char();
-                        OperatorToken::GreaterThan.into()
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::GreaterThan.into()
+                        }
                     }
                 }
                 '&' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::AndAssign.into()
-                    } else if self.last_char == '&' {
-                        OperatorToken::And.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::Ampersand.into()
+                    match self.last_char {
+                        Some('=') => OperatorToken::AndAssign.into(),
+                        Some('&') => OperatorToken::And.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::Ampersand.into()
+                        }
                     }
                 }
                 '|' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::OrAssign.into()
-                    } else if self.last_char == '|' {
-                        OperatorToken::Or.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::BitwiseOr.into()
+                    match self.last_char {
+                        Some('=') => OperatorToken::OrAssign.into(),
+                        Some('|') => OperatorToken::Or.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::BitwiseOr.into()
+                        }
                     }
                 }
                 '^' => {
                     self.read_char();
 
-                    if self.last_char == '=' {
-                        OperatorToken::XorAssign.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::BitwiseXor.into()
+                    match self.last_char {
+                        Some('=') => OperatorToken::XorAssign.into(),
+                        _ => {
+                            self.unread_char();
+                            OperatorToken::BitwiseXor.into()
+                        }
                     }
                 }
-                '~' => {
-                    self.read_char();
-
-                    if self.last_char == '=' {
-                        OperatorToken::NotAssign.into()
-                    } else {
-                        self.unread_char();
-                        OperatorToken::BitwiseNot.into()
-                    }
-                }
+                '~' => OperatorToken::BitwiseNot.into(),
                 _ => {
                     return Err(AllError::LexerError(format!(
                         "unexpected operator: {:?}",
@@ -415,36 +497,42 @@ impl Tokenizer {
         }
         // 따옴표일 경우 처리
         else if self.is_quote() {
-            if self.last_char == '"' {
+            if let Some('"') = self.last_char {
                 let mut identifier = vec![];
 
                 self.read_char();
-                while self.last_char != '"' {
-                    identifier.push(self.last_char);
+                loop {
+                    if let Some('"') = self.last_char {
+                        break;
+                    }
+
+                    identifier.push(self.last_char.unwrap());
                     self.read_char();
                 }
 
                 let identifier: String = identifier.into_iter().collect::<String>();
 
                 PrimaryToken::String(identifier).into()
-            } else if self.last_char == '\'' {
+            } else if let Some('\'') = self.last_char {
                 let mut string = vec![];
 
                 self.read_char();
                 while !self.is_eof() {
-                    if self.last_char == '\'' {
+                    if let Some('\'') = self.last_char {
                         self.read_char();
 
                         // '' 의 형태일 경우 '로 이스케이프
                         // 아닐 경우 문자열 종료
-                        if self.last_char == '\'' {
-                            string.push(self.last_char);
+                        if let Some('\'') = self.last_char {
+                            string.push('\'');
                         } else {
                             self.unread_char();
                             break;
                         }
                     } else {
-                        string.push(self.last_char);
+                        if let Some(c) = self.last_char {
+                            string.push(c);
+                        }
                     }
 
                     self.read_char();
@@ -462,7 +550,7 @@ impl Tokenizer {
         }
         // 기타 문자 부호들 처리
         else if self.is_general_syntax_character() {
-            match self.last_char {
+            match self.last_char.unwrap() {
                 '(' => GeneralToken::LeftParentheses.into(),
                 ')' => GeneralToken::RightParentheses.into(),
                 '{' => GeneralToken::LeftBrace.into(),
@@ -492,7 +580,7 @@ impl Tokenizer {
             )));
         };
 
-        self.last_char = ' ';
+        self.last_char = None;
 
         Ok(token)
     }
@@ -508,7 +596,9 @@ impl Tokenizer {
         let mut tokens = vec![];
 
         while tokenizer.has_next() {
-            tokens.push(tokenizer.get_token()?);
+            let token = tokenizer.get_token()?;
+            println!("test, {:?}", token);
+            tokens.push(token);
         }
 
         Ok(tokens)
