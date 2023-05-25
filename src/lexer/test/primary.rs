@@ -33,6 +33,18 @@ pub fn string() {
 }
 
 #[test]
+pub fn identifier() {
+    let text = r#"abc"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    assert_eq!(
+        tokens,
+        vec![PrimaryToken::Identifier("abc".to_owned()).into()]
+    );
+}
+
+#[test]
 pub fn line_comment() {
     let text = r#"// 123.234"#.to_owned();
 
