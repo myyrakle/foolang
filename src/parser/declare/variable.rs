@@ -4,7 +4,7 @@ use crate::{
         statement::{define_variable::VariableDefinitionStatement, Statement},
     },
     error::all_error::AllError,
-    lexer::{keyword::Keyword, primary::PrimaryToken, token::Token},
+    lexer::{keyword::Keyword, operator::OperatorToken, primary::PrimaryToken, token::Token},
     parser::{Parser, ParserContext},
 };
 
@@ -66,15 +66,33 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return VariableDefinitionStatement {
-                name: variable_name,
-                value: None,
-                mutable: false,
-            }
-            .into();
+            return Err(AllError::ParserError(
+                "Unexpected end of tokens".to_string(),
+            ));
         };
 
-        todo!()
+        match current_token {
+            Token::Operator(OperatorToken::Assign) => {
+                self.next();
+
+                let expression = self.parse_expression(ParserContext::new())?;
+
+                let statement = VariableDefinitionStatement {
+                    name: variable_name,
+                    value: Some(expression),
+                    mutable: false,
+                }
+                .into();
+
+                Ok(statement)
+            }
+            _ => {
+                return Err(AllError::ParserError(format!(
+                    "Expected = for variable assignment. but found {:?}",
+                    current_token
+                )));
+            }
+        }
     }
 
     pub(crate) fn parse_mut_variable(
