@@ -8,7 +8,7 @@ use super::{
 #[derive(Debug)]
 pub struct Tokenizer {
     buffer: Vec<char>,
-    buffer_index: usize,
+    buffer_index: Option<usize>,
     last_char: Option<char>,
 }
 
@@ -18,7 +18,7 @@ impl Tokenizer {
         Self {
             last_char: None,
             buffer: text.chars().collect(),
-            buffer_index: 0,
+            buffer_index: None,
         }
     }
 
@@ -93,13 +93,22 @@ impl Tokenizer {
     }
 
     fn is_eof(&self) -> bool {
-        self.buffer_index >= self.buffer.len()
+        match self.buffer_index {
+            Some(index) => index >= self.buffer.len(),
+            _ => false,
+        }
     }
 
     // 버퍼에서 문자 하나를 읽어서 last_char에 보관합니다.
     fn read_char(&mut self) {
-        self.last_char = self.buffer.get(self.buffer_index).map(|e| e.to_owned());
-        self.buffer_index += 1;
+        let buffer_index = match self.buffer_index {
+            Some(index) => index + 1,
+            None => 0,
+        };
+
+        self.buffer_index = Some(buffer_index);
+
+        self.last_char = self.buffer.get(buffer_index).map(|e| e.to_owned());
     }
 
     // 보관했던 문자 하나를 다시 버퍼에 돌려놓습니다.
@@ -108,13 +117,21 @@ impl Tokenizer {
             return ();
         }
 
-        self.buffer_index -= 1;
-        self.last_char = self.buffer.get(self.buffer_index).map(|e| e.to_owned());
+        let buffer_index = match self.buffer_index {
+            Some(index) => index - 1,
+            None => {
+                return;
+            }
+        };
+        self.buffer_index = Some(buffer_index);
+        self.last_char = self.buffer.get(buffer_index).map(|e| e.to_owned());
     }
 
     // 주어진 텍스트에서 토큰을 순서대로 획득해 반환합니다.
     // 끝을 만날 경우 Token::EOF를 반환합니다.
     pub fn get_token(&mut self) -> Result<Token, AllError> {
+        self.read_char();
+
         // 화이트 스페이스 삼킴
         while self.is_whitespace() && !self.is_eof() {
             self.read_char();
@@ -187,6 +204,8 @@ impl Tokenizer {
                     break;
                 }
             }
+
+            println!("test");
 
             let number_string: String =
                 number_string.into_iter().collect::<String>().to_uppercase();
@@ -403,7 +422,7 @@ impl Tokenizer {
                         '=' => OperatorToken::Equal.into(),
                         _ => {
                             self.unread_char();
-                            OperatorToken::Equal.into()
+                            OperatorToken::Assign.into()
                         }
                     }
                 }
@@ -586,7 +605,10 @@ impl Tokenizer {
     }
 
     pub fn has_next(&self) -> bool {
-        !self.is_eof()
+        match self.buffer_index {
+            Some(buffer_index) => buffer_index + 1 < self.buffer.len(),
+            None => true,
+        }
     }
 
     // Tokenizer 생성 없이 토큰 목록을 가져올 수 있는 boilerplate 함수입니다.
@@ -597,7 +619,6 @@ impl Tokenizer {
 
         while tokenizer.has_next() {
             let token = tokenizer.get_token()?;
-            println!("test, {:?}", token);
             tokens.push(token);
         }
 
