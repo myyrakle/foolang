@@ -91,8 +91,6 @@ pub fn add_then_multiply_with_parenthese() {
 
     let tokens = Tokenizer::string_to_tokens(text).unwrap();
 
-    println!("tokens: {:?}", tokens);
-
     let mut parser = Parser::new();
     parser.set_tokens(tokens);
 

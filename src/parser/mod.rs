@@ -72,10 +72,8 @@ impl Parser {
                         statements.push(statement.into());
                     }
                     Token::GeneralToken(GeneralToken::LeftParentheses) => {
-                        println!("??");
-                        let statement = self.parse_expression(self.context.clone())?;
-                        println!("statement = {:?}", statement);
-                        statements.push(statement.into());
+                       let statement = self.parse_expression(self.context.clone())?;
+                       statements.push(statement.into());
                     }
                     _ => {
                         unimplemented!("not implemented yet")

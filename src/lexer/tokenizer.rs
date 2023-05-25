@@ -205,8 +205,6 @@ impl Tokenizer {
                 }
             }
 
-            println!("test");
-
             let number_string: String =
                 number_string.into_iter().collect::<String>().to_uppercase();
 
