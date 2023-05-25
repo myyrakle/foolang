@@ -66,6 +66,7 @@ impl Parser {
 
             // 각 argument를 파싱
             let expression = self.parse_expression(context.clone())?;
+            arguments.push(expression);
 
             let next_token = self.get_next_token();
 

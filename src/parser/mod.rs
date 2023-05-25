@@ -1,9 +1,9 @@
 pub mod context;
+pub mod expression;
+pub mod variable;
 pub use context::ParserContext;
 
-pub mod expression;
-
-pub mod variable;
+pub(crate) mod test;
 
 use crate::{
     ast::statement::Statement,
