@@ -45,6 +45,9 @@ impl Parser {
         // rhs에 괄호 연산자가 있는 경우
         let mut rhs_has_parentheses = false;
 
+        // lhs에 괄호 연산자가 있는 경우
+        let mut lhs_has_parentheses = false;
+
         self.next();
         let rhs = self.parse_expression(_context)?;
 
@@ -54,6 +57,13 @@ impl Parser {
             *paren.expression
         } else {
             rhs
+        };
+
+        let lhs = if let Expression::Parentheses(paren) = lhs {
+            lhs_has_parentheses = true;
+            *paren.expression
+        } else {
+            lhs
         };
 
         // rhs에 또 binary operation이 중첩되는 경우 처리
@@ -76,6 +86,15 @@ impl Parser {
                 }
                 .into())
             } else {
+                if lhs_has_parentheses {
+                    return Ok(BinaryExpression {
+                        lhs: Box::new(lhs),
+                        rhs: Box::new(rhs),
+                        operator,
+                    }
+                    .into());
+                }
+
                 let next_precedence = rhs_binary_expression.operator.get_precedence();
 
                 let lhs = Box::new(lhs);

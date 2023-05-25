@@ -15,7 +15,7 @@ use super::{Parser, ParserContext};
 impl Parser {
     pub(super) fn parse_expression(
         &mut self,
-        _context: ParserContext,
+        context: ParserContext,
     ) -> Result<Expression, AllError> {
         let current_token = if let Some(token) = self.get_current_token() {
             token
@@ -34,16 +34,16 @@ impl Parser {
                 if let Some(next_token) = self.get_next_token() {
                     if let Token::GeneralToken(GeneralToken::LeftParentheses) = next_token {
                         let function_call_expression =
-                            self.parse_function_call_expression(_context)?;
+                            self.parse_function_call_expression(context)?;
 
                         Ok(function_call_expression)
                     } else {
-                        let variable_expression = self.parse_variable_expression(_context)?;
+                        let variable_expression = self.parse_variable_expression(context)?;
 
                         Ok(variable_expression)
                     }
                 } else {
-                    let variable_expression = self.parse_variable_expression(_context)?;
+                    let variable_expression = self.parse_variable_expression(context)?;
 
                     Ok(variable_expression)
                 }
@@ -54,7 +54,7 @@ impl Parser {
                         self.next();
 
                         let binary_expression =
-                            self.parse_binary_expression(Expression::from(primary), _context)?;
+                            self.parse_binary_expression(Expression::from(primary), context)?;
 
                         Ok(binary_expression)
                     } else {
@@ -68,7 +68,7 @@ impl Parser {
             }
             Token::Operator(operator) => {
                 if operator.is_unary_operator() {
-                    let unary_expression = self.parse_unary_expression(_context)?;
+                    let unary_expression = self.parse_unary_expression(context)?;
 
                     Ok(unary_expression)
                 } else {
@@ -79,9 +79,24 @@ impl Parser {
                 }
             }
             Token::GeneralToken(GeneralToken::LeftParentheses) => {
-                let parentheses_expression = self.parse_parentheses_expression(_context)?;
+                let parentheses_expression = self.parse_parentheses_expression(context.clone())?;
 
-                Ok(parentheses_expression)
+                if let Some(current_token) = self.get_current_token() {
+                    if current_token.is_binary_operator() {
+                        let binary_expression = self.parse_binary_expression(
+                            Expression::from(parentheses_expression),
+                            context,
+                        )?;
+
+                        Ok(binary_expression)
+                    } else {
+                        self.next();
+                        Ok(parentheses_expression)
+                    }
+                } else {
+                    self.next();
+                    Ok(parentheses_expression)
+                }
             }
             _ => todo!(),
         }

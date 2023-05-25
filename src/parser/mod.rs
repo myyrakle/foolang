@@ -8,7 +8,7 @@ pub(crate) mod test;
 use crate::{
     ast::statement::Statement,
     error::all_error::AllError,
-    lexer::{keyword::Keyword, token::Token},
+    lexer::{general::GeneralToken, keyword::Keyword, token::Token},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -71,7 +71,15 @@ impl Parser {
                         let statement = self.parse_expression(self.context.clone())?;
                         statements.push(statement.into());
                     }
-                    _ => {}
+                    Token::GeneralToken(GeneralToken::LeftParentheses) => {
+                        println!("??");
+                        let statement = self.parse_expression(self.context.clone())?;
+                        println!("statement = {:?}", statement);
+                        statements.push(statement.into());
+                    }
+                    _ => {
+                        unimplemented!("not implemented yet")
+                    }
                 }
             } else {
                 break;
