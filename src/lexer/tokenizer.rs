@@ -244,9 +244,9 @@ impl Tokenizer {
                 '-' => {
                     self.read_char();
 
-                    match self.last_char.unwrap() {
-                        '>' => GeneralToken::Arrow.into(),
-                        '=' => OperatorToken::MinusAssign.into(),
+                    match self.last_char {
+                        Some('>') => GeneralToken::Arrow.into(),
+                        Some('=') => OperatorToken::MinusAssign.into(),
                         _ => {
                             self.unread_char();
                             OperatorToken::Minus.into()
