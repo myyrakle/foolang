@@ -1,6 +1,6 @@
 pub mod context;
+pub mod declare;
 pub mod expression;
-pub mod variable;
 pub use context::ParserContext;
 
 pub(crate) mod test;
@@ -64,7 +64,7 @@ impl Parser {
             if let Some(current_token) = self.get_current_token() {
                 match current_token {
                     Token::Keyword(Keyword::Let | Keyword::Const) => {
-                        let statement = self.parse_variable_definition(self.context.clone())?;
+                        let statement = self.parse_declare_variable(self.context.clone())?;
                         statements.push(statement);
                     }
                     Token::Primary(_) => {
@@ -72,8 +72,8 @@ impl Parser {
                         statements.push(statement.into());
                     }
                     Token::GeneralToken(GeneralToken::LeftParentheses) => {
-                       let statement = self.parse_expression(self.context.clone())?;
-                       statements.push(statement.into());
+                        let statement = self.parse_expression(self.context.clone())?;
+                        statements.push(statement.into());
                     }
                     _ => {
                         unimplemented!("not implemented yet")
