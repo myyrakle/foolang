@@ -277,7 +277,7 @@ impl Tokenizer {
                                     None => {
                                         return Err(AllError::LexerError(
                                             "unexpected EOF".to_string(),
-                                        ))
+                                        ));
                                     }
                                 }
 
@@ -290,7 +290,7 @@ impl Tokenizer {
                         Some('/') => {
                             let mut comment = vec![];
 
-                            while !self.is_eof() {
+                            while self.has_next() {
                                 self.read_char();
 
                                 match self.last_char {
@@ -303,7 +303,7 @@ impl Tokenizer {
                                     None => {
                                         return Err(AllError::LexerError(
                                             "unexpected EOF".to_string(),
-                                        ))
+                                        ));
                                     }
                                 }
                             }
