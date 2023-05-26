@@ -30,7 +30,7 @@ impl Parser {
         };
 
         let variable_expression = VariableExpression {
-            name: current_identifer.into(),
+            name: current_identifer,
         };
 
         if let Some(next_token) = self.get_next_token() {
