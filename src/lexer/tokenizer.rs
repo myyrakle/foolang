@@ -546,10 +546,8 @@ impl Tokenizer {
                             self.unread_char();
                             break;
                         }
-                    } else {
-                        if let Some(c) = self.last_char {
-                            string.push(c);
-                        }
+                    } else if let Some(c) = self.last_char {
+                        string.push(c);
                     }
 
                     self.read_char();
@@ -589,7 +587,7 @@ impl Tokenizer {
         }
         // 아무것도 해당되지 않을 경우 예외처리
         else if self.is_eof() {
-            Token::EOF
+            Token::Eof
         } else {
             return Err(AllError::LexerError(format!(
                 "unexpected character: {:?}",

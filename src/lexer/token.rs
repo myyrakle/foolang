@@ -10,7 +10,7 @@ pub enum Token {
     GeneralToken(GeneralToken),
 
     // exception handling
-    EOF,
+    Eof,
 }
 
 impl Token {
