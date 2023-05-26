@@ -114,7 +114,7 @@ impl Tokenizer {
     // 보관했던 문자 하나를 다시 버퍼에 돌려놓습니다.
     fn unread_char(&mut self) {
         if self.is_eof() {
-            return ();
+            return;
         }
 
         let buffer_index = match self.buffer_index {

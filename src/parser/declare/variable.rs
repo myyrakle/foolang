@@ -83,12 +83,10 @@ impl Parser {
 
                 Ok(statement)
             }
-            _ => {
-                return Err(AllError::ParserError(format!(
-                    "Expected = for variable assignment. but found {:?}",
-                    current_token
-                )));
-            }
+            _ => Err(AllError::ParserError(format!(
+                "Expected = for variable assignment. but found {:?}",
+                current_token
+            ))),
         }
     }
 

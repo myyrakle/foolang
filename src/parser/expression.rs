@@ -28,7 +28,7 @@ impl Parser {
         match current_token {
             Token::Primary(PrimaryToken::Comment(comment)) => {
                 self.next();
-                return Ok(Expression::Comment(comment));
+                Ok(Expression::Comment(comment))
             }
             Token::Primary(PrimaryToken::Identifier(_)) => {
                 if let Some(Token::GeneralToken(GeneralToken::LeftParentheses)) =
