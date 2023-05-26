@@ -31,17 +31,12 @@ impl Parser {
                 return Ok(Expression::Comment(comment));
             }
             Token::Primary(PrimaryToken::Identifier(_)) => {
-                if let Some(next_token) = self.get_next_token() {
-                    if let Token::GeneralToken(GeneralToken::LeftParentheses) = next_token {
-                        let function_call_expression =
-                            self.parse_function_call_expression(context)?;
+                if let Some(Token::GeneralToken(GeneralToken::LeftParentheses)) =
+                    self.get_next_token()
+                {
+                    let function_call_expression = self.parse_function_call_expression(context)?;
 
-                        Ok(function_call_expression)
-                    } else {
-                        let variable_expression = self.parse_variable_expression(context)?;
-
-                        Ok(variable_expression)
-                    }
+                    Ok(function_call_expression)
                 } else {
                     let variable_expression = self.parse_variable_expression(context)?;
 
@@ -83,10 +78,8 @@ impl Parser {
 
                 if let Some(current_token) = self.get_current_token() {
                     if current_token.is_binary_operator() {
-                        let binary_expression = self.parse_binary_expression(
-                            Expression::from(parentheses_expression),
-                            context,
-                        )?;
+                        let binary_expression =
+                            self.parse_binary_expression(parentheses_expression, context)?;
 
                         Ok(binary_expression)
                     } else {
