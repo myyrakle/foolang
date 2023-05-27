@@ -89,6 +89,23 @@ impl Parser {
             arguments,
         };
 
-        Ok(function_call_expression.into())
+        if let Some(next_token) = self.get_next_token() {
+            if next_token.is_binary_operator() {
+                self.next();
+                let binary_expression =
+                    self.parse_binary_expression(function_call_expression.into(), context)?;
+
+                Ok(binary_expression)
+            } else {
+                Err(AllError::ParserError(format!(
+                    "Expected binary operator, found {:?}",
+                    next_token
+                )))
+            }
+        } else {
+            self.next();
+
+            Ok(function_call_expression.into())
+        }
     }
 }
