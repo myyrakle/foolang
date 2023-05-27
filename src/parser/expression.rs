@@ -25,8 +25,6 @@ impl Parser {
             ));
         };
 
-        println!("!!!: {current_token:?}");
-
         match current_token {
             Token::Primary(PrimaryToken::Comment(comment)) => {
                 self.next();
@@ -34,7 +32,6 @@ impl Parser {
             }
             Token::Primary(PrimaryToken::Identifier(_)) => {
                 let next_token = self.get_next_token();
-                println!("next: {next_token:?}");
 
                 if let Some(Token::GeneralToken(GeneralToken::LeftParentheses)) = next_token {
                     let function_call_expression = self.parse_function_call_expression(context)?;
