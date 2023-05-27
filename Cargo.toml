@@ -2,6 +2,7 @@
 name = "foolang"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,7 +14,6 @@ atty = { version = "0.2.14", optional = true }
 structopt = { version = "0.3.18", optional = true }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1.21.0", features = ["full"] }
-rustc_llvm = { path = "./rustc_llvm" }
 
 [[bin]]
 name = "foo"
