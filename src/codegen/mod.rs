@@ -1,3 +1,5 @@
+pub(crate) mod expression;
+
 use crate::{ast::statement::Statement, error::all_error::AllError};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -23,6 +25,29 @@ impl Default for CodeGenerator {
 
 impl CodeGenerator {
     pub fn generate(&mut self) -> Result<Vec<String>, AllError> {
-        todo!()
+        let mut codes = vec![];
+
+        for statement in self.statements.clone().into_iter() {
+            match statement {
+                Statement::Expression(expression) => {
+                    let mut result = self.generate_expression(expression.to_owned())?;
+                    codes.append(&mut result);
+                }
+                Statement::DefineVariable(_variable_declaration) => {
+                    unimplemented!();
+                }
+                Statement::DefineFunction(_function_declaration) => {
+                    unimplemented!();
+                }
+                Statement::Return(_return_statement) => {
+                    unimplemented!();
+                }
+                _ => {
+                    unimplemented!();
+                }
+            }
+        }
+
+        Ok(codes)
     }
 }
