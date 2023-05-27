@@ -1,6 +1,6 @@
 use crate::{
     ast::statement::{define_variable::VariableDefinitionStatement, Statement},
-    error::all_error::AllError,
+    error::all_error::{parser_error::ParserError, AllError},
     lexer::{keyword::Keyword, operator::OperatorToken, primary::PrimaryToken, token::Token},
     parser::{Parser, ParserContext},
 };
@@ -13,9 +13,7 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(2, "Unexpected end of tokens".to_string()).into());
         };
 
         match current_token {
@@ -43,19 +41,21 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(3, "Unexpected end of tokens".to_string()).into());
         };
 
         let variable_name =
             if let Token::Primary(PrimaryToken::Identifier(identifier)) = current_token {
                 identifier
             } else {
-                return Err(AllError::ParserError(format!(
-                    "Expected identifier for variable name. but found {:?}",
-                    current_token
-                )));
+                return Err(ParserError::new(
+                    4,
+                    format!(
+                        "Expected identifier for variable name. but found {:?}",
+                        current_token
+                    ),
+                )
+                .into());
             };
 
         self.next();
@@ -63,9 +63,7 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(5, "Unexpected end of tokens".to_string()).into());
         };
 
         match current_token {
@@ -83,10 +81,14 @@ impl Parser {
 
                 Ok(statement)
             }
-            _ => Err(AllError::ParserError(format!(
-                "Expected = for variable assignment. but found {:?}",
-                current_token
-            ))),
+            _ => Err(ParserError::new(
+                6,
+                format!(
+                    "Expected = for variable assignment. but found {:?}",
+                    current_token
+                ),
+            )
+            .into()),
         }
     }
 

@@ -1,6 +1,6 @@
 use crate::{
     ast::expression::{call::CallExpression, Expression},
-    error::all_error::AllError,
+    error::all_error::{parser_error::ParserError, AllError},
     lexer::{general::GeneralToken, primary::PrimaryToken, token::Token},
 };
 
@@ -14,35 +14,31 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(100, "Unexpected end of tokens".to_string()).into());
         };
 
         let function_name = if let Token::Primary(PrimaryToken::Identifier(id)) = current_token {
             id
         } else {
-            return Err(AllError::ParserError(format!(
-                "Expected identifier, found {:?}",
-                current_token
-            )));
+            return Err(ParserError::new(
+                101,
+                format!("Expected identifier, found {:?}", current_token),
+            )
+            .into());
         };
 
         self.next();
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(102, "Unexpected end of tokens".to_string()).into());
         };
 
         if let Token::GeneralToken(GeneralToken::LeftParentheses) = current_token {
         } else {
-            return Err(AllError::ParserError(format!(
-                "Expected '(', found {:?}",
-                current_token
-            )));
+            return Err(
+                ParserError::new(103, format!("Expected '(', found {:?}", current_token)).into(),
+            );
         }
 
         let mut arguments = vec![];
@@ -58,9 +54,7 @@ impl Parser {
                     break;
                 }
             } else {
-                return Err(AllError::ParserError(
-                    "Unexpected end of tokens".to_string(),
-                ));
+                return Err(ParserError::new(104, "Unexpected end of tokens".to_string()).into());
             }
 
             self.next();
@@ -79,9 +73,7 @@ impl Parser {
                     self.next();
                 }
             } else {
-                return Err(AllError::ParserError(
-                    "Unexpected end of tokens".to_string(),
-                ));
+                return Err(ParserError::new(105, "Unexpected end of tokens".to_string()).into());
             }
         }
 
@@ -103,10 +95,11 @@ impl Parser {
                         self.next();
                         Ok(function_call_expression.into())
                     }
-                    _ => Err(AllError::ParserError(format!(
-                        "Expected binary operator, found {:?}",
-                        next_token
-                    ))),
+                    _ => Err(ParserError::new(
+                        106,
+                        format!("Expected binary operator, found {:?}", next_token),
+                    )
+                    .into()),
                 }
             }
         } else {

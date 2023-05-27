@@ -1,6 +1,6 @@
 use crate::{
     ast::expression::{variable::VariableExpression, Expression},
-    error::all_error::AllError,
+    error::all_error::{parser_error::ParserError, AllError},
     lexer::{primary::PrimaryToken, token::Token},
 };
 
@@ -14,19 +14,18 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(400, "Unexpected end of tokens".to_string()).into());
         };
 
         let current_identifer = if let Token::Primary(PrimaryToken::Identifier(id)) = current_token
         {
             id
         } else {
-            return Err(AllError::ParserError(format!(
-                "Expected identifier, found {:?}",
-                current_token
-            )));
+            return Err(ParserError::new(
+                401,
+                format!("Expected identifier, found {:?}", current_token),
+            )
+            .into());
         };
 
         let variable_expression = VariableExpression {
@@ -41,10 +40,11 @@ impl Parser {
 
                 Ok(binary_expression)
             } else {
-                Err(AllError::ParserError(format!(
-                    "Expected binary operator, found {:?}",
-                    next_token
-                )))
+                Err(ParserError::new(
+                    402,
+                    format!("Expected binary operator, found {:?}", next_token),
+                )
+                .into())
             }
         } else {
             self.next();

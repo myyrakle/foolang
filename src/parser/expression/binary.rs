@@ -3,7 +3,7 @@ use crate::{
         expression::{binary::BinaryExpression, Expression},
         operator::binary::BinaryOperator,
     },
-    error::all_error::AllError,
+    error::all_error::{parser_error::ParserError, AllError},
     lexer::token::Token,
 };
 
@@ -18,25 +18,25 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(9, "Unexpected end of tokens".to_string()).into());
         };
 
         if !current_token.is_binary_operator() {
-            return Err(AllError::ParserError(format!(
-                "Expected binary operator, found {:?}",
-                current_token
-            )));
+            return Err(ParserError::new(
+                7,
+                format!("Expected binary operator, found {:?}", current_token),
+            )
+            .into());
         }
 
         let operator: BinaryOperator = if let Token::Operator(operator) = current_token {
             operator.into()
         } else {
-            return Err(AllError::ParserError(format!(
-                "Expected binary operator, found {:?}",
-                current_token
-            )));
+            return Err(ParserError::new(
+                8,
+                format!("Expected binary operator, found {:?}", current_token),
+            )
+            .into());
         };
 
         // 현재 연산자의 우선순위

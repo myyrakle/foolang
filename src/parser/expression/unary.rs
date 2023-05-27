@@ -3,7 +3,7 @@ use crate::{
         expression::{unary::UnaryExpression, Expression},
         operator::unary::UnaryOperator,
     },
-    error::all_error::AllError,
+    error::all_error::{parser_error::ParserError, AllError},
     lexer::token::Token,
 };
 
@@ -17,25 +17,25 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(300, "Unexpected end of tokens".to_string()).into());
         };
 
         if !current_token.is_unary_operator() {
-            return Err(AllError::ParserError(format!(
-                "Expected unary operator, found {:?}",
-                current_token
-            )));
+            return Err(ParserError::new(
+                301,
+                format!("Expected unary operator, found {:?}", current_token),
+            )
+            .into());
         }
 
         let operator: UnaryOperator = if let Token::Operator(operator) = current_token {
             operator.into()
         } else {
-            return Err(AllError::ParserError(format!(
-                "Expected unary operator, found {:?}",
-                current_token
-            )));
+            return Err(ParserError::new(
+                302,
+                format!("Expected unary operator, found {:?}", current_token),
+            )
+            .into());
         };
 
         // rhs에 괄호 연산자가 있는 경우

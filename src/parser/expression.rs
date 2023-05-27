@@ -6,7 +6,7 @@ pub(crate) mod variable;
 
 use crate::{
     ast::expression::Expression,
-    error::all_error::AllError,
+    error::all_error::{parser_error::ParserError, AllError},
     lexer::{general::GeneralToken, primary::PrimaryToken, token::Token},
 };
 
@@ -20,9 +20,7 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(0, "Unexpected end of tokens".to_string()).into());
         };
 
         match current_token {
@@ -67,10 +65,11 @@ impl Parser {
 
                     Ok(unary_expression)
                 } else {
-                    Err(AllError::ParserError(format!(
-                        "Expected unary operator, found {:?}",
-                        operator
-                    )))
+                    Err(ParserError::new(
+                        1,
+                        format!("Expected unary operator, found {:?}", operator),
+                    )
+                    .into())
                 }
             }
             Token::GeneralToken(GeneralToken::LeftParentheses) => {

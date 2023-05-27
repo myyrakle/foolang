@@ -1,6 +1,6 @@
 use crate::{
     ast::expression::{parentheses::ParenthesesExpression, Expression},
-    error::all_error::AllError,
+    error::all_error::{parser_error::ParserError, AllError},
     lexer::{general::GeneralToken, token::Token},
 };
 
@@ -14,17 +14,14 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(200, "Unexpected end of tokens".to_string()).into());
         };
 
         if let Token::GeneralToken(GeneralToken::LeftParentheses) = current_token {
         } else {
-            return Err(AllError::ParserError(format!(
-                "Expected '(', found {:?}",
-                current_token
-            )));
+            return Err(
+                ParserError::new(201, format!("Expected '(', found {:?}", current_token)).into(),
+            );
         }
 
         self.next();
@@ -33,9 +30,7 @@ impl Parser {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
-            return Err(AllError::ParserError(
-                "Unexpected end of tokens".to_string(),
-            ));
+            return Err(ParserError::new(202, "Unexpected end of tokens".to_string()).into());
         };
 
         if let Token::GeneralToken(GeneralToken::RightParentheses) = current_token {
@@ -47,10 +42,7 @@ impl Parser {
 
             Ok(parentheses_expression.into())
         } else {
-            Err(AllError::ParserError(format!(
-                "Expected ')', found {:?}",
-                current_token
-            )))
+            Err(ParserError::new(203, format!("Expected ')', found {:?}", current_token)).into())
         }
     }
 }
