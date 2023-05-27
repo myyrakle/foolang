@@ -33,7 +33,7 @@ impl Parser {
             operator.into()
         } else {
             return Err(AllError::ParserError(format!(
-                "Expected binary operator, found {:?}",
+                "Expected unary operator, found {:?}",
                 current_token
             )));
         };

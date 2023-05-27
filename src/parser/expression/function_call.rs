@@ -54,6 +54,7 @@ impl Parser {
                 // ) 만나면 종료
                 if let Token::GeneralToken(GeneralToken::RightParentheses) = next_token {
                     self.next();
+                    self.next();
                     break;
                 }
             } else {
@@ -97,14 +98,19 @@ impl Parser {
 
                 Ok(binary_expression)
             } else {
-                Err(AllError::ParserError(format!(
-                    "Expected binary operator, found {:?}",
-                    next_token
-                )))
+                println!("{:?}", next_token);
+                match next_token {
+                    Token::GeneralToken(GeneralToken::SemiColon) => {
+                        self.next();
+                        Ok(function_call_expression.into())
+                    }
+                    _ => Err(AllError::ParserError(format!(
+                        "Expected binary operator, found {:?}",
+                        next_token
+                    ))),
+                }
             }
         } else {
-            self.next();
-
             Ok(function_call_expression.into())
         }
     }
