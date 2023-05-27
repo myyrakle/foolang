@@ -63,13 +63,13 @@ impl Parser {
             let expression = self.parse_expression(context.clone())?;
             arguments.push(expression);
 
-            let next_token = self.get_next_token();
+            let current_token = self.get_current_token();
 
-            if let Some(next_token) = next_token {
-                if let Token::GeneralToken(GeneralToken::RightParentheses) = next_token {
+            if let Some(current_token) = current_token {
+                if let Token::GeneralToken(GeneralToken::RightParentheses) = current_token {
                     self.next();
                     break;
-                } else if let Token::GeneralToken(GeneralToken::Comma) = next_token {
+                } else if let Token::GeneralToken(GeneralToken::Comma) = current_token {
                     self.next();
                 }
             } else {
