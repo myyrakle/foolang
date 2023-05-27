@@ -142,9 +142,17 @@ impl Tokenizer {
             let mut identifier = vec![self.last_char.unwrap()];
 
             self.read_char();
-            while self.is_alphabet_or_number() || self.is_underscore() {
-                identifier.push(self.last_char.unwrap());
-                self.read_char();
+            loop {
+                if self.is_alphabet_or_number() || self.is_underscore() {
+                    identifier.push(self.last_char.unwrap());
+                    self.read_char();
+                } else {
+                    break;
+                }
+            }
+
+            if self.is_general_syntax_character() || self.is_operator_character() {
+                self.unread_char();
             }
 
             let identifier: String = identifier.into_iter().collect::<String>();

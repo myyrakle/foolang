@@ -50,6 +50,8 @@ impl Parser {
         loop {
             let next_token = self.get_next_token();
 
+            println!("!!! {:?}", next_token);
+
             if let Some(next_token) = next_token {
                 // ) 만나면 종료
                 if let Token::GeneralToken(GeneralToken::RightParentheses) = next_token {
@@ -84,11 +86,14 @@ impl Parser {
                 ));
             }
         }
+        println!("!!!?");
 
         let function_call_expression = CallExpression {
             function_name,
             arguments,
         };
+
+        println!("?????");
 
         if let Some(next_token) = self.get_next_token() {
             if next_token.is_binary_operator() {

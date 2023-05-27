@@ -11,6 +11,7 @@ pub fn function_call_no_arguments() {
     let text = r#"foo()"#.to_owned();
 
     let tokens = Tokenizer::string_to_tokens(text).unwrap();
+    println!("{:?}", tokens);
 
     let mut parser = Parser::new();
     parser.set_tokens(tokens);
