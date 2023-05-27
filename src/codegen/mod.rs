@@ -25,7 +25,11 @@ impl Default for CodeGenerator {
 
 impl CodeGenerator {
     pub fn generate(&mut self) -> Result<Vec<String>, AllError> {
-        let mut codes = vec![];
+        let mut codes = vec![
+            "declare i32 @printf(i8* nocapture, ...) nounwind".to_owned(),
+            "define i32 @main()".into(),
+            "{".into(),
+        ];
 
         for statement in self.statements.clone().into_iter() {
             match statement {
@@ -42,11 +46,11 @@ impl CodeGenerator {
                 Statement::Return(_return_statement) => {
                     unimplemented!();
                 }
-                _ => {
-                    unimplemented!();
-                }
             }
         }
+
+        codes.push("ret i32 0".into());
+        codes.push("}".into());
 
         Ok(codes)
     }

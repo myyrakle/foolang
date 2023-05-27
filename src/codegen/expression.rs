@@ -1,16 +1,13 @@
-use crate::{
-    ast::{expression::Expression, statement::Statement},
-    error::all_error::AllError,
-};
+use crate::{ast::expression::Expression, error::all_error::AllError};
 
 use super::CodeGenerator;
 
 impl CodeGenerator {
     pub fn generate_expression(&mut self, expression: Expression) -> Result<Vec<String>, AllError> {
-        let codes = vec![];
+        let _codes = vec![];
 
         match expression {
-            Expression::Call(call_expression) => {
+            Expression::Call(_call_expression) => {
                 unimplemented!();
             }
             Expression::Literal(_literal_expression) => {
@@ -30,6 +27,6 @@ impl CodeGenerator {
             }
         }
 
-        Ok(codes)
+        Ok(_codes)
     }
 }
