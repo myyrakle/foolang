@@ -48,8 +48,7 @@ impl Parser {
         // parsing arguments
         loop {
             let current_token = self.get_current_token();
-            println!("{:?}", current_token);
-
+         
             match current_token {
                 Some(Token::GeneralToken(GeneralToken::RightParentheses)) => {
                     self.next();
@@ -67,7 +66,6 @@ impl Parser {
 
             // 각 argument를 파싱
             let expression = self.parse_expression(context.clone())?;
-            println!("{:?}", expression);
             arguments.push(expression);
         }
 
