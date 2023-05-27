@@ -47,3 +47,27 @@ pub fn function_call_one_arguments() {
         .into()]
     );
 }
+
+#[test]
+pub fn function_call_two_arguments() {
+    let text = r#"foo(10, 20)"#.to_owned();
+
+    let tokens = Tokenizer::string_to_tokens(text).unwrap();
+
+    let mut parser = Parser::new();
+    parser.set_tokens(tokens);
+
+    let statements = parser.parse().unwrap();
+
+    assert_eq!(
+        statements,
+        vec![Expression::Call(CallExpression {
+            function_name: "foo".to_owned(),
+            arguments: vec![
+                LiteralExpression::Integer(10).into(),
+                LiteralExpression::Integer(20).into()
+            ],
+        })
+        .into()]
+    );
+}
