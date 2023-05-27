@@ -41,40 +41,34 @@ impl Parser {
             );
         }
 
+        self.next();
+
         let mut arguments = vec![];
 
+        // parsing arguments
         loop {
-            let next_token = self.get_next_token();
+            let current_token = self.get_current_token();
+            println!("{:?}", current_token);
 
-            if let Some(next_token) = next_token {
-                // ) 만나면 종료
-                if let Token::GeneralToken(GeneralToken::RightParentheses) = next_token {
-                    self.next();
+            match current_token {
+                Some(Token::GeneralToken(GeneralToken::RightParentheses)) => {
                     self.next();
                     break;
                 }
-            } else {
-                return Err(ParserError::new(104, "Unexpected end of tokens".to_string()).into());
+                Some(Token::GeneralToken(GeneralToken::Comma)) => {
+                    self.next();
+                    continue;
+                }
+                None => {
+                    break;
+                }
+                _ => {}
             }
-
-            self.next();
 
             // 각 argument를 파싱
             let expression = self.parse_expression(context.clone())?;
+            println!("{:?}", expression);
             arguments.push(expression);
-
-            let current_token = self.get_current_token();
-
-            if let Some(current_token) = current_token {
-                if let Token::GeneralToken(GeneralToken::RightParentheses) = current_token {
-                    self.next();
-                    break;
-                } else if let Token::GeneralToken(GeneralToken::Comma) = current_token {
-                    self.next();
-                }
-            } else {
-                return Err(ParserError::new(105, "Unexpected end of tokens".to_string()).into());
-            }
         }
 
         let function_call_expression = CallExpression {
