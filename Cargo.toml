@@ -13,6 +13,7 @@ atty = { version = "0.2.14", optional = true }
 structopt = { version = "0.3.18", optional = true }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1.21.0", features = ["full"] }
+libc = "0.2.158"
 
 [[bin]]
 name = "foo"
