@@ -17,16 +17,32 @@ mod utils;
 
 use clap::Parser;
 
+use libc::c_int;
+#[link(name="llvm", kind="static")]
+extern
+{
+    fn add(_: c_int, _: c_int)->c_int;
+}
+
+
+
 #[tokio::main]
 async fn main() -> Result<(), AllError> {
-    let command = Command::parse();
+    println!("Hello, world!");
 
-    match command.action {
-        SubCommand::Build(action) => {
-            let executable_filename = execute_build(action).await?;
-            println!("executable: {}", executable_filename);
-        }
-    }
+    let a = 1;
+    let b = 2;
+    let c = unsafe { add(a, b) };
+    println!("{} + {} = {}", a, b, c);
+
+    // let command = Command::parse();
+
+    // match command.action {
+    //     SubCommand::Build(action) => {
+    //         let executable_filename = execute_build(action).await?;
+    //         println!("executable: {}", executable_filename);
+    //     }
+    // }
 
     Ok(())
 }
