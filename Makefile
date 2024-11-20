@@ -1,8 +1,7 @@
 build-llvm:
-	@echo "Building LLVM"
-	mkdir -p build
-	mkdir -p target/debug/deps
-	mkdir -p target/release/deps
-	g++ -c ./src/llvm/wrapping.cpp -o build/wrapping.o
-	ar -rv target/debug/deps/libllvm.a build/wrapping.o
-	cp target/debug/deps/libllvm.a target/release/deps/libllvm.a
+	@cd llvm-project
+	@cmake -S llvm -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
+	@cd build
+	@ninja -j2
+
+
