@@ -21,13 +21,12 @@ fn exists_binding_file() -> bool {
 
 fn main() {
     // println!("cargo:rustc-link-search=native=/home/path/to/rust/proyect/folder/contain/file.a");
-    //println!("cargo:rustc-link-lib=static=test");
 
     // 라이브러리 경로 지정
     println!("cargo:rustc-link-search=/home/myyrakle/Codes/Rust/foolang/llvm-project/build/lib");
 
     // 라이브러리 링크
-    //println!("cargo:rustc-link-lib=foo");
+    println!("cargo:rustc-link-lib=LLVMCore");
 
     let current_dir = PathBuf::from(std::env::current_dir().unwrap());
 
