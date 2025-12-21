@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::ir::error::IRError;
+
 use self::parser_error::ParserError;
 
 pub mod parser_error;
@@ -16,10 +18,18 @@ pub enum AllError {
     IOError(String),
     #[error("FileNotFound error: {0}")]
     FileNotFound(String),
+    #[error("IR error: {0}")]
+    IRError(String),
 }
 
 impl From<ParserError> for AllError {
     fn from(error: ParserError) -> Self {
         Self::ParserError(error)
+    }
+}
+
+impl From<IRError> for AllError {
+    fn from(error: IRError) -> Self {
+        Self::IRError(error.message)
     }
 }

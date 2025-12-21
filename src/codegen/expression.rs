@@ -3,9 +3,8 @@ use crate::{ast::expression::Expression, error::all_error::AllError};
 use super::CodeGenerator;
 
 impl CodeGenerator {
+    #[allow(dead_code)]
     pub fn generate_expression(&mut self, expression: Expression) -> Result<Vec<String>, AllError> {
-        let _codes = vec![];
-
         match expression {
             Expression::Call(_call_expression) => {
                 unimplemented!();
@@ -26,7 +25,5 @@ impl CodeGenerator {
                 unimplemented!();
             }
         }
-
-        Ok(_codes)
     }
 }
