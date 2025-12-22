@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-#[derive(thiserror::Error, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 
 pub struct ParserError {
     pub message: String,

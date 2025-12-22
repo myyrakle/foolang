@@ -1,6 +1,6 @@
 pub(crate) mod expression;
 
-use crate::{ast::statement::Statement, error::all_error::AllError, ir::ast::CodeUnit};
+use crate::{ast::statement::Statement, error::Errors, ir::ast::CodeUnit};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodeGenerator {
@@ -24,7 +24,7 @@ impl Default for CodeGenerator {
 }
 
 impl CodeGenerator {
-    pub fn generate(&mut self) -> Result<Vec<CodeUnit>, AllError> {
+    pub fn generate(&mut self) -> Result<Vec<CodeUnit>, Errors> {
         unimplemented!("Code generation not yet implemented")
     }
 }

@@ -7,23 +7,6 @@ edition = "2021"
 
 [dependencies]
 colored = "2.0.0"
-thiserror = "1.0.40"
 clap = { version = "3.1.3", features = ["derive"] }
-atty = { version = "0.2.14", optional = true }
-structopt = { version = "0.3.18", optional = true }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1.21.0", features = ["full"] }
-libc = "0.2.158"
-
-[build-dependencies]
-bindgen = "0.65.1"
-
-[[bin]]
-name = "foo"
-path = "./src/main.rs"
-required-features = ["foo"]
-
-[features]
-default = ["foo"]
-foo = ["cli"]
-cli = ["atty", "structopt"]

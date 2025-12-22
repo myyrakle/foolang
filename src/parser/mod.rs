@@ -7,7 +7,7 @@ pub(crate) mod test;
 
 use crate::{
     ast::statement::Statement,
-    error::all_error::AllError,
+    error::Errors,
     lexer::{general::GeneralToken, keyword::Keyword, token::Token},
 };
 
@@ -56,7 +56,7 @@ impl Default for Parser {
 }
 
 impl Parser {
-    pub(crate) fn parse(&mut self) -> Result<Vec<Statement>, AllError> {
+    pub(crate) fn parse(&mut self) -> Result<Vec<Statement>, Errors> {
         let mut statements = vec![];
 
         // top-level parser loop

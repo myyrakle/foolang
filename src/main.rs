@@ -2,7 +2,6 @@
 
 use action::build::execute_build;
 use command::{Command, SubCommand};
-use error::all_error::AllError;
 
 mod action;
 mod ast;
@@ -17,8 +16,10 @@ mod utils;
 
 use clap::Parser;
 
+use crate::error::Errors;
+
 #[tokio::main]
-async fn main() -> Result<(), AllError> {
+async fn main() -> Result<(), Errors> {
     let command = Command::parse();
 
     match command.action {
