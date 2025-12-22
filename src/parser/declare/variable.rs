@@ -1,6 +1,6 @@
 use crate::{
     ast::statement::{define_variable::VariableDefinitionStatement, Statement},
-    error::all_error::{parser_error::ParserError, AllError},
+    error::{parser_error::ParserError, Errors},
     lexer::{keyword::Keyword, operator::OperatorToken, primary::PrimaryToken, token::Token},
     parser::{Parser, ParserContext},
 };
@@ -9,7 +9,7 @@ impl Parser {
     pub(crate) fn parse_declare_variable(
         &mut self,
         _context: ParserContext,
-    ) -> Result<Statement, AllError> {
+    ) -> Result<Statement, Errors> {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
@@ -34,7 +34,7 @@ impl Parser {
     pub(crate) fn parse_let_variable(
         &mut self,
         _context: ParserContext,
-    ) -> Result<Statement, AllError> {
+    ) -> Result<Statement, Errors> {
         // eat let
         self.next();
 
@@ -95,7 +95,7 @@ impl Parser {
     pub(crate) fn parse_mut_variable(
         &mut self,
         _context: ParserContext,
-    ) -> Result<Statement, AllError> {
+    ) -> Result<Statement, Errors> {
         // eat mut
         self.next();
 

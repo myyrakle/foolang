@@ -1,6 +1,6 @@
 use crate::{
     ast::expression::{call::CallExpression, Expression},
-    error::all_error::{parser_error::ParserError, AllError},
+    error::{parser_error::ParserError, Errors},
     lexer::{general::GeneralToken, primary::PrimaryToken, token::Token},
 };
 
@@ -10,7 +10,7 @@ impl Parser {
     pub(super) fn parse_function_call_expression(
         &mut self,
         context: ParserContext,
-    ) -> Result<Expression, AllError> {
+    ) -> Result<Expression, Errors> {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {
@@ -48,7 +48,7 @@ impl Parser {
         // parsing arguments
         loop {
             let current_token = self.get_current_token();
-         
+
             match current_token {
                 Some(Token::GeneralToken(GeneralToken::RightParentheses)) => {
                     self.next();

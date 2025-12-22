@@ -3,7 +3,7 @@ use crate::{
         expression::{binary::BinaryExpression, Expression},
         operator::binary::BinaryOperator,
     },
-    error::all_error::{parser_error::ParserError, AllError},
+    error::{parser_error::ParserError, Errors},
     lexer::token::Token,
 };
 
@@ -14,7 +14,7 @@ impl Parser {
         &mut self,
         lhs: Expression,
         _context: ParserContext,
-    ) -> Result<Expression, AllError> {
+    ) -> Result<Expression, Errors> {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {

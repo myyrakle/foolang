@@ -1,6 +1,6 @@
 use crate::{
     ast::expression::{parentheses::ParenthesesExpression, Expression},
-    error::all_error::{parser_error::ParserError, AllError},
+    error::{parser_error::ParserError, Errors},
     lexer::{general::GeneralToken, token::Token},
 };
 
@@ -10,7 +10,7 @@ impl Parser {
     pub(super) fn parse_parentheses_expression(
         &mut self,
         _context: ParserContext,
-    ) -> Result<Expression, AllError> {
+    ) -> Result<Expression, Errors> {
         let current_token = if let Some(token) = self.get_current_token() {
             token
         } else {

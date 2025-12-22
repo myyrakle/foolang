@@ -1,5 +1,5 @@
 use crate::{
-    codegen::CodeGenerator, command::action::build, error::all_error::AllError, ir::IRCompiler,
+    codegen::CodeGenerator, command::action::build, error::Errors, ir::IRCompiler,
     lexer::tokenizer::Tokenizer, parser::Parser,
 };
 
@@ -8,11 +8,11 @@ pub struct ExecuteBuildResult {
     pub executable_filename: String,
 }
 
-pub(crate) async fn execute_build(action: build::Action) -> Result<ExecuteBuildResult, AllError> {
+pub(crate) async fn execute_build(action: build::Action) -> Result<ExecuteBuildResult, Errors> {
     let text = if let Ok(text) = tokio::fs::read_to_string(&action.value.filename).await {
         text
     } else {
-        return Err(AllError::FileNotFound(action.value.filename));
+        return Err(Errors::FileNotFound(action.value.filename));
     };
 
     // Lexing
@@ -43,7 +43,7 @@ pub(crate) async fn execute_build(action: build::Action) -> Result<ExecuteBuildR
     // TODO: abstract filesystem operations
     tokio::fs::write(&action.value.filename, format!("{:?}", linked_object))
         .await
-        .map_err(|e| AllError::IOError(e.to_string()))?;
+        .map_err(|e| Errors::IOError(e.to_string()))?;
 
     let result = ExecuteBuildResult {
         executable_filename: action.value.filename,
