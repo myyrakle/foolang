@@ -1,6 +1,6 @@
 pub(crate) mod expression;
 
-use crate::{ast::statement::Statement, error::all_error::AllError};
+use crate::{ast::statement::Statement, error::all_error::AllError, ir::ast::CodeUnit};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodeGenerator {
@@ -24,34 +24,7 @@ impl Default for CodeGenerator {
 }
 
 impl CodeGenerator {
-    pub fn generate(&mut self) -> Result<Vec<String>, AllError> {
-        let mut codes = vec![
-            "declare i32 @printf(i8* nocapture, ...) nounwind".to_owned(),
-            "define i32 @main()".into(),
-            "{".into(),
-        ];
-
-        for statement in self.statements.clone().into_iter() {
-            match statement {
-                Statement::Expression(expression) => {
-                    let mut result = self.generate_expression(expression.to_owned())?;
-                    codes.append(&mut result);
-                }
-                Statement::DefineVariable(_variable_declaration) => {
-                    unimplemented!();
-                }
-                Statement::DefineFunction(_function_declaration) => {
-                    unimplemented!();
-                }
-                Statement::Return(_return_statement) => {
-                    unimplemented!();
-                }
-            }
-        }
-
-        codes.push("ret i32 0".into());
-        codes.push("}".into());
-
-        Ok(codes)
+    pub fn generate(&mut self) -> Result<Vec<CodeUnit>, AllError> {
+        unimplemented!("Code generation not yet implemented")
     }
 }
