@@ -10,6 +10,6 @@ pub struct GlobalStatements {
 
 #[derive(Debug)]
 pub enum GlobalStatement {
-    Function(FunctionDefinition),
+    DefineFunction(FunctionDefinition),
     Constant(ConstantDefinition),
 }
