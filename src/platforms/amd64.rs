@@ -89,11 +89,29 @@ impl Register {
     }
     
     /// Returns the register encoding as i32
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use foolang::platforms::amd64::Register;
+    /// 
+    /// assert_eq!(Register::RAX.as_i32(), 0x0);
+    /// assert_eq!(Register::R15.as_i32(), 0xF);
+    /// ```
     pub fn as_i32(self) -> i32 {
         self as i32
     }
     
     /// Returns the register name as a string
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use foolang::platforms::amd64::Register;
+    /// 
+    /// assert_eq!(Register::RAX.name(), "RAX");
+    /// assert_eq!(Register::R8.name(), "R8");
+    /// ```
     pub fn name(self) -> &'static str {
         match self {
             Register::RAX => "RAX",
@@ -116,6 +134,15 @@ impl Register {
     }
     
     /// Returns true if the register requires REX prefix (R8-R15)
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use foolang::platforms::amd64::Register;
+    /// 
+    /// assert_eq!(Register::RAX.requires_rex(), false);
+    /// assert_eq!(Register::R8.requires_rex(), true);
+    /// ```
     pub fn requires_rex(self) -> bool {
         (self as u8) >= 0x8
     }
