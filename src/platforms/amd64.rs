@@ -1,3 +1,126 @@
+/// AMD64 register enumeration with binary encoding codes
+/// 
+/// This enum represents the general-purpose registers in AMD64 architecture
+/// and their corresponding binary encoding values used in instruction encoding.
+/// The encoding values correspond to the register field in ModR/M byte.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum Register {
+    // 64-bit General Purpose Registers (RAX through RDI)
+    /// RAX - Accumulator register
+    /// Encoding: 0x0
+    RAX = 0x0,
+    
+    /// RCX - Counter register
+    /// Encoding: 0x1
+    RCX = 0x1,
+    
+    /// RDX - Data register
+    /// Encoding: 0x2
+    RDX = 0x2,
+    
+    /// RBX - Base register
+    /// Encoding: 0x3
+    RBX = 0x3,
+    
+    /// RSP - Stack pointer register
+    /// Encoding: 0x4
+    RSP = 0x4,
+    
+    /// RBP - Base pointer register
+    /// Encoding: 0x5
+    RBP = 0x5,
+    
+    /// RSI - Source index register
+    /// Encoding: 0x6
+    RSI = 0x6,
+    
+    /// RDI - Destination index register
+    /// Encoding: 0x7
+    RDI = 0x7,
+    
+    // Extended 64-bit Registers (R8 through R15)
+    /// R8 - Extended register 8
+    /// Encoding: 0x8 (requires REX prefix)
+    R8 = 0x8,
+    
+    /// R9 - Extended register 9
+    /// Encoding: 0x9 (requires REX prefix)
+    R9 = 0x9,
+    
+    /// R10 - Extended register 10
+    /// Encoding: 0xA (requires REX prefix)
+    R10 = 0xA,
+    
+    /// R11 - Extended register 11
+    /// Encoding: 0xB (requires REX prefix)
+    R11 = 0xB,
+    
+    /// R12 - Extended register 12
+    /// Encoding: 0xC (requires REX prefix)
+    R12 = 0xC,
+    
+    /// R13 - Extended register 13
+    /// Encoding: 0xD (requires REX prefix)
+    R13 = 0xD,
+    
+    /// R14 - Extended register 14
+    /// Encoding: 0xE (requires REX prefix)
+    R14 = 0xE,
+    
+    /// R15 - Extended register 15
+    /// Encoding: 0xF (requires REX prefix)
+    R15 = 0xF,
+}
+
+impl Register {
+    /// Returns the register encoding as u8
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use foolang::platforms::amd64::Register;
+    /// 
+    /// assert_eq!(Register::RAX.as_u8(), 0x0);
+    /// assert_eq!(Register::RBX.as_u8(), 0x3);
+    /// ```
+    pub fn as_u8(self) -> u8 {
+        self as u8
+    }
+    
+    /// Returns the register encoding as i32
+    pub fn as_i32(self) -> i32 {
+        self as i32
+    }
+    
+    /// Returns the register name as a string
+    pub fn name(self) -> &'static str {
+        match self {
+            Register::RAX => "RAX",
+            Register::RCX => "RCX",
+            Register::RDX => "RDX",
+            Register::RBX => "RBX",
+            Register::RSP => "RSP",
+            Register::RBP => "RBP",
+            Register::RSI => "RSI",
+            Register::RDI => "RDI",
+            Register::R8 => "R8",
+            Register::R9 => "R9",
+            Register::R10 => "R10",
+            Register::R11 => "R11",
+            Register::R12 => "R12",
+            Register::R13 => "R13",
+            Register::R14 => "R14",
+            Register::R15 => "R15",
+        }
+    }
+    
+    /// Returns true if the register requires REX prefix (R8-R15)
+    pub fn requires_rex(self) -> bool {
+        (self as u8) >= 0x8
+    }
+}
+
 /// AMD64 instruction set enumeration with binary hex codes
 /// 
 /// This enum represents various AMD64 (x86-64) instructions and their corresponding
@@ -248,6 +371,87 @@ impl Instruction {
 mod tests {
     use super::*;
 
+    // Register tests
+    #[test]
+    fn test_register_as_u8() {
+        assert_eq!(Register::RAX.as_u8(), 0x0);
+        assert_eq!(Register::RCX.as_u8(), 0x1);
+        assert_eq!(Register::RDX.as_u8(), 0x2);
+        assert_eq!(Register::RBX.as_u8(), 0x3);
+        assert_eq!(Register::RSP.as_u8(), 0x4);
+        assert_eq!(Register::RBP.as_u8(), 0x5);
+        assert_eq!(Register::RSI.as_u8(), 0x6);
+        assert_eq!(Register::RDI.as_u8(), 0x7);
+        assert_eq!(Register::R8.as_u8(), 0x8);
+        assert_eq!(Register::R9.as_u8(), 0x9);
+        assert_eq!(Register::R10.as_u8(), 0xA);
+        assert_eq!(Register::R11.as_u8(), 0xB);
+        assert_eq!(Register::R12.as_u8(), 0xC);
+        assert_eq!(Register::R13.as_u8(), 0xD);
+        assert_eq!(Register::R14.as_u8(), 0xE);
+        assert_eq!(Register::R15.as_u8(), 0xF);
+    }
+
+    #[test]
+    fn test_register_as_i32() {
+        assert_eq!(Register::RAX.as_i32(), 0x0);
+        assert_eq!(Register::RBX.as_i32(), 0x3);
+        assert_eq!(Register::R8.as_i32(), 0x8);
+        assert_eq!(Register::R15.as_i32(), 0xF);
+    }
+
+    #[test]
+    fn test_register_name() {
+        assert_eq!(Register::RAX.name(), "RAX");
+        assert_eq!(Register::RCX.name(), "RCX");
+        assert_eq!(Register::RDX.name(), "RDX");
+        assert_eq!(Register::RBX.name(), "RBX");
+        assert_eq!(Register::RSP.name(), "RSP");
+        assert_eq!(Register::RBP.name(), "RBP");
+        assert_eq!(Register::RSI.name(), "RSI");
+        assert_eq!(Register::RDI.name(), "RDI");
+        assert_eq!(Register::R8.name(), "R8");
+        assert_eq!(Register::R9.name(), "R9");
+        assert_eq!(Register::R10.name(), "R10");
+        assert_eq!(Register::R11.name(), "R11");
+        assert_eq!(Register::R12.name(), "R12");
+        assert_eq!(Register::R13.name(), "R13");
+        assert_eq!(Register::R14.name(), "R14");
+        assert_eq!(Register::R15.name(), "R15");
+    }
+
+    #[test]
+    fn test_register_requires_rex() {
+        // Registers RAX-RDI don't require REX for basic access
+        assert_eq!(Register::RAX.requires_rex(), false);
+        assert_eq!(Register::RCX.requires_rex(), false);
+        assert_eq!(Register::RDX.requires_rex(), false);
+        assert_eq!(Register::RBX.requires_rex(), false);
+        assert_eq!(Register::RSP.requires_rex(), false);
+        assert_eq!(Register::RBP.requires_rex(), false);
+        assert_eq!(Register::RSI.requires_rex(), false);
+        assert_eq!(Register::RDI.requires_rex(), false);
+        
+        // Extended registers R8-R15 require REX prefix
+        assert_eq!(Register::R8.requires_rex(), true);
+        assert_eq!(Register::R9.requires_rex(), true);
+        assert_eq!(Register::R10.requires_rex(), true);
+        assert_eq!(Register::R11.requires_rex(), true);
+        assert_eq!(Register::R12.requires_rex(), true);
+        assert_eq!(Register::R13.requires_rex(), true);
+        assert_eq!(Register::R14.requires_rex(), true);
+        assert_eq!(Register::R15.requires_rex(), true);
+    }
+
+    #[test]
+    fn test_register_equality() {
+        assert_eq!(Register::RAX, Register::RAX);
+        assert_ne!(Register::RAX, Register::RBX);
+        assert_eq!(Register::R15, Register::R15);
+        assert_ne!(Register::R8, Register::R9);
+    }
+
+    // Instruction tests
     #[test]
     fn test_instruction_as_i32() {
         assert_eq!(Instruction::Add.as_i32(), 0x01);
