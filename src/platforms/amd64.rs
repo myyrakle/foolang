@@ -1,76 +1,76 @@
-/// AMD64 register enumeration with binary encoding codes
+/// AMD64 register enumeration with ModR/M byte encoding
 /// 
 /// This enum represents the general-purpose registers in AMD64 architecture
-/// and their corresponding binary encoding values used in instruction encoding.
-/// The encoding values correspond to the register field in ModR/M byte.
+/// and their corresponding ModR/M byte values for register-to-register operations.
+/// The encoding uses Mod=11 (register-direct mode) with the register in the R/M field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Register {
     // 64-bit General Purpose Registers (RAX through RDI)
     /// RAX - Accumulator register
-    /// Encoding: 0x0
-    RAX = 0x0,
+    /// ModR/M byte: 0xC0 (11 000 000)
+    RAX = 0xC0,
     
     /// RCX - Counter register
-    /// Encoding: 0x1
-    RCX = 0x1,
+    /// ModR/M byte: 0xC1 (11 000 001)
+    RCX = 0xC1,
     
     /// RDX - Data register
-    /// Encoding: 0x2
-    RDX = 0x2,
+    /// ModR/M byte: 0xC2 (11 000 010)
+    RDX = 0xC2,
     
     /// RBX - Base register
-    /// Encoding: 0x3
-    RBX = 0x3,
+    /// ModR/M byte: 0xC3 (11 000 011)
+    RBX = 0xC3,
     
     /// RSP - Stack pointer register
-    /// Encoding: 0x4
-    RSP = 0x4,
+    /// ModR/M byte: 0xC4 (11 000 100)
+    RSP = 0xC4,
     
     /// RBP - Base pointer register
-    /// Encoding: 0x5
-    RBP = 0x5,
+    /// ModR/M byte: 0xC5 (11 000 101)
+    RBP = 0xC5,
     
     /// RSI - Source index register
-    /// Encoding: 0x6
-    RSI = 0x6,
+    /// ModR/M byte: 0xC6 (11 000 110)
+    RSI = 0xC6,
     
     /// RDI - Destination index register
-    /// Encoding: 0x7
-    RDI = 0x7,
+    /// ModR/M byte: 0xC7 (11 000 111)
+    RDI = 0xC7,
     
     // Extended 64-bit Registers (R8 through R15)
     /// R8 - Extended register 8
-    /// Encoding: 0x8 (requires REX prefix)
-    R8 = 0x8,
+    /// ModR/M byte: 0xC8 (11 001 000) - requires REX prefix
+    R8 = 0xC8,
     
     /// R9 - Extended register 9
-    /// Encoding: 0x9 (requires REX prefix)
-    R9 = 0x9,
+    /// ModR/M byte: 0xC9 (11 001 001) - requires REX prefix
+    R9 = 0xC9,
     
     /// R10 - Extended register 10
-    /// Encoding: 0xA (requires REX prefix)
-    R10 = 0xA,
+    /// ModR/M byte: 0xCA (11 001 010) - requires REX prefix
+    R10 = 0xCA,
     
     /// R11 - Extended register 11
-    /// Encoding: 0xB (requires REX prefix)
-    R11 = 0xB,
+    /// ModR/M byte: 0xCB (11 001 011) - requires REX prefix
+    R11 = 0xCB,
     
     /// R12 - Extended register 12
-    /// Encoding: 0xC (requires REX prefix)
-    R12 = 0xC,
+    /// ModR/M byte: 0xCC (11 001 100) - requires REX prefix
+    R12 = 0xCC,
     
     /// R13 - Extended register 13
-    /// Encoding: 0xD (requires REX prefix)
-    R13 = 0xD,
+    /// ModR/M byte: 0xCD (11 001 101) - requires REX prefix
+    R13 = 0xCD,
     
     /// R14 - Extended register 14
-    /// Encoding: 0xE (requires REX prefix)
-    R14 = 0xE,
+    /// ModR/M byte: 0xCE (11 001 110) - requires REX prefix
+    R14 = 0xCE,
     
     /// R15 - Extended register 15
-    /// Encoding: 0xF (requires REX prefix)
-    R15 = 0xF,
+    /// ModR/M byte: 0xCF (11 001 111) - requires REX prefix
+    R15 = 0xCF,
 }
 
 impl Register {
@@ -81,8 +81,8 @@ impl Register {
     /// ```
     /// use foolang::platforms::amd64::Register;
     /// 
-    /// assert_eq!(Register::RAX.as_u8(), 0x0);
-    /// assert_eq!(Register::RBX.as_u8(), 0x3);
+    /// assert_eq!(Register::RAX.as_u8(), 0xC0);
+    /// assert_eq!(Register::RBX.as_u8(), 0xC3);
     /// ```
     pub fn as_u8(self) -> u8 {
         self as u8
@@ -95,8 +95,8 @@ impl Register {
     /// ```
     /// use foolang::platforms::amd64::Register;
     /// 
-    /// assert_eq!(Register::RAX.as_i32(), 0x0);
-    /// assert_eq!(Register::R15.as_i32(), 0xF);
+    /// assert_eq!(Register::RAX.as_i32(), 0xC0);
+    /// assert_eq!(Register::R15.as_i32(), 0xCF);
     /// ```
     pub fn as_i32(self) -> i32 {
         self as i32
@@ -144,7 +144,7 @@ impl Register {
     /// assert_eq!(Register::R8.requires_rex(), true);
     /// ```
     pub fn requires_rex(self) -> bool {
-        (self as u8) >= 0x8
+        (self as u8) >= 0xC8
     }
 }
 
@@ -401,30 +401,30 @@ mod tests {
     // Register tests
     #[test]
     fn test_register_as_u8() {
-        assert_eq!(Register::RAX.as_u8(), 0x0);
-        assert_eq!(Register::RCX.as_u8(), 0x1);
-        assert_eq!(Register::RDX.as_u8(), 0x2);
-        assert_eq!(Register::RBX.as_u8(), 0x3);
-        assert_eq!(Register::RSP.as_u8(), 0x4);
-        assert_eq!(Register::RBP.as_u8(), 0x5);
-        assert_eq!(Register::RSI.as_u8(), 0x6);
-        assert_eq!(Register::RDI.as_u8(), 0x7);
-        assert_eq!(Register::R8.as_u8(), 0x8);
-        assert_eq!(Register::R9.as_u8(), 0x9);
-        assert_eq!(Register::R10.as_u8(), 0xA);
-        assert_eq!(Register::R11.as_u8(), 0xB);
-        assert_eq!(Register::R12.as_u8(), 0xC);
-        assert_eq!(Register::R13.as_u8(), 0xD);
-        assert_eq!(Register::R14.as_u8(), 0xE);
-        assert_eq!(Register::R15.as_u8(), 0xF);
+        assert_eq!(Register::RAX.as_u8(), 0xC0);
+        assert_eq!(Register::RCX.as_u8(), 0xC1);
+        assert_eq!(Register::RDX.as_u8(), 0xC2);
+        assert_eq!(Register::RBX.as_u8(), 0xC3);
+        assert_eq!(Register::RSP.as_u8(), 0xC4);
+        assert_eq!(Register::RBP.as_u8(), 0xC5);
+        assert_eq!(Register::RSI.as_u8(), 0xC6);
+        assert_eq!(Register::RDI.as_u8(), 0xC7);
+        assert_eq!(Register::R8.as_u8(), 0xC8);
+        assert_eq!(Register::R9.as_u8(), 0xC9);
+        assert_eq!(Register::R10.as_u8(), 0xCA);
+        assert_eq!(Register::R11.as_u8(), 0xCB);
+        assert_eq!(Register::R12.as_u8(), 0xCC);
+        assert_eq!(Register::R13.as_u8(), 0xCD);
+        assert_eq!(Register::R14.as_u8(), 0xCE);
+        assert_eq!(Register::R15.as_u8(), 0xCF);
     }
 
     #[test]
     fn test_register_as_i32() {
-        assert_eq!(Register::RAX.as_i32(), 0x0);
-        assert_eq!(Register::RBX.as_i32(), 0x3);
-        assert_eq!(Register::R8.as_i32(), 0x8);
-        assert_eq!(Register::R15.as_i32(), 0xF);
+        assert_eq!(Register::RAX.as_i32(), 0xC0);
+        assert_eq!(Register::RBX.as_i32(), 0xC3);
+        assert_eq!(Register::R8.as_i32(), 0xC8);
+        assert_eq!(Register::R15.as_i32(), 0xCF);
     }
 
     #[test]
