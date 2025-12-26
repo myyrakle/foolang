@@ -419,6 +419,37 @@ impl Instruction {
     }
 }
 
+impl Instruction {
+    /// Returns SYSCALL instruction bytes as a const array
+    pub const SYSCALL_BYTES: [u8; 2] = [0x0F, 0x05];
+}
+
+/// ModR/M byte constants for common register operations
+pub mod modrm {
+    /// LEA RSI, [RIP+disp32] - RIP-relative addressing mode
+    /// Binary: 00 110 101 (Mod=00, Reg=110(RSI), R/M=101(RIP-relative))
+    pub const LEA_RSI_RIP_REL: u8 = 0x35;
+
+    /// XOR RDI, RDI - Register-direct mode
+    /// Binary: 11 111 111 (Mod=11, Reg=111(RDI), R/M=111(RDI))
+    pub const XOR_RDI_RDI: u8 = 0xFF;
+}
+
+/// Linux system call numbers for x86-64
+pub mod syscall {
+    /// sys_write - Write to file descriptor
+    pub const SYS_WRITE: u8 = 1;
+
+    /// sys_exit - Terminate process
+    pub const SYS_EXIT: u8 = 60;
+}
+
+/// Standard file descriptors
+pub mod fd {
+    /// Standard output
+    pub const STDOUT: u8 = 1;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

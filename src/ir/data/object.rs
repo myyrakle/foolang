@@ -643,20 +643,20 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             Register::RAX as u8,
-            0x01,
+            crate::platforms::amd64::syscall::SYS_WRITE,
             0x00,
             0x00,
-            0x00, // mov rax, 1
+            0x00, // mov rax, 1 (sys_write)
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             Register::RDI as u8,
-            0x01,
+            crate::platforms::amd64::fd::STDOUT,
             0x00,
             0x00,
-            0x00, // mov rdi, 1
+            0x00, // mov rdi, 1 (stdout)
             RexPrefix::RexW as u8,
             Instruction::Lea as u8,
-            0x35,
+            crate::platforms::amd64::modrm::LEA_RSI_RIP_REL,
             0x00,
             0x00,
             0x00,
@@ -664,24 +664,24 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             Register::RDX as u8,
-            0x0e,
+            0x0e, // 14 (Hello World 문자열 길이)
             0x00,
             0x00,
             0x00, // mov rdx, 14
-            0x0f,
-            0x05, // syscall
+            Instruction::SYSCALL_BYTES[0],
+            Instruction::SYSCALL_BYTES[1], // syscall
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             Register::RAX as u8,
-            0x3c,
+            crate::platforms::amd64::syscall::SYS_EXIT,
             0x00,
             0x00,
-            0x00, // mov rax, 60
+            0x00, // mov rax, 60 (sys_exit)
             RexPrefix::RexW as u8,
             Instruction::Xor as u8,
-            0xff, // xor rdi, rdi
-            0x0f,
-            0x05, // syscall
+            crate::platforms::amd64::modrm::XOR_RDI_RDI, // xor rdi, rdi
+            Instruction::SYSCALL_BYTES[0],
+            Instruction::SYSCALL_BYTES[1], // syscall
         ];
 
         object.text_section.data = machine_code;
@@ -746,20 +746,20 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             Register::RAX as u8,
-            0x01,
+            crate::platforms::amd64::syscall::SYS_WRITE,
             0x00,
             0x00,
-            0x00, // mov rax, 1
+            0x00, // mov rax, 1 (sys_write)
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             Register::RDI as u8,
-            0x01,
+            crate::platforms::amd64::fd::STDOUT,
             0x00,
             0x00,
-            0x00, // mov rdi, 1
+            0x00, // mov rdi, 1 (stdout)
             RexPrefix::RexW as u8,
             Instruction::Lea as u8,
-            0x35,
+            crate::platforms::amd64::modrm::LEA_RSI_RIP_REL,
             0x00,
             0x00,
             0x00,
@@ -767,24 +767,24 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             Register::RDX as u8,
-            0x0e,
+            0x0e, // 14 (Hello World 문자열 길이)
             0x00,
             0x00,
             0x00, // mov rdx, 14
-            0x0f,
-            0x05, // syscall
+            Instruction::SYSCALL_BYTES[0],
+            Instruction::SYSCALL_BYTES[1], // syscall
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             Register::RAX as u8,
-            0x3c,
+            crate::platforms::amd64::syscall::SYS_EXIT,
             0x00,
             0x00,
-            0x00, // mov rax, 60
+            0x00, // mov rax, 60 (sys_exit)
             RexPrefix::RexW as u8,
             Instruction::Xor as u8,
-            0xff, // xor rdi, rdi
-            0x0f,
-            0x05, // syscall
+            crate::platforms::amd64::modrm::XOR_RDI_RDI, // xor rdi, rdi
+            Instruction::SYSCALL_BYTES[0],
+            Instruction::SYSCALL_BYTES[1], // syscall
         ];
 
         object.text_section.data = machine_code;
@@ -817,15 +817,15 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata("hello")
+            let mut perms = fs::metadata("hello.exe")
                 .expect("Failed to get file metadata")
                 .permissions();
             perms.set_mode(0o755);
-            fs::set_permissions("hello", perms).expect("Failed to set permissions");
+            fs::set_permissions("hello.exe", perms).expect("Failed to set permissions");
         }
 
-        println!("ELF executable file created: hello");
-        println!("To run: ./hello");
+        println!("ELF executable file created: hello.exe");
+        println!("To run: ./hello.exe");
     }
 }
 
