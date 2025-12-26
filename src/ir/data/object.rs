@@ -170,6 +170,188 @@ impl IRCompileObject {
         binary
     }
 
+    /// ELF 실행 파일 생성 (ET_EXEC)
+    pub fn to_executable_elf_binary(&self) -> Vec<u8> {
+        let mut binary = Vec::new();
+
+        // 메모리 주소 설정
+        const BASE_ADDR: u64 = 0x400000;
+        const TEXT_ADDR: u64 = BASE_ADDR + 0x1000; // .text at 0x401000
+        const RODATA_ADDR: u64 = BASE_ADDR + 0x2000; // .rodata at 0x402000
+
+        // ELF Header (64-bit executable)
+        self.write_executable_elf_header(&mut binary, TEXT_ADDR);
+
+        // Program Headers는 ELF 헤더 직후 (오프셋 64)
+        let phdr_offset = 64;
+
+        // Program Headers (LOAD 세그먼트)
+        // PT_LOAD for .text (executable)
+        let text_file_offset = 0x1000; // 파일 오프셋
+        let text_size = self.text_section.data.len();
+        self.write_program_header(
+            &mut binary,
+            1, // PT_LOAD
+            5, // PF_R | PF_X (읽기+실행)
+            text_file_offset,
+            TEXT_ADDR,
+            TEXT_ADDR,
+            text_size as u64,
+            text_size as u64,
+            0x1000, // 페이지 정렬
+        );
+
+        // PT_LOAD for .rodata (read-only)
+        let rodata_file_offset = 0x2000;
+        let rodata_size = self.rodata_section.data.len();
+        self.write_program_header(
+            &mut binary,
+            1, // PT_LOAD
+            4, // PF_R (읽기 전용)
+            rodata_file_offset,
+            RODATA_ADDR,
+            RODATA_ADDR,
+            rodata_size as u64,
+            rodata_size as u64,
+            0x1000,
+        );
+
+        // 패딩으로 파일 오프셋 0x1000까지 채우기
+        while binary.len() < text_file_offset {
+            binary.push(0);
+        }
+
+        // .text 섹션 데이터 (재배치 적용)
+        let mut text_data = self.text_section.data.clone();
+
+        // 재배치 처리: PC-relative 주소 계산
+        for reloc in &self.relocations {
+            if reloc.section == section::SectionType::Text {
+                if let relocation::RelocationType::PcRel32 = reloc.reloc_type {
+                    // PC-relative 계산: target_addr - (current_addr + 4)
+                    let current_addr = TEXT_ADDR + reloc.offset as u64 + 4;
+                    let target_addr = RODATA_ADDR; // hello_msg가 .rodata의 시작
+                    let offset = (target_addr as i64 - current_addr as i64 + reloc.addend) as i32;
+
+                    // 오프셋 패치
+                    let offset_bytes = offset.to_le_bytes();
+                    text_data[reloc.offset..reloc.offset + 4].copy_from_slice(&offset_bytes);
+                }
+            }
+        }
+
+        binary.extend_from_slice(&text_data);
+
+        // 패딩으로 파일 오프셋 0x2000까지 채우기
+        while binary.len() < rodata_file_offset {
+            binary.push(0);
+        }
+
+        // .rodata 섹션 데이터
+        binary.extend_from_slice(&self.rodata_section.data);
+
+        binary
+    }
+
+    fn write_executable_elf_header(&self, buffer: &mut Vec<u8>, entry_point: u64) {
+        // ELF Magic
+        buffer.extend_from_slice(&[0x7f, b'E', b'L', b'F']);
+
+        // Class (64-bit)
+        buffer.push(2);
+
+        // Data (little endian)
+        buffer.push(1);
+
+        // Version
+        buffer.push(1);
+
+        // OS/ABI (System V)
+        buffer.push(0);
+
+        // ABI Version
+        buffer.push(0);
+
+        // Padding (7 bytes)
+        buffer.extend_from_slice(&[0u8; 7]);
+
+        // Type (ET_EXEC = 2)
+        buffer.extend_from_slice(&2u16.to_le_bytes());
+
+        // Machine (x86-64 = 0x3E)
+        buffer.extend_from_slice(&0x3Eu16.to_le_bytes());
+
+        // Version
+        buffer.extend_from_slice(&1u32.to_le_bytes());
+
+        // Entry point (e_entry)
+        buffer.extend_from_slice(&entry_point.to_le_bytes());
+
+        // Program header offset (64 = ELF 헤더 직후)
+        buffer.extend_from_slice(&64u64.to_le_bytes());
+
+        // Section header offset (0 = 없음, 실행파일에는 optional)
+        buffer.extend_from_slice(&0u64.to_le_bytes());
+
+        // Flags
+        buffer.extend_from_slice(&0u32.to_le_bytes());
+
+        // ELF header size
+        buffer.extend_from_slice(&64u16.to_le_bytes());
+
+        // Program header entry size (56 bytes for 64-bit)
+        buffer.extend_from_slice(&56u16.to_le_bytes());
+
+        // Program header count (2 = .text + .rodata)
+        buffer.extend_from_slice(&2u16.to_le_bytes());
+
+        // Section header entry size (0)
+        buffer.extend_from_slice(&0u16.to_le_bytes());
+
+        // Section header count (0)
+        buffer.extend_from_slice(&0u16.to_le_bytes());
+
+        // Section header string table index (0)
+        buffer.extend_from_slice(&0u16.to_le_bytes());
+    }
+
+    fn write_program_header(
+        &self,
+        buffer: &mut Vec<u8>,
+        p_type: u32,
+        p_flags: u32,
+        p_offset: usize,
+        p_vaddr: u64,
+        p_paddr: u64,
+        p_filesz: u64,
+        p_memsz: u64,
+        p_align: u64,
+    ) {
+        // p_type
+        buffer.extend_from_slice(&p_type.to_le_bytes());
+
+        // p_flags
+        buffer.extend_from_slice(&p_flags.to_le_bytes());
+
+        // p_offset
+        buffer.extend_from_slice(&(p_offset as u64).to_le_bytes());
+
+        // p_vaddr
+        buffer.extend_from_slice(&p_vaddr.to_le_bytes());
+
+        // p_paddr
+        buffer.extend_from_slice(&p_paddr.to_le_bytes());
+
+        // p_filesz
+        buffer.extend_from_slice(&p_filesz.to_le_bytes());
+
+        // p_memsz
+        buffer.extend_from_slice(&p_memsz.to_le_bytes());
+
+        // p_align
+        buffer.extend_from_slice(&p_align.to_le_bytes());
+    }
+
     fn write_elf_header(&self, buffer: &mut Vec<u8>) {
         // ELF Magic Number
         buffer.extend_from_slice(&[0x7f, b'E', b'L', b'F']);
@@ -430,6 +612,7 @@ mod tests {
         platforms::amd64::Register,
     };
 
+    #[test]
     fn test_generate_amd64_linux_elf() {
         let mut object = IRCompileObject::new();
 
@@ -520,7 +703,7 @@ mod tests {
             offset: 17, // lea 명령어의 오프셋 필드 위치
             symbol: "hello_msg".to_string(),
             reloc_type: RelocationType::PcRel32,
-            addend: -4, // PC-relative 계산 조정
+            addend: 0, // PC-relative 계산 (RIP는 이미 offset 필드 끝을 가리킴)
         });
 
         let bytes = object.to_elf_binary();
@@ -532,7 +715,8 @@ mod tests {
         println!("To run: ./hello");
     }
 
-    fn test_generate_amd64_linux_executable_elf() {
+    #[test]
+    pub fn test_generate_amd64_linux_executable_elf() {
         let mut object = IRCompileObject::new();
 
         // Hello World 문자열을 .rodata 섹션에 추가
@@ -622,15 +806,25 @@ mod tests {
             offset: 17, // lea 명령어의 오프셋 필드 위치
             symbol: "hello_msg".to_string(),
             reloc_type: RelocationType::PcRel32,
-            addend: -4, // PC-relative 계산 조정
+            addend: 0, // PC-relative 계산 (RIP는 이미 offset 필드 끝을 가리킴)
         });
 
-        let bytes = object.to_elf_binary();
+        let bytes = object.to_executable_elf_binary();
 
-        fs::write("output.o", bytes).expect("Failed to write ELF object file");
+        fs::write("hello.exe", bytes).expect("Failed to write ELF executable file");
 
-        println!("ELF object file created: output.o");
-        println!("To create executable, run: ld output.o -o hello");
+        // 실행 권한 부여
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata("hello")
+                .expect("Failed to get file metadata")
+                .permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions("hello", perms).expect("Failed to set permissions");
+        }
+
+        println!("ELF executable file created: hello");
         println!("To run: ./hello");
     }
 }
