@@ -28,6 +28,18 @@ pub struct IRCompileObject {
 }
 
 impl IRCompileObject {
+    pub fn new() -> Self {
+        Self {
+            data_section: Section::new_data(),
+            rodata_section: Section::new_rodata(),
+            bss_section: Section::new_bss(),
+            text_section: Section::new_text(),
+            symbol_table: SymbolTable::new(),
+            relocations: Vec::new(),
+        }
+    }
+}
+impl IRCompileObject {
     pub fn to_elf_binary(&self) -> Vec<u8> {
         let mut binary = Vec::new();
 
@@ -95,17 +107,61 @@ impl IRCompileObject {
 
         // 5: .symtab (SHT_SYMTAB, link=strtab section, info=first non-local symbol index)
         // link: 6 (.strtab), info: 2 (첫 번째 글로벌 심볼의 인덱스)
-        self.write_section_header(&mut binary, 26, 2, 0, symtab_offset, symtab_size, 8, 6, 2, 24);
+        self.write_section_header(
+            &mut binary,
+            26,
+            2,
+            0,
+            symtab_offset,
+            symtab_size,
+            8,
+            6,
+            2,
+            24,
+        );
 
         // 6: .strtab (SHT_STRTAB)
-        self.write_section_header(&mut binary, 34, 3, 0, strtab_offset, strtab_size, 1, 0, 0, 0);
+        self.write_section_header(
+            &mut binary,
+            34,
+            3,
+            0,
+            strtab_offset,
+            strtab_size,
+            1,
+            0,
+            0,
+            0,
+        );
 
         // 7: .rela.text (SHT_RELA, link=symtab, info=.text section index)
         // link: 5 (.symtab), info: 1 (.text), entsize: 24 (sizeof(Elf64_Rela))
-        self.write_section_header(&mut binary, 42, 4, 0x40, rela_text_offset, rela_text_size, 8, 5, 1, 24);
+        self.write_section_header(
+            &mut binary,
+            42,
+            4,
+            0x40,
+            rela_text_offset,
+            rela_text_size,
+            8,
+            5,
+            1,
+            24,
+        );
 
         // 8: .shstrtab (SHT_STRTAB)
-        self.write_section_header(&mut binary, 52, 3, 0, shstrtab_offset, shstrtab_size, 1, 0, 0, 0);
+        self.write_section_header(
+            &mut binary,
+            52,
+            3,
+            0,
+            shstrtab_offset,
+            shstrtab_size,
+            1,
+            0,
+            0,
+            0,
+        );
 
         // ELF Header의 섹션 헤더 오프셋 업데이트
         let section_headers_offset = section_headers_start as u64;
@@ -238,14 +294,14 @@ impl IRCompileObject {
         strtab.push(0);
 
         // Section names
-        strtab.extend_from_slice(b".text\0");      // offset 1
-        strtab.extend_from_slice(b".rodata\0");    // offset 9
-        strtab.extend_from_slice(b".data\0");      // offset 17
-        strtab.extend_from_slice(b".bss\0");       // offset 23
-        strtab.extend_from_slice(b".symtab\0");    // offset 28
-        strtab.extend_from_slice(b".strtab\0");    // offset 36
+        strtab.extend_from_slice(b".text\0"); // offset 1
+        strtab.extend_from_slice(b".rodata\0"); // offset 9
+        strtab.extend_from_slice(b".data\0"); // offset 17
+        strtab.extend_from_slice(b".bss\0"); // offset 23
+        strtab.extend_from_slice(b".symtab\0"); // offset 28
+        strtab.extend_from_slice(b".strtab\0"); // offset 36
         strtab.extend_from_slice(b".rela.text\0"); // offset 44
-        strtab.extend_from_slice(b".shstrtab\0");  // offset 54
+        strtab.extend_from_slice(b".shstrtab\0"); // offset 54
 
         strtab
     }
@@ -270,7 +326,10 @@ impl IRCompileObject {
         (strtab, offsets)
     }
 
-    fn build_symbol_table(&self, string_offsets: &std::collections::HashMap<String, u32>) -> Vec<u8> {
+    fn build_symbol_table(
+        &self,
+        string_offsets: &std::collections::HashMap<String, u32>,
+    ) -> Vec<u8> {
         let mut symtab = Vec::new();
 
         // NULL symbol (first entry must be null)
@@ -328,7 +387,9 @@ impl IRCompileObject {
 
             // r_info (symbol index and type)
             // 심볼 인덱스 찾기 (1-based, 0은 NULL)
-            let symbol_index = self.symbol_table.symbols
+            let symbol_index = self
+                .symbol_table
+                .symbols
                 .iter()
                 .position(|s| s.name == reloc.symbol)
                 .map(|idx| (idx + 1) as u32)
@@ -354,16 +415,223 @@ impl IRCompileObject {
     }
 }
 
-impl IRCompileObject {
-    pub fn new() -> Self {
-        Self {
-            data_section: Section::new_data(),
-            rodata_section: Section::new_rodata(),
-            bss_section: Section::new_bss(),
-            text_section: Section::new_text(),
-            symbol_table: SymbolTable::new(),
-            relocations: Vec::new(),
-        }
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use crate::ir::data::relocation::{Relocation, RelocationType};
+    use crate::platforms::amd64::{Instruction, RexPrefix};
+    use crate::{
+        ir::data::{
+            object::IRCompileObject,
+            section::SectionType,
+            symbol::{Symbol, SymbolBinding, SymbolType},
+        },
+        platforms::amd64::Register,
+    };
+
+    fn test_generate_amd64_linux_elf() {
+        let mut object = IRCompileObject::new();
+
+        // Hello World 문자열을 .rodata 섹션에 추가
+        let hello_str = b"Hello, World!\n";
+        object.rodata_section.data.extend_from_slice(hello_str);
+
+        // 심볼 테이블에 문자열 심볼 추가
+        object.symbol_table.add_symbol(Symbol {
+            name: "hello_msg".to_string(),
+            section: SectionType::RoData,
+            offset: 0,
+            size: hello_str.len(),
+            symbol_type: SymbolType::Object,
+            binding: SymbolBinding::Local,
+        });
+
+        // x86-64 리눅스에서 write 시스템콜로 Hello World 출력하는 기계어 코드
+        // mov rax, 1        ; sys_write
+        // mov rdi, 1        ; stdout
+        // lea rsi, [rel hello_msg]  ; 문자열 주소
+        // mov rdx, 14       ; 길이
+        // syscall
+        // mov rax, 60       ; sys_exit
+        // xor rdi, rdi      ; exit code 0
+        // syscall
+        let machine_code = vec![
+            RexPrefix::RexW as u8,
+            Instruction::MovImm as u8,
+            Register::RAX as u8,
+            0x01,
+            0x00,
+            0x00,
+            0x00, // mov rax, 1
+            RexPrefix::RexW as u8,
+            Instruction::MovImm as u8,
+            Register::RDI as u8,
+            0x01,
+            0x00,
+            0x00,
+            0x00, // mov rdi, 1
+            RexPrefix::RexW as u8,
+            Instruction::Lea as u8,
+            0x35,
+            0x00,
+            0x00,
+            0x00,
+            0x00, // lea rsi, [rip+0] (재배치 필요)
+            RexPrefix::RexW as u8,
+            Instruction::MovImm as u8,
+            Register::RDX as u8,
+            0x0e,
+            0x00,
+            0x00,
+            0x00, // mov rdx, 14
+            0x0f,
+            0x05, // syscall
+            RexPrefix::RexW as u8,
+            Instruction::MovImm as u8,
+            Register::RAX as u8,
+            0x3c,
+            0x00,
+            0x00,
+            0x00, // mov rax, 60
+            RexPrefix::RexW as u8,
+            Instruction::Xor as u8,
+            0xff, // xor rdi, rdi
+            0x0f,
+            0x05, // syscall
+        ];
+
+        object.text_section.data = machine_code;
+
+        // _start 함수 심볼 추가 (엔트리 포인트)
+        object.symbol_table.add_symbol(Symbol {
+            name: "_start".to_string(),
+            section: SectionType::Text,
+            offset: 0,
+            size: object.text_section.data.len(),
+            symbol_type: SymbolType::Function,
+            binding: SymbolBinding::Global,
+        });
+
+        // .rodata 섹션의 hello_msg에 대한 재배치 정보 추가
+        // lea rsi, [rip+offset] 명령어의 오프셋 부분(바이트 17-20)을 패치해야 함
+        object.relocations.push(Relocation {
+            section: SectionType::Text,
+            offset: 17, // lea 명령어의 오프셋 필드 위치
+            symbol: "hello_msg".to_string(),
+            reloc_type: RelocationType::PcRel32,
+            addend: -4, // PC-relative 계산 조정
+        });
+
+        let bytes = object.to_elf_binary();
+
+        fs::write("output.o", bytes).expect("Failed to write ELF object file");
+
+        println!("ELF object file created: output.o");
+        println!("To create executable, run: ld output.o -o hello");
+        println!("To run: ./hello");
+    }
+
+    fn test_generate_amd64_linux_executable_elf() {
+        let mut object = IRCompileObject::new();
+
+        // Hello World 문자열을 .rodata 섹션에 추가
+        let hello_str = b"Hello, World!\n";
+        object.rodata_section.data.extend_from_slice(hello_str);
+
+        // 심볼 테이블에 문자열 심볼 추가
+        object.symbol_table.add_symbol(Symbol {
+            name: "hello_msg".to_string(),
+            section: SectionType::RoData,
+            offset: 0,
+            size: hello_str.len(),
+            symbol_type: SymbolType::Object,
+            binding: SymbolBinding::Local,
+        });
+
+        // x86-64 리눅스에서 write 시스템콜로 Hello World 출력하는 기계어 코드
+        // mov rax, 1        ; sys_write
+        // mov rdi, 1        ; stdout
+        // lea rsi, [rel hello_msg]  ; 문자열 주소
+        // mov rdx, 14       ; 길이
+        // syscall
+        // mov rax, 60       ; sys_exit
+        // xor rdi, rdi      ; exit code 0
+        // syscall
+        let machine_code = vec![
+            RexPrefix::RexW as u8,
+            Instruction::MovImm as u8,
+            Register::RAX as u8,
+            0x01,
+            0x00,
+            0x00,
+            0x00, // mov rax, 1
+            RexPrefix::RexW as u8,
+            Instruction::MovImm as u8,
+            Register::RDI as u8,
+            0x01,
+            0x00,
+            0x00,
+            0x00, // mov rdi, 1
+            RexPrefix::RexW as u8,
+            Instruction::Lea as u8,
+            0x35,
+            0x00,
+            0x00,
+            0x00,
+            0x00, // lea rsi, [rip+0] (재배치 필요)
+            RexPrefix::RexW as u8,
+            Instruction::MovImm as u8,
+            Register::RDX as u8,
+            0x0e,
+            0x00,
+            0x00,
+            0x00, // mov rdx, 14
+            0x0f,
+            0x05, // syscall
+            RexPrefix::RexW as u8,
+            Instruction::MovImm as u8,
+            Register::RAX as u8,
+            0x3c,
+            0x00,
+            0x00,
+            0x00, // mov rax, 60
+            RexPrefix::RexW as u8,
+            Instruction::Xor as u8,
+            0xff, // xor rdi, rdi
+            0x0f,
+            0x05, // syscall
+        ];
+
+        object.text_section.data = machine_code;
+
+        // _start 함수 심볼 추가 (엔트리 포인트)
+        object.symbol_table.add_symbol(Symbol {
+            name: "_start".to_string(),
+            section: SectionType::Text,
+            offset: 0,
+            size: object.text_section.data.len(),
+            symbol_type: SymbolType::Function,
+            binding: SymbolBinding::Global,
+        });
+
+        // .rodata 섹션의 hello_msg에 대한 재배치 정보 추가
+        // lea rsi, [rip+offset] 명령어의 오프셋 부분(바이트 17-20)을 패치해야 함
+        object.relocations.push(Relocation {
+            section: SectionType::Text,
+            offset: 17, // lea 명령어의 오프셋 필드 위치
+            symbol: "hello_msg".to_string(),
+            reloc_type: RelocationType::PcRel32,
+            addend: -4, // PC-relative 계산 조정
+        });
+
+        let bytes = object.to_elf_binary();
+
+        fs::write("output.o", bytes).expect("Failed to write ELF object file");
+
+        println!("ELF object file created: output.o");
+        println!("To create executable, run: ld output.o -o hello");
+        println!("To run: ./hello");
     }
 }
 
