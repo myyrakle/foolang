@@ -1,5 +1,5 @@
 /// AMD64 register enumeration with ModR/M byte encoding
-/// 
+///
 /// This enum represents the general-purpose registers in AMD64 architecture
 /// and their corresponding ModR/M byte values for register-to-register operations.
 /// The encoding uses Mod=11 (register-direct mode) with the register in the R/M field.
@@ -10,64 +10,64 @@ pub enum Register {
     /// RAX - Accumulator register
     /// ModR/M byte: 0xC0 (11 000 000)
     RAX = 0xC0,
-    
+
     /// RCX - Counter register
     /// ModR/M byte: 0xC1 (11 000 001)
     RCX = 0xC1,
-    
+
     /// RDX - Data register
     /// ModR/M byte: 0xC2 (11 000 010)
     RDX = 0xC2,
-    
+
     /// RBX - Base register
     /// ModR/M byte: 0xC3 (11 000 011)
     RBX = 0xC3,
-    
+
     /// RSP - Stack pointer register
     /// ModR/M byte: 0xC4 (11 000 100)
     RSP = 0xC4,
-    
+
     /// RBP - Base pointer register
     /// ModR/M byte: 0xC5 (11 000 101)
     RBP = 0xC5,
-    
+
     /// RSI - Source index register
     /// ModR/M byte: 0xC6 (11 000 110)
     RSI = 0xC6,
-    
+
     /// RDI - Destination index register
     /// ModR/M byte: 0xC7 (11 000 111)
     RDI = 0xC7,
-    
+
     // Extended 64-bit Registers (R8 through R15)
     /// R8 - Extended register 8
     /// ModR/M byte: 0xC8 (11 001 000) - requires REX prefix
     R8 = 0xC8,
-    
+
     /// R9 - Extended register 9
     /// ModR/M byte: 0xC9 (11 001 001) - requires REX prefix
     R9 = 0xC9,
-    
+
     /// R10 - Extended register 10
     /// ModR/M byte: 0xCA (11 001 010) - requires REX prefix
     R10 = 0xCA,
-    
+
     /// R11 - Extended register 11
     /// ModR/M byte: 0xCB (11 001 011) - requires REX prefix
     R11 = 0xCB,
-    
+
     /// R12 - Extended register 12
     /// ModR/M byte: 0xCC (11 001 100) - requires REX prefix
     R12 = 0xCC,
-    
+
     /// R13 - Extended register 13
     /// ModR/M byte: 0xCD (11 001 101) - requires REX prefix
     R13 = 0xCD,
-    
+
     /// R14 - Extended register 14
     /// ModR/M byte: 0xCE (11 001 110) - requires REX prefix
     R14 = 0xCE,
-    
+
     /// R15 - Extended register 15
     /// ModR/M byte: 0xCF (11 001 111) - requires REX prefix
     R15 = 0xCF,
@@ -75,40 +75,40 @@ pub enum Register {
 
 impl Register {
     /// Returns the register encoding as u8
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use foolang::platforms::amd64::Register;
-    /// 
+    ///
     /// assert_eq!(Register::RAX.as_u8(), 0xC0);
     /// assert_eq!(Register::RBX.as_u8(), 0xC3);
     /// ```
     pub fn as_u8(self) -> u8 {
         self as u8
     }
-    
+
     /// Returns the register encoding as i32
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use foolang::platforms::amd64::Register;
-    /// 
+    ///
     /// assert_eq!(Register::RAX.as_i32(), 0xC0);
     /// assert_eq!(Register::R15.as_i32(), 0xCF);
     /// ```
     pub fn as_i32(self) -> i32 {
         self as i32
     }
-    
+
     /// Returns the register name as a string
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use foolang::platforms::amd64::Register;
-    /// 
+    ///
     /// assert_eq!(Register::RAX.name(), "RAX");
     /// assert_eq!(Register::R8.name(), "R8");
     /// ```
@@ -132,14 +132,14 @@ impl Register {
             Register::R15 => "R15",
         }
     }
-    
+
     /// Returns true if the register requires REX prefix (R8-R15)
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use foolang::platforms::amd64::Register;
-    /// 
+    ///
     /// assert_eq!(Register::RAX.requires_rex(), false);
     /// assert_eq!(Register::R8.requires_rex(), true);
     /// ```
@@ -148,10 +148,35 @@ impl Register {
     }
 }
 
+/// REX prefix bytes for 64-bit mode
+///
+/// REX prefixes enable 64-bit operand size and access to extended registers
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum RexPrefix {
+    /// REX (0x40) - Base REX prefix
+    Rex = 0x40,
+
+    /// REX.W (0x48) - 64-bit operand size
+    RexW = 0x48,
+
+    /// REX.R (0x44) - Extension of ModR/M reg field
+    RexR = 0x44,
+
+    /// REX.X (0x42) - Extension of SIB index field
+    RexX = 0x42,
+
+    /// REX.B (0x41) - Extension of ModR/M r/m field, SIB base, or opcode reg
+    RexB = 0x41,
+}
+
 /// AMD64 instruction set enumeration with binary hex codes
 ///
 /// This enum represents various AMD64 (x86-64) instructions and their corresponding
 /// binary opcodes. The opcodes are represented as i32 values for easy manipulation.
+///
+/// Note: Some instructions require REX prefixes for 64-bit operation.
+/// Use RexPrefix enum for prefix bytes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum Instruction {
@@ -160,9 +185,9 @@ pub enum Instruction {
     /// Opcode: 0x89 (MOV r/m32, r32)
     Mov = 0x89,
 
-    /// MOVQ - Move quadword
-    /// Opcode: 0x48 (REX.W prefix for 64-bit operands)
-    MovQ = 0x48,
+    /// MOV - Move immediate to register/memory
+    /// Opcode: 0xC7 (MOV r/m64, imm32)
+    MovImm = 0xC7,
 
     /// PUSH - Push onto stack
     /// Opcode: 0x50 (PUSH r64)
@@ -354,7 +379,7 @@ impl Instruction {
     pub fn name(self) -> &'static str {
         match self {
             Instruction::Mov => "MOV",
-            Instruction::MovQ => "MOVQ",
+            Instruction::MovImm => "MOV",
             Instruction::Push => "PUSH",
             Instruction::Pop => "POP",
             Instruction::Lea => "LEA",
@@ -458,7 +483,7 @@ mod tests {
         assert_eq!(Register::RBP.requires_rex(), false);
         assert_eq!(Register::RSI.requires_rex(), false);
         assert_eq!(Register::RDI.requires_rex(), false);
-        
+
         // Extended registers R8-R15 require REX prefix
         assert_eq!(Register::R8.requires_rex(), true);
         assert_eq!(Register::R9.requires_rex(), true);

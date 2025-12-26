@@ -1,3 +1,8 @@
+use crate::ir::data::{
+    section::SectionType,
+    symbol::{Symbol, SymbolBinding, SymbolType},
+};
+
 pub fn compile_constant_definition(
     constant: &crate::ir::ast::global::constant::ConstantDefinition,
     object: &mut crate::ir::IRCompileObject,
@@ -22,7 +27,6 @@ fn compile_constant_amd64(
     object: &mut crate::ir::IRCompileObject,
 ) -> Result<(), crate::ir::error::IRError> {
     use crate::ir::ast::common::literal::LiteralValue;
-    use crate::ir::{SectionType, Symbol, SymbolBinding, SymbolType};
 
     // 상수는 .rodata 섹션에 배치
     let offset = object.rodata_section.data.len();
