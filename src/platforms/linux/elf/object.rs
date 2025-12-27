@@ -47,8 +47,8 @@ mod elf_constants {
     /// sizeof(Elf64_Rela) - 재배치 엔트리 크기
     pub const SIZEOF_ELF64_RELA: u64 = 24;
 
-    /// ELF 실행 파일 기본 로드 주소
-    pub const BASE_ADDR: u64 = 0x400000;
+    /// PIE 실행 파일 기본 로드 주소 (0 = 로더가 결정)
+    pub const BASE_ADDR: u64 = 0x0;
     /// 페이지 크기 (4KB)
     pub const PAGE_SIZE: u64 = 0x1000;
 }
@@ -302,11 +302,11 @@ impl ELFObject {
     fn encode_executable(&self) -> Vec<u8> {
         let mut binary = Vec::new();
 
-        // 메모리 주소 설정
-        let text_addr = elf_constants::BASE_ADDR + elf_constants::PAGE_SIZE; // .text at 0x401000
-        let rodata_addr = elf_constants::BASE_ADDR + (2 * elf_constants::PAGE_SIZE); // .rodata at 0x402000
+        // PIE 메모리 주소 설정 (상대 주소, 로더가 실제 주소 결정)
+        let text_addr = elf_constants::BASE_ADDR + elf_constants::PAGE_SIZE; // .text at 0x1000
+        let rodata_addr = elf_constants::BASE_ADDR + (2 * elf_constants::PAGE_SIZE); // .rodata at 0x2000
 
-        // ELF Header (64-bit executable)
+        // ELF Header (64-bit PIE executable, ET_DYN)
         self.write_executable_elf_header(&mut binary, text_addr);
 
         // Program Headers (LOAD 세그먼트)
