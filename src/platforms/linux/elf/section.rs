@@ -1,9 +1,59 @@
+/// ELF 섹션 헤더 타입 (sh_type)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum SectionHeaderType {
+    /// NULL section
+    Null = 0,
+    /// Program data
+    ProgBits = 1,
+    /// Symbol table
+    SymTab = 2,
+    /// String table
+    StrTab = 3,
+    /// Relocation entries with addends
+    Rela = 4,
+    /// Symbol hash table
+    Hash = 5,
+    /// Dynamic linking information
+    Dynamic = 6,
+    /// Notes
+    Note = 7,
+    /// No space in file (BSS)
+    NoBits = 8,
+}
+
+/// ELF 섹션 플래그 (sh_flags)
+pub mod section_flags {
+    /// Writable
+    pub const SHF_WRITE: u64 = 0x1;
+    /// Occupies memory during execution
+    pub const SHF_ALLOC: u64 = 0x2;
+    /// Executable
+    pub const SHF_EXECINSTR: u64 = 0x4;
+    /// Info link field
+    pub const SHF_INFO_LINK: u64 = 0x40;
+}
+
 /// 섹션 플래그 (읽기/쓰기/실행 권한)
 #[derive(Debug, Clone)]
 pub struct SectionFlags {
     pub readable: bool,
     pub writable: bool,
     pub executable: bool,
+}
+
+impl SectionFlags {
+    /// ELF 섹션 플래그 비트 값으로 변환
+    pub fn to_elf_flags(&self) -> u64 {
+        let mut flags = section_flags::SHF_ALLOC; // 기본적으로 메모리에 로드됨
+        if self.writable {
+            flags |= section_flags::SHF_WRITE;
+        }
+        if self.executable {
+            flags |= section_flags::SHF_EXECINSTR;
+        }
+        flags
+    }
 }
 
 /// 섹션 타입

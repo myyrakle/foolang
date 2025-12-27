@@ -1,9 +1,68 @@
 use super::{
     header::ELFHeader64,
     relocation::{self, Relocation},
-    section::{self, LinkedSection, Section},
+    section::{self, LinkedSection, Section, SectionHeaderType},
     symbol::{self, SymbolTable},
 };
+
+/// ELF 섹션 인덱스 상수
+mod section_indices {
+    pub const NULL: usize = 0;
+    pub const TEXT: usize = 1;
+    pub const RODATA: usize = 2;
+    pub const DATA: usize = 3;
+    pub const BSS: usize = 4;
+    pub const SYMTAB: usize = 5;
+    pub const STRTAB: usize = 6;
+    pub const RELA_TEXT: usize = 7;
+    pub const SHSTRTAB: usize = 8;
+}
+
+/// .shstrtab 섹션 내의 섹션 이름 문자열 오프셋
+mod section_name_offsets {
+    pub const NULL: u32 = 0;
+    pub const TEXT: u32 = 1; // ".text"
+    pub const RODATA: u32 = 7; // ".rodata"
+    pub const DATA: u32 = 15; // ".data"
+    pub const BSS: u32 = 21; // ".bss"
+    pub const SYMTAB: u32 = 26; // ".symtab"
+    pub const STRTAB: u32 = 34; // ".strtab"
+    pub const RELA_TEXT: u32 = 42; // ".rela.text"
+    pub const SHSTRTAB: u32 = 52; // ".shstrtab"
+}
+
+/// ELF 상수
+mod elf_constants {
+    /// sizeof(Elf64_Sym) - 심볼 테이블 엔트리 크기
+    pub const SIZEOF_ELF64_SYM: u64 = 24;
+    /// sizeof(Elf64_Rela) - 재배치 엔트리 크기
+    pub const SIZEOF_ELF64_RELA: u64 = 24;
+
+    /// ELF 실행 파일 기본 로드 주소
+    pub const BASE_ADDR: u64 = 0x400000;
+    /// 페이지 크기 (4KB)
+    pub const PAGE_SIZE: u64 = 0x1000;
+}
+
+/// Program Header 타입 (p_type)
+#[allow(dead_code)]
+mod program_header_type {
+    pub const PT_NULL: u32 = 0;
+    pub const PT_LOAD: u32 = 1;
+    pub const PT_DYNAMIC: u32 = 2;
+    pub const PT_INTERP: u32 = 3;
+    pub const PT_NOTE: u32 = 4;
+}
+
+/// Program Header 플래그 (p_flags)
+#[allow(dead_code)]
+mod program_header_flags {
+    pub const PF_X: u32 = 0x1; // Execute
+    pub const PF_W: u32 = 0x2; // Write
+    pub const PF_R: u32 = 0x4; // Read
+    pub const PF_RX: u32 = PF_R | PF_X; // Read + Execute
+    pub const PF_RW: u32 = PF_R | PF_W; // Read + Write
+}
 
 #[derive(Debug, Clone)]
 pub enum ELFObjectType {
@@ -103,37 +162,81 @@ impl ELFObject {
         self.write_null_section_header(&mut binary);
 
         // 1: .text (SHT_PROGBITS, flags=AX)
-        self.write_section_header(&mut binary, 1, 1, 6, text_offset, text_size, 16, 0, 0, 0);
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::TEXT,
+            SectionHeaderType::ProgBits as u32,
+            self.text_section.flags.to_elf_flags(),
+            text_offset,
+            text_size,
+            16,
+            0,
+            0,
+            0,
+        );
 
         // 2: .rodata (SHT_PROGBITS, flags=A)
-        self.write_section_header(&mut binary, 7, 1, 2, rodata_offset, rodata_size, 1, 0, 0, 0);
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::RODATA,
+            SectionHeaderType::ProgBits as u32,
+            self.rodata_section.flags.to_elf_flags(),
+            rodata_offset,
+            rodata_size,
+            1,
+            0,
+            0,
+            0,
+        );
 
         // 3: .data (SHT_PROGBITS, flags=WA)
-        self.write_section_header(&mut binary, 15, 1, 3, data_offset, data_size, 8, 0, 0, 0);
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::DATA,
+            SectionHeaderType::ProgBits as u32,
+            self.data_section.flags.to_elf_flags(),
+            data_offset,
+            data_size,
+            8,
+            0,
+            0,
+            0,
+        );
 
         // 4: .bss (SHT_NOBITS, flags=WA)
-        self.write_section_header(&mut binary, 21, 8, 3, 0, bss_size, 8, 0, 0, 0);
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::BSS,
+            SectionHeaderType::NoBits as u32,
+            self.bss_section.flags.to_elf_flags(),
+            0,
+            bss_size,
+            8,
+            0,
+            0,
+            0,
+        );
 
         // 5: .symtab (SHT_SYMTAB, link=strtab section, info=first non-local symbol index)
         // link: 6 (.strtab), info: 2 (첫 번째 글로벌 심볼의 인덱스)
         self.write_section_header(
             &mut binary,
-            26,
-            2,
+            section_name_offsets::SYMTAB,
+            SectionHeaderType::SymTab as u32,
             0,
             symtab_offset,
             symtab_size,
             8,
-            6,
+            section_indices::STRTAB as u32,
             2,
-            24,
+            elf_constants::SIZEOF_ELF64_SYM,
         );
 
         // 6: .strtab (SHT_STRTAB)
         self.write_section_header(
             &mut binary,
-            34,
-            3,
+            section_name_offsets::STRTAB,
+            SectionHeaderType::StrTab as u32,
             0,
             strtab_offset,
             strtab_size,
@@ -147,22 +250,22 @@ impl ELFObject {
         // link: 5 (.symtab), info: 1 (.text), entsize: 24 (sizeof(Elf64_Rela))
         self.write_section_header(
             &mut binary,
-            42,
-            4,
-            0x40,
+            section_name_offsets::RELA_TEXT,
+            SectionHeaderType::Rela as u32,
+            section::section_flags::SHF_INFO_LINK,
             rela_text_offset,
             rela_text_size,
             8,
-            5,
-            1,
-            24,
+            section_indices::SYMTAB as u32,
+            section_indices::TEXT as u32,
+            elf_constants::SIZEOF_ELF64_RELA,
         );
 
         // 8: .shstrtab (SHT_STRTAB)
         self.write_section_header(
             &mut binary,
-            52,
-            3,
+            section_name_offsets::SHSTRTAB,
+            SectionHeaderType::StrTab as u32,
             0,
             shstrtab_offset,
             shstrtab_size,
@@ -184,45 +287,44 @@ impl ELFObject {
         let mut binary = Vec::new();
 
         // 메모리 주소 설정
-        const BASE_ADDR: u64 = 0x400000;
-        const TEXT_ADDR: u64 = BASE_ADDR + 0x1000; // .text at 0x401000
-        const RODATA_ADDR: u64 = BASE_ADDR + 0x2000; // .rodata at 0x402000
+        let text_addr = elf_constants::BASE_ADDR + elf_constants::PAGE_SIZE; // .text at 0x401000
+        let rodata_addr = elf_constants::BASE_ADDR + (2 * elf_constants::PAGE_SIZE); // .rodata at 0x402000
 
         // ELF Header (64-bit executable)
-        self.write_executable_elf_header(&mut binary, TEXT_ADDR);
+        self.write_executable_elf_header(&mut binary, text_addr);
 
         // Program Headers (LOAD 세그먼트)
         // PT_LOAD for .text (executable)
-        let text_file_offset = 0x1000; // 파일 오프셋
+        let text_file_offset = elf_constants::PAGE_SIZE as usize; // 파일 오프셋
         let text_size = self.text_section.data.len();
         self.write_program_header(
             &mut binary,
-            1, // PT_LOAD
-            5, // PF_R | PF_X (읽기+실행)
+            program_header_type::PT_LOAD,
+            program_header_flags::PF_RX, // PF_R | PF_X (읽기+실행)
             text_file_offset,
-            TEXT_ADDR,
-            TEXT_ADDR,
+            text_addr,
+            text_addr,
             text_size as u64,
             text_size as u64,
-            0x1000, // 페이지 정렬
+            elf_constants::PAGE_SIZE, // 페이지 정렬
         );
 
         // PT_LOAD for .rodata (read-only)
-        let rodata_file_offset = 0x2000;
+        let rodata_file_offset = (2 * elf_constants::PAGE_SIZE) as usize;
         let rodata_size = self.rodata_section.data.len();
         self.write_program_header(
             &mut binary,
-            1, // PT_LOAD
-            4, // PF_R (읽기 전용)
+            program_header_type::PT_LOAD,
+            program_header_flags::PF_R, // PF_R (읽기 전용)
             rodata_file_offset,
-            RODATA_ADDR,
-            RODATA_ADDR,
+            rodata_addr,
+            rodata_addr,
             rodata_size as u64,
             rodata_size as u64,
-            0x1000,
+            elf_constants::PAGE_SIZE,
         );
 
-        // 패딩으로 파일 오프셋 0x1000까지 채우기
+        // 패딩으로 파일 오프셋까지 채우기
         while binary.len() < text_file_offset {
             binary.push(0);
         }
@@ -235,8 +337,8 @@ impl ELFObject {
             if reloc.section == section::SectionType::Text {
                 if let relocation::RelocationType::PcRel32 = reloc.reloc_type {
                     // PC-relative 계산: target_addr - (current_addr + 4)
-                    let current_addr = TEXT_ADDR + reloc.offset as u64 + 4;
-                    let target_addr = RODATA_ADDR; // hello_msg가 .rodata의 시작
+                    let current_addr = text_addr + reloc.offset as u64 + 4;
+                    let target_addr = rodata_addr; // hello_msg가 .rodata의 시작
                     let offset = (target_addr as i64 - current_addr as i64 + reloc.addend) as i32;
 
                     // 오프셋 패치
