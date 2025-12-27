@@ -1,3 +1,7 @@
+use std::{fmt::Display, str::FromStr};
+
+use serde::Deserialize;
+
 /// Defines the supported compilation targets based on architecture and operating system.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Target {
@@ -7,6 +11,66 @@ pub enum Target {
     Arm64Windows, // 64-bit ARM architecture on Windows
     Amd64Darwin,  // 64-bit x86 architecture on macOS
     Arm64Darwin,  // 64-bit ARM architecture on macOS
+    WebAssembly,  // WebAssembly target
+    JavaScript,   // JavaScript target
+}
+
+impl Default for Target {
+    fn default() -> Self {
+        detect_current_target()
+    }
+}
+
+impl<'de> Deserialize<'de> for Target {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s: &str = Deserialize::deserialize(deserializer)?;
+        match s {
+            "amd64-linux" => Ok(Target::Amd64Linux),
+            "arm64-linux" => Ok(Target::Arm64Linux),
+            "amd64-windows" => Ok(Target::Amd64Windows),
+            "arm64-windows" => Ok(Target::Arm64Windows),
+            "amd64-darwin" => Ok(Target::Amd64Darwin),
+            "arm64-darwin" => Ok(Target::Arm64Darwin),
+            "webassembly" => Ok(Target::WebAssembly),
+            "javascript" => Ok(Target::JavaScript),
+            _ => Err(serde::de::Error::custom(format!("Unknown target: {}", s))),
+        }
+    }
+}
+
+impl Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let target_str = match self {
+            Target::Amd64Linux => "amd64-linux",
+            Target::Arm64Linux => "arm64-linux",
+            Target::Amd64Windows => "amd64-windows",
+            Target::Arm64Windows => "arm64-windows",
+            Target::Amd64Darwin => "amd64-darwin",
+            Target::Arm64Darwin => "arm64-darwin",
+            Target::WebAssembly => "webassembly",
+            Target::JavaScript => "javascript",
+        };
+        write!(f, "{}", target_str)
+    }
+}
+
+impl FromStr for Target {
+    type Err = Box<dyn std::error::Error + Send + Sync>;
+
+    fn from_str(input: &str) -> Result<Target, Self::Err> {
+        match input {
+            "amd64-linux" => Ok(Target::Amd64Linux),
+            "arm64-linux" => Ok(Target::Arm64Linux),
+            "amd64-windows" => Ok(Target::Amd64Windows),
+            "arm64-windows" => Ok(Target::Arm64Windows),
+            "amd64-darwin" => Ok(Target::Amd64Darwin),
+            "arm64-darwin" => Ok(Target::Arm64Darwin),
+            _ => Err(format!("Unknown target: {}", input).into()),
+        }
+    }
 }
 
 /// Detects the current compilation target based on architecture and OS.

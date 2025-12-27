@@ -1,4 +1,7 @@
-use crate::ir::data::{IRCompiledObject, IRLinkedObject};
+use crate::{
+    ir::data::{IRCompiledObject, IRLinkedObject},
+    platforms::target::Target,
+};
 
 pub mod ast;
 pub mod compiler;
@@ -13,7 +16,11 @@ impl IRCompiler {
         IRCompiler {}
     }
 
-    pub fn link(&self, _objects: Vec<IRCompiledObject>) -> Result<IRLinkedObject, error::IRError> {
+    pub fn link(
+        &self,
+        _target: &Target,
+        _objects: Vec<IRCompiledObject>,
+    ) -> Result<IRLinkedObject, error::IRError> {
         // Linking logic goes here
         unimplemented!()
     }
