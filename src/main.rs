@@ -12,7 +12,7 @@ mod error;
 mod ir;
 mod lexer;
 mod parser;
-mod platforms;
+pub mod platforms;
 mod utils;
 
 use clap::Parser;

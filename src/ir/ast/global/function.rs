@@ -3,7 +3,7 @@ use crate::ir::ast::local::LocalStatements;
 #[derive(Debug)]
 pub struct FunctionDefinition {
     pub function_name: String,
-    pub return_type: String,
+    pub return_type: Option<String>,
     pub arguments: Vec<FunctionArgument>,
     pub function_body: LocalStatements,
 }

@@ -1,7 +1,7 @@
-use crate::ir::ast::common::Operand;
+use crate::ir::ast::common::{Identifier, Operand};
 
 #[derive(Debug)]
 pub struct CallInstruction {
-    pub function_name: String,
+    pub function_name: Identifier,
     pub parameters: Vec<Operand>,
 }

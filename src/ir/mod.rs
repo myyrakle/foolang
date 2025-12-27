@@ -1,28 +1,19 @@
-use crate::ir::ast::CodeUnit;
+use crate::ir::data::{IRCompiledObject, IRLinkedObject};
 
 pub mod ast;
+pub mod compiler;
+pub mod data;
 pub mod error;
 
 #[derive(Debug)]
 pub struct IRCompiler {}
-
-#[derive(Debug)]
-pub struct IRCompileObject {}
-
-#[derive(Debug)]
-pub struct IRLinkObject {}
 
 impl IRCompiler {
     pub fn new() -> Self {
         IRCompiler {}
     }
 
-    pub fn compile(&self, _code_unit: CodeUnit) -> Result<IRCompileObject, error::IRError> {
-        // Compilation logic goes here
-        unimplemented!()
-    }
-
-    pub fn link(&self, _objects: Vec<IRCompileObject>) -> Result<IRLinkObject, error::IRError> {
+    pub fn link(&self, _objects: Vec<IRCompiledObject>) -> Result<IRLinkedObject, error::IRError> {
         // Linking logic goes here
         unimplemented!()
     }
