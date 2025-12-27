@@ -9,6 +9,8 @@ pub struct ExecuteBuildResult {
 }
 
 pub(crate) async fn execute_build(action: build::Action) -> Result<ExecuteBuildResult, Errors> {
+    let target = &action.value.target;
+
     let text = if let Ok(text) = tokio::fs::read_to_string(&action.value.filename).await {
         text
     } else {
@@ -34,11 +36,11 @@ pub(crate) async fn execute_build(action: build::Action) -> Result<ExecuteBuildR
     let mut compiled_objects = vec![];
     // TODO: Parallelize this loop
     for code_unit in codes {
-        let compiled_object = ir_compiler.compile(code_unit)?;
+        let compiled_object = ir_compiler.compile(target, code_unit)?;
         compiled_objects.push(compiled_object);
     }
 
-    let linked_object = ir_compiler.link(compiled_objects)?;
+    let linked_object = ir_compiler.link(target, compiled_objects)?;
 
     // TODO: abstract filesystem operations
     tokio::fs::write(&action.value.filename, format!("{:?}", linked_object))

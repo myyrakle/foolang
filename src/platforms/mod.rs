@@ -5,3 +5,5 @@ pub mod amd64;
 
 /// Linux-specific platform implementations
 pub mod linux;
+
+pub mod target;
