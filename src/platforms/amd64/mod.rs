@@ -2,6 +2,9 @@ pub mod instruction;
 pub mod register;
 pub mod rex;
 
+// Re-export commonly used ModR/M construction functions
+pub use register::{modrm_digit_reg, modrm_reg_reg};
+
 /// ModR/M byte constants for common register operations
 pub mod modrm {
     /// LEA RSI, [RIP+disp32] - RIP-relative addressing mode
@@ -34,31 +37,39 @@ mod tests {
 
     // Register tests
     #[test]
+    fn test_register_number() {
+        assert_eq!(Register::RAX.number(), 0);
+        assert_eq!(Register::RCX.number(), 1);
+        assert_eq!(Register::RDX.number(), 2);
+        assert_eq!(Register::RBX.number(), 3);
+        assert_eq!(Register::RSP.number(), 4);
+        assert_eq!(Register::RBP.number(), 5);
+        assert_eq!(Register::RSI.number(), 6);
+        assert_eq!(Register::RDI.number(), 7);
+        assert_eq!(Register::R8.number(), 8);
+        assert_eq!(Register::R9.number(), 9);
+        assert_eq!(Register::R10.number(), 10);
+        assert_eq!(Register::R11.number(), 11);
+        assert_eq!(Register::R12.number(), 12);
+        assert_eq!(Register::R13.number(), 13);
+        assert_eq!(Register::R14.number(), 14);
+        assert_eq!(Register::R15.number(), 15);
+    }
+
+    #[test]
     fn test_register_as_u8() {
-        assert_eq!(Register::RAX.as_u8(), 0xC0);
-        assert_eq!(Register::RCX.as_u8(), 0xC1);
-        assert_eq!(Register::RDX.as_u8(), 0xC2);
-        assert_eq!(Register::RBX.as_u8(), 0xC3);
-        assert_eq!(Register::RSP.as_u8(), 0xC4);
-        assert_eq!(Register::RBP.as_u8(), 0xC5);
-        assert_eq!(Register::RSI.as_u8(), 0xC6);
-        assert_eq!(Register::RDI.as_u8(), 0xC7);
-        assert_eq!(Register::R8.as_u8(), 0xC8);
-        assert_eq!(Register::R9.as_u8(), 0xC9);
-        assert_eq!(Register::R10.as_u8(), 0xCA);
-        assert_eq!(Register::R11.as_u8(), 0xCB);
-        assert_eq!(Register::R12.as_u8(), 0xCC);
-        assert_eq!(Register::R13.as_u8(), 0xCD);
-        assert_eq!(Register::R14.as_u8(), 0xCE);
-        assert_eq!(Register::R15.as_u8(), 0xCF);
+        assert_eq!(Register::RAX.as_u8(), 0);
+        assert_eq!(Register::RBX.as_u8(), 3);
+        assert_eq!(Register::R8.as_u8(), 8);
+        assert_eq!(Register::R15.as_u8(), 15);
     }
 
     #[test]
     fn test_register_as_i32() {
-        assert_eq!(Register::RAX.as_i32(), 0xC0);
-        assert_eq!(Register::RBX.as_i32(), 0xC3);
-        assert_eq!(Register::R8.as_i32(), 0xC8);
-        assert_eq!(Register::R15.as_i32(), 0xCF);
+        assert_eq!(Register::RAX.as_i32(), 0);
+        assert_eq!(Register::RBX.as_i32(), 3);
+        assert_eq!(Register::R8.as_i32(), 8);
+        assert_eq!(Register::R15.as_i32(), 15);
     }
 
     #[test]
@@ -139,5 +150,34 @@ mod tests {
     fn test_instruction_equality() {
         assert_eq!(Instruction::Add, Instruction::Add);
         assert_ne!(Instruction::Add, Instruction::Sub);
+    }
+
+    // ModR/M construction tests
+    #[test]
+    fn test_modrm_reg_reg() {
+        use crate::platforms::amd64::register::{modrm_reg_reg};
+
+        // MOV RAX, RBX (Reg=0, R/M=3)
+        assert_eq!(modrm_reg_reg(Register::RAX, Register::RBX), 0xC3);
+
+        // MOV RDI, RSI (Reg=7, R/M=6)
+        assert_eq!(modrm_reg_reg(Register::RDI, Register::RSI), 0xFE);
+
+        // XOR RDI, RDI (Reg=7, R/M=7)
+        assert_eq!(modrm_reg_reg(Register::RDI, Register::RDI), 0xFF);
+    }
+
+    #[test]
+    fn test_modrm_digit_reg() {
+        use crate::platforms::amd64::register::{modrm_digit_reg};
+
+        // MUL RBX (Digit=4, R/M=3)
+        assert_eq!(modrm_digit_reg(4, Register::RBX), 0xE3);
+
+        // DIV RAX (Digit=6, R/M=0)
+        assert_eq!(modrm_digit_reg(6, Register::RAX), 0xF0);
+
+        // INC RDI (Digit=0, R/M=7)
+        assert_eq!(modrm_digit_reg(0, Register::RDI), 0xC7);
     }
 }
