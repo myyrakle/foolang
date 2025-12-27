@@ -651,17 +651,19 @@ mod tests {
         // mov rax, 60       ; sys_exit
         // xor rdi, rdi      ; exit code 0
         // syscall
+        use crate::platforms::amd64::register::modrm_digit_reg;
+
         let machine_code = vec![
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
-            Register::RAX as u8,
+            modrm_digit_reg(0, Register::RAX), // ModR/M byte for mov rax, imm32
             crate::platforms::amd64::syscall::SYS_WRITE,
             0x00,
             0x00,
             0x00, // mov rax, 1 (sys_write)
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
-            Register::RDI as u8,
+            modrm_digit_reg(0, Register::RDI), // ModR/M byte for mov rdi, imm32
             crate::platforms::amd64::fd::STDOUT,
             0x00,
             0x00,
@@ -675,7 +677,7 @@ mod tests {
             0x00, // lea rsi, [rip+0] (재배치 필요)
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
-            Register::RDX as u8,
+            modrm_digit_reg(0, Register::RDX), // ModR/M byte for mov rdx, imm32
             0x0e, // 14 (Hello World 문자열 길이)
             0x00,
             0x00,
@@ -684,7 +686,7 @@ mod tests {
             Instruction::SYSCALL_BYTES[1], // syscall
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
-            Register::RAX as u8,
+            modrm_digit_reg(0, Register::RAX), // ModR/M byte for mov rax, imm32
             crate::platforms::amd64::syscall::SYS_EXIT,
             0x00,
             0x00,
@@ -754,17 +756,19 @@ mod tests {
         // mov rax, 60       ; sys_exit
         // xor rdi, rdi      ; exit code 0
         // syscall
+        use crate::platforms::amd64::register::modrm_digit_reg;
+
         let machine_code = vec![
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
-            Register::RAX as u8,
+            modrm_digit_reg(0, Register::RAX), // ModR/M byte for mov rax, imm32
             crate::platforms::amd64::syscall::SYS_WRITE,
             0x00,
             0x00,
             0x00, // mov rax, 1 (sys_write)
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
-            Register::RDI as u8,
+            modrm_digit_reg(0, Register::RDI), // ModR/M byte for mov rdi, imm32
             crate::platforms::amd64::fd::STDOUT,
             0x00,
             0x00,
@@ -778,7 +782,7 @@ mod tests {
             0x00, // lea rsi, [rip+0] (재배치 필요)
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
-            Register::RDX as u8,
+            modrm_digit_reg(0, Register::RDX), // ModR/M byte for mov rdx, imm32
             0x0e, // 14 (Hello World 문자열 길이)
             0x00,
             0x00,
@@ -787,7 +791,7 @@ mod tests {
             Instruction::SYSCALL_BYTES[1], // syscall
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
-            Register::RAX as u8,
+            modrm_digit_reg(0, Register::RAX), // ModR/M byte for mov rax, imm32
             crate::platforms::amd64::syscall::SYS_EXIT,
             0x00,
             0x00,
