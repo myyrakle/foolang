@@ -109,16 +109,17 @@ pub enum ELFType {
     /// 알 수 없음
     None = 0,
 
-    /// 재배치 가능한 파일 (.o)
+    /// 재배치 가능한 파일 (.o) - ET_REL
     Relocatable = 1,
 
-    /// 실행 파일
+    /// 고정 주소 실행 파일 - ET_EXEC (레거시, 보안 취약)
     Executable = 2,
 
-    /// 공유 오브젝트 파일 (.so)
-    Shared = 3,
+    /// Position Independent Executable / 공유 라이브러리 - ET_DYN
+    /// PIE 실행 파일 또는 .so 파일
+    Dynamic = 3,
 
-    /// 코어 덤프 파일
+    /// 코어 덤프 파일 - ET_CORE
     Core = 4,
 }
 
@@ -230,11 +231,11 @@ impl ELFHeader64 {
         }
     }
 
-    /// 실행 파일 기본 헤더
+    /// PIE 실행 파일 기본 헤더 (ET_DYN)
     pub fn executable_x86_64(entry_point: u64) -> Self {
         Self {
             ident: ELFIdent::elf64_linux(),
-            file_type: ELFType::Executable,
+            file_type: ELFType::Dynamic, // PIE uses ET_DYN
             machine: ELFMachine::X86_64,
             version: 1,
             entry: entry_point,
