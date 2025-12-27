@@ -16,7 +16,7 @@ pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
             GlobalStatement::Constant(constant) => {
                 constant::compile_constant(&constant, &mut compiled_object)?;
             }
-            GlobalStatement::DefineFunction(function) => {
+            GlobalStatement::DefineFunction(_function) => {
                 // Compile function definition
                 // Placeholder for actual compilation logic
             }

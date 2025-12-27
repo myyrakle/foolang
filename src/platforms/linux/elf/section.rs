@@ -44,14 +44,31 @@ pub struct SectionFlags {
 
 impl SectionFlags {
     /// ELF 섹션 플래그 비트 값으로 변환
+    ///
+    /// ELF 섹션 플래그 규칙:
+    /// - readable이 true인 경우: SHF_ALLOC 설정 (메모리에 로드, 읽기 가능)
+    /// - readable이 false인 경우: 플래그 없음 (디버그 정보 등 비할당 섹션)
+    /// - writable이 true인 경우: SHF_WRITE 추가
+    /// - executable이 true인 경우: SHF_EXECINSTR 추가
+    ///
+    /// 참고: ELF에는 명시적인 "읽기" 플래그가 없습니다.
+    /// 읽기는 SHF_ALLOC이 있으면 기본으로 가능합니다.
     pub fn to_elf_flags(&self) -> u64 {
-        let mut flags = section_flags::SHF_ALLOC; // 기본적으로 메모리에 로드됨
+        let mut flags = 0;
+
+        // readable이 true면 메모리에 로드 (읽기 가능)
+        if self.readable {
+            flags |= section_flags::SHF_ALLOC;
+        }
+
         if self.writable {
             flags |= section_flags::SHF_WRITE;
         }
+
         if self.executable {
             flags |= section_flags::SHF_EXECINSTR;
         }
+
         flags
     }
 }

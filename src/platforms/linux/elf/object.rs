@@ -21,14 +21,14 @@ mod section_indices {
 /// .shstrtab 섹션 내의 섹션 이름 문자열 오프셋
 mod section_name_offsets {
     pub const NULL: u32 = 0;
-    pub const TEXT: u32 = 1; // ".text"
-    pub const RODATA: u32 = 7; // ".rodata"
-    pub const DATA: u32 = 15; // ".data"
-    pub const BSS: u32 = 21; // ".bss"
-    pub const SYMTAB: u32 = 26; // ".symtab"
-    pub const STRTAB: u32 = 34; // ".strtab"
-    pub const RELA_TEXT: u32 = 42; // ".rela.text"
-    pub const SHSTRTAB: u32 = 52; // ".shstrtab"
+    pub const TEXT: u32 = 1; // ".text\0" (6 bytes)
+    pub const RODATA: u32 = 7; // ".rodata\0" (8 bytes)
+    pub const DATA: u32 = 15; // ".data\0" (6 bytes)
+    pub const BSS: u32 = 21; // ".bss\0" (5 bytes)
+    pub const SYMTAB: u32 = 26; // ".symtab\0" (8 bytes)
+    pub const STRTAB: u32 = 34; // ".strtab\0" (8 bytes)
+    pub const RELA_TEXT: u32 = 42; // ".rela.text\0" (11 bytes)
+    pub const SHSTRTAB: u32 = 53; // ".shstrtab\0" (10 bytes)
 }
 
 /// ELF 상수
@@ -336,10 +336,29 @@ impl ELFObject {
         for reloc in &self.relocations {
             if reloc.section == section::SectionType::Text {
                 if let relocation::RelocationType::PcRel32 = reloc.reloc_type {
+                    // 심볼 테이블에서 참조 대상 심볼 찾기
+                    let symbol = self
+                        .symbol_table
+                        .symbols
+                        .iter()
+                        .find(|s| s.name == reloc.symbol)
+                        .expect(&format!("Symbol '{}' not found in symbol table", reloc.symbol));
+
+                    // 심볼의 실제 메모리 주소 계산
+                    let symbol_addr = match symbol.section {
+                        section::SectionType::Text => text_addr + symbol.offset as u64,
+                        section::SectionType::RoData => rodata_addr + symbol.offset as u64,
+                        section::SectionType::Data => {
+                            panic!("Data section not supported in executable yet")
+                        }
+                        section::SectionType::Bss => {
+                            panic!("BSS section not supported in executable yet")
+                        }
+                    };
+
                     // PC-relative 계산: target_addr - (current_addr + 4)
                     let current_addr = text_addr + reloc.offset as u64 + 4;
-                    let target_addr = rodata_addr; // hello_msg가 .rodata의 시작
-                    let offset = (target_addr as i64 - current_addr as i64 + reloc.addend) as i32;
+                    let offset = (symbol_addr as i64 - current_addr as i64 + reloc.addend) as i32;
 
                     // 오프셋 패치
                     let offset_bytes = offset.to_le_bytes();
@@ -467,17 +486,17 @@ impl ELFObject {
         let mut strtab = Vec::new();
 
         // NULL string
-        strtab.push(0);
+        strtab.push(0); // offset 0
 
         // Section names
         strtab.extend_from_slice(b".text\0"); // offset 1
-        strtab.extend_from_slice(b".rodata\0"); // offset 9
-        strtab.extend_from_slice(b".data\0"); // offset 17
-        strtab.extend_from_slice(b".bss\0"); // offset 23
-        strtab.extend_from_slice(b".symtab\0"); // offset 28
-        strtab.extend_from_slice(b".strtab\0"); // offset 36
-        strtab.extend_from_slice(b".rela.text\0"); // offset 44
-        strtab.extend_from_slice(b".shstrtab\0"); // offset 54
+        strtab.extend_from_slice(b".rodata\0"); // offset 7
+        strtab.extend_from_slice(b".data\0"); // offset 15
+        strtab.extend_from_slice(b".bss\0"); // offset 21
+        strtab.extend_from_slice(b".symtab\0"); // offset 26
+        strtab.extend_from_slice(b".strtab\0"); // offset 34
+        strtab.extend_from_slice(b".rela.text\0"); // offset 42
+        strtab.extend_from_slice(b".shstrtab\0"); // offset 53
 
         strtab
     }

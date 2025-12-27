@@ -39,32 +39,38 @@ pub enum Instruction {
     Sub = 0x29,
 
     /// MUL - Unsigned multiply
-    /// Opcode: 0xF7 (with /4 extension)
-    Mul = 0xF704,
+    /// Opcode: 0xF7 (requires ModR/M with /4 extension in reg field)
+    /// Internal discriminant uses unique value to avoid enum collision
+    Mul = 0x10F7,
 
-    /// IMUL - Signed multiply
-    /// Opcode: 0xAF (0F AF - two byte opcode)
+    /// IMUL - Signed multiply (two-byte form)
+    /// Opcode: 0x0F AF (two byte opcode)
     IMul = 0x0FAF,
 
     /// DIV - Unsigned divide
-    /// Opcode: 0xF7 (with /6 extension)
-    Div = 0xF706,
+    /// Opcode: 0xF7 (requires ModR/M with /6 extension in reg field)
+    /// Internal discriminant uses unique value to avoid enum collision
+    Div = 0x20F7,
 
     /// IDIV - Signed divide
-    /// Opcode: 0xF7 (with /7 extension)
-    IDiv = 0xF707,
+    /// Opcode: 0xF7 (requires ModR/M with /7 extension in reg field)
+    /// Internal discriminant uses unique value to avoid enum collision
+    IDiv = 0x30F7,
 
     /// INC - Increment
-    /// Opcode: 0xFF (with /0 extension)
-    Inc = 0xFF00,
+    /// Opcode: 0xFF (requires ModR/M with /0 extension in reg field)
+    /// Internal discriminant uses unique value to avoid enum collision
+    Inc = 0x10FF,
 
     /// DEC - Decrement
-    /// Opcode: 0xFF (with /1 extension)
-    Dec = 0xFF01,
+    /// Opcode: 0xFF (requires ModR/M with /1 extension in reg field)
+    /// Internal discriminant uses unique value to avoid enum collision
+    Dec = 0x20FF,
 
     /// NEG - Negate
-    /// Opcode: 0xF7 (with /3 extension)
-    Neg = 0xF703,
+    /// Opcode: 0xF7 (requires ModR/M with /3 extension in reg field)
+    /// Internal discriminant uses unique value to avoid enum collision
+    Neg = 0x40F7,
 
     // Logical Instructions
     /// AND - Logical AND
@@ -80,20 +86,24 @@ pub enum Instruction {
     Xor = 0x31,
 
     /// NOT - Logical NOT
-    /// Opcode: 0xF7 (with /2 extension)
-    Not = 0xF702,
+    /// Opcode: 0xF7 (requires ModR/M with /2 extension in reg field)
+    /// Internal discriminant uses unique value to avoid enum collision
+    Not = 0x50F7,
 
     /// SHL - Shift left
-    /// Opcode: 0xD3 (with /4 extension)
-    Shl = 0xD304,
+    /// Opcode: 0xD3 (requires ModR/M with /4 extension in reg field)
+    /// Internal discriminant uses unique value to avoid enum collision
+    Shl = 0x10D3,
 
     /// SHR - Shift right
-    /// Opcode: 0xD3 (with /5 extension)
-    Shr = 0xD305,
+    /// Opcode: 0xD3 (requires ModR/M with /5 extension in reg field)
+    /// Internal discriminant uses unique value to avoid enum collision
+    Shr = 0x20D3,
 
     /// SAR - Arithmetic shift right
-    /// Opcode: 0xD3 (with /7 extension)
-    Sar = 0xD307,
+    /// Opcode: 0xD3 (requires ModR/M with /7 extension in reg field)
+    /// Internal discriminant uses unique value to avoid enum collision
+    Sar = 0x30D3,
 
     // Comparison and Test Instructions
     /// CMP - Compare
@@ -177,24 +187,41 @@ impl Instruction {
     pub fn as_bytes(self) -> Vec<u8> {
         let value = self as i32;
 
-        // Handle multi-byte opcodes
-        if value > 0xFF {
-            // Two-byte opcode
-            if value <= 0xFFFF {
-                vec![(value >> 8) as u8, (value & 0xFF) as u8]
-            } else {
-                // Three or more bytes (rare, but handled)
-                let mut bytes = Vec::new();
-                let mut v = value;
-                while v > 0 {
-                    bytes.insert(0, (v & 0xFF) as u8);
-                    v >>= 8;
+        // For instructions with /digit extensions, extract the actual opcode
+        // Internal discriminants use high bytes for uniqueness, but opcode is in low bytes
+        match self {
+            // 0xF7 opcode family (MUL, DIV, IDIV, NEG, NOT)
+            Instruction::Mul | Instruction::Div | Instruction::IDiv
+            | Instruction::Neg | Instruction::Not => vec![0xF7],
+
+            // 0xFF opcode family (INC, DEC)
+            Instruction::Inc | Instruction::Dec => vec![0xFF],
+
+            // 0xD3 opcode family (SHL, SHR, SAR)
+            Instruction::Shl | Instruction::Shr | Instruction::Sar => vec![0xD3],
+
+            // All other instructions
+            _ => {
+                // Handle multi-byte opcodes
+                if value > 0xFF {
+                    // Two-byte opcode
+                    if value <= 0xFFFF {
+                        vec![(value >> 8) as u8, (value & 0xFF) as u8]
+                    } else {
+                        // Three or more bytes (rare, but handled)
+                        let mut bytes = Vec::new();
+                        let mut v = value;
+                        while v > 0 {
+                            bytes.insert(0, (v & 0xFF) as u8);
+                            v >>= 8;
+                        }
+                        bytes
+                    }
+                } else {
+                    // Single-byte opcode
+                    vec![value as u8]
                 }
-                bytes
             }
-        } else {
-            // Single-byte opcode
-            vec![value as u8]
         }
     }
 
@@ -250,4 +277,26 @@ impl Instruction {
 impl Instruction {
     /// Returns SYSCALL instruction bytes as a const array
     pub const SYSCALL_BYTES: [u8; 2] = [0x0F, 0x05];
+
+    /// Returns the ModR/M reg field extension for instructions that require /digit encoding
+    ///
+    /// For instructions like MUL, DIV, INC, etc., the opcode alone is not sufficient.
+    /// The ModR/M byte's reg field (bits 3-5) must contain a specific digit extension.
+    ///
+    /// Returns None for instructions that don't use /digit encoding.
+    pub fn modrm_extension(self) -> Option<u8> {
+        match self {
+            Instruction::Inc => Some(0), // /0
+            Instruction::Dec => Some(1), // /1
+            Instruction::Not => Some(2), // /2
+            Instruction::Neg => Some(3), // /3
+            Instruction::Mul => Some(4), // /4
+            Instruction::Shl => Some(4), // /4
+            Instruction::Shr => Some(5), // /5
+            Instruction::Div => Some(6), // /6
+            Instruction::IDiv => Some(7), // /7
+            Instruction::Sar => Some(7), // /7
+            _ => None,
+        }
+    }
 }
