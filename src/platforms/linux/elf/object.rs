@@ -5,6 +5,15 @@ use super::{
     symbol::{self, SymbolTable},
 };
 
+/// ELF 출력 타입
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ELFOutputType {
+    /// 재배치 가능한 오브젝트 파일 (.o)
+    Relocatable,
+    /// 실행 파일
+    Executable,
+}
+
 /// ELF 섹션 인덱스 상수
 mod section_indices {
     pub const NULL: usize = 0;
@@ -108,7 +117,15 @@ impl ELFObject {
 }
 
 impl ELFObject {
-    pub fn to_elf_binary(&self) -> Vec<u8> {
+    /// ELF 바이너리 인코딩 (통합 함수)
+    pub fn encode(&self, output_type: ELFOutputType) -> Vec<u8> {
+        match output_type {
+            ELFOutputType::Relocatable => self.encode_relocatable(),
+            ELFOutputType::Executable => self.encode_executable(),
+        }
+    }
+
+    fn encode_relocatable(&self) -> Vec<u8> {
         let mut binary = Vec::new();
 
         // ELF Header (64-bit)
@@ -282,8 +299,7 @@ impl ELFObject {
         binary
     }
 
-    /// ELF 실행 파일 생성 (ET_EXEC)
-    pub fn to_executable_elf_binary(&self) -> Vec<u8> {
+    fn encode_executable(&self) -> Vec<u8> {
         let mut binary = Vec::new();
 
         // 메모리 주소 설정
@@ -619,7 +635,7 @@ mod tests {
     use crate::platforms::amd64::rex::RexPrefix;
     use crate::platforms::linux::elf::relocation::{Relocation, RelocationType};
     use crate::platforms::linux::elf::{
-        object::ELFObject,
+        object::{ELFObject, ELFOutputType},
         section::SectionType,
         symbol::{Symbol, SymbolBinding, SymbolType},
     };
@@ -720,7 +736,7 @@ mod tests {
             addend: 0, // PC-relative 계산 (RIP는 이미 offset 필드 끝을 가리킴)
         });
 
-        let bytes = object.to_elf_binary();
+        let bytes = object.encode(ELFOutputType::Relocatable);
 
         fs::write("output.o", bytes).expect("Failed to write ELF object file");
 
@@ -825,7 +841,7 @@ mod tests {
             addend: 0, // PC-relative 계산 (RIP는 이미 offset 필드 끝을 가리킴)
         });
 
-        let bytes = object.to_executable_elf_binary();
+        let bytes = object.encode(ELFOutputType::Executable);
 
         fs::write("hello.exe", bytes).expect("Failed to write ELF executable file");
 
