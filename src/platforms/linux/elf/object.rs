@@ -1,13 +1,21 @@
-use crate::ir::data::{
+use super::{
+    header::ELFHeader64,
     relocation::{self, Relocation},
     section::{self, LinkedSection, Section},
     symbol::{self, SymbolTable},
 };
 
+#[derive(Debug, Clone)]
+pub enum ELFObjectType {
+    Relocatable,
+    Executable,
+    Shared,
+}
+
 /// 컴파일된 오브젝트 파일
 /// Unix/Linux: ELF
 #[derive(Debug, Clone)]
-pub struct IRCompileObject {
+pub struct ELFObject {
     /// 데이터 섹션 (.data) - 초기화된 변경 가능한 전역 변수
     pub data_section: Section,
 
@@ -27,7 +35,7 @@ pub struct IRCompileObject {
     pub relocations: Vec<Relocation>,
 }
 
-impl IRCompileObject {
+impl ELFObject {
     pub fn new() -> Self {
         Self {
             data_section: Section::new_data(),
@@ -39,7 +47,8 @@ impl IRCompileObject {
         }
     }
 }
-impl IRCompileObject {
+
+impl ELFObject {
     pub fn to_elf_binary(&self) -> Vec<u8> {
         let mut binary = Vec::new();
 
@@ -182,9 +191,6 @@ impl IRCompileObject {
         // ELF Header (64-bit executable)
         self.write_executable_elf_header(&mut binary, TEXT_ADDR);
 
-        // Program Headers는 ELF 헤더 직후 (오프셋 64)
-        let phdr_offset = 64;
-
         // Program Headers (LOAD 세그먼트)
         // PT_LOAD for .text (executable)
         let text_file_offset = 0x1000; // 파일 오프셋
@@ -254,65 +260,8 @@ impl IRCompileObject {
     }
 
     fn write_executable_elf_header(&self, buffer: &mut Vec<u8>, entry_point: u64) {
-        // ELF Magic
-        buffer.extend_from_slice(&[0x7f, b'E', b'L', b'F']);
-
-        // Class (64-bit)
-        buffer.push(2);
-
-        // Data (little endian)
-        buffer.push(1);
-
-        // Version
-        buffer.push(1);
-
-        // OS/ABI (System V)
-        buffer.push(0);
-
-        // ABI Version
-        buffer.push(0);
-
-        // Padding (7 bytes)
-        buffer.extend_from_slice(&[0u8; 7]);
-
-        // Type (ET_EXEC = 2)
-        buffer.extend_from_slice(&2u16.to_le_bytes());
-
-        // Machine (x86-64 = 0x3E)
-        buffer.extend_from_slice(&0x3Eu16.to_le_bytes());
-
-        // Version
-        buffer.extend_from_slice(&1u32.to_le_bytes());
-
-        // Entry point (e_entry)
-        buffer.extend_from_slice(&entry_point.to_le_bytes());
-
-        // Program header offset (64 = ELF 헤더 직후)
-        buffer.extend_from_slice(&64u64.to_le_bytes());
-
-        // Section header offset (0 = 없음, 실행파일에는 optional)
-        buffer.extend_from_slice(&0u64.to_le_bytes());
-
-        // Flags
-        buffer.extend_from_slice(&0u32.to_le_bytes());
-
-        // ELF header size
-        buffer.extend_from_slice(&64u16.to_le_bytes());
-
-        // Program header entry size (56 bytes for 64-bit)
-        buffer.extend_from_slice(&56u16.to_le_bytes());
-
-        // Program header count (2 = .text + .rodata)
-        buffer.extend_from_slice(&2u16.to_le_bytes());
-
-        // Section header entry size (0)
-        buffer.extend_from_slice(&0u16.to_le_bytes());
-
-        // Section header count (0)
-        buffer.extend_from_slice(&0u16.to_le_bytes());
-
-        // Section header string table index (0)
-        buffer.extend_from_slice(&0u16.to_le_bytes());
+        let header = ELFHeader64::executable_x86_64(entry_point);
+        buffer.extend_from_slice(&header.to_bytes());
     }
 
     fn write_program_header(
@@ -353,65 +302,8 @@ impl IRCompileObject {
     }
 
     fn write_elf_header(&self, buffer: &mut Vec<u8>) {
-        // ELF Magic Number
-        buffer.extend_from_slice(&[0x7f, b'E', b'L', b'F']);
-
-        // Class (64-bit)
-        buffer.push(2);
-
-        // Data (Little Endian)
-        buffer.push(1);
-
-        // Version
-        buffer.push(1);
-
-        // OS/ABI (UNIX System V)
-        buffer.push(0);
-
-        // ABI Version
-        buffer.push(0);
-
-        // Padding
-        buffer.extend_from_slice(&[0; 7]);
-
-        // Type (Relocatable)
-        buffer.extend_from_slice(&1u16.to_le_bytes()); // ET_REL
-
-        // Machine (x86-64)
-        buffer.extend_from_slice(&0x3eu16.to_le_bytes());
-
-        // Version
-        buffer.extend_from_slice(&1u32.to_le_bytes());
-
-        // Entry point (0 for object files)
-        buffer.extend_from_slice(&0u64.to_le_bytes());
-
-        // Program header offset (0 for object files)
-        buffer.extend_from_slice(&0u64.to_le_bytes());
-
-        // Section header offset (placeholder, will be patched)
-        buffer.extend_from_slice(&0u64.to_le_bytes());
-
-        // Flags
-        buffer.extend_from_slice(&0u32.to_le_bytes());
-
-        // ELF header size
-        buffer.extend_from_slice(&64u16.to_le_bytes());
-
-        // Program header entry size
-        buffer.extend_from_slice(&0u16.to_le_bytes());
-
-        // Program header count
-        buffer.extend_from_slice(&0u16.to_le_bytes());
-
-        // Section header entry size
-        buffer.extend_from_slice(&64u16.to_le_bytes());
-
-        // Section header count (9 sections: null, text, rodata, data, bss, symtab, strtab, rela.text, shstrtab)
-        buffer.extend_from_slice(&9u16.to_le_bytes());
-
-        // Section header string table index (8 = .shstrtab)
-        buffer.extend_from_slice(&8u16.to_le_bytes());
+        let header = ELFHeader64::relocatable_x86_64();
+        buffer.extend_from_slice(&header.to_bytes());
     }
 
     fn patch_elf_header(&self, buffer: &mut Vec<u8>, section_header_offset: u64) {
@@ -601,20 +493,19 @@ impl IRCompileObject {
 mod tests {
     use std::fs;
 
-    use crate::ir::data::relocation::{Relocation, RelocationType};
-    use crate::platforms::amd64::{Instruction, RexPrefix};
-    use crate::{
-        ir::data::{
-            object::IRCompileObject,
-            section::SectionType,
-            symbol::{Symbol, SymbolBinding, SymbolType},
-        },
-        platforms::amd64::Register,
+    use crate::platforms::amd64::instruction::Instruction;
+    use crate::platforms::amd64::register::Register;
+    use crate::platforms::amd64::rex::RexPrefix;
+    use crate::platforms::linux::elf::relocation::{Relocation, RelocationType};
+    use crate::platforms::linux::elf::{
+        object::ELFObject,
+        section::SectionType,
+        symbol::{Symbol, SymbolBinding, SymbolType},
     };
 
     #[test]
     fn test_generate_amd64_linux_elf() {
-        let mut object = IRCompileObject::new();
+        let mut object = ELFObject::new();
 
         // Hello World 문자열을 .rodata 섹션에 추가
         let hello_str = b"Hello, World!\n";
@@ -717,7 +608,7 @@ mod tests {
 
     #[test]
     pub fn test_generate_amd64_linux_executable_elf() {
-        let mut object = IRCompileObject::new();
+        let mut object = ELFObject::new();
 
         // Hello World 문자열을 .rodata 섹션에 추가
         let hello_str = b"Hello, World!\n";

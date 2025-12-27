@@ -1,30 +1,13 @@
-use crate::ir::data::{
+use crate::platforms::linux::elf::{
+    object::ELFObject,
     section::SectionType,
     symbol::{Symbol, SymbolBinding, SymbolType},
 };
 
-pub fn compile_constant_definition(
-    constant: &crate::ir::ast::global::constant::ConstantDefinition,
-    object: &mut crate::ir::IRCompileObject,
-) -> Result<(), crate::ir::error::IRError> {
-    if cfg!(target_arch = "x86_64") {
-        compile_constant_amd64(constant, object)?;
-    } else if cfg!(target_arch = "aarch64") {
-        unimplemented!("Constant compilation for aarch64 is not yet implemented");
-    } else {
-        unimplemented!(
-            "Constant compilation not implemented for this architecture: {}",
-            std::env::consts::ARCH
-        );
-    }
-
-    Ok(())
-}
-
 /// AMD64/x86-64 아키텍처에서 상수 컴파일
-fn compile_constant_amd64(
+pub fn compile_constant(
     constant: &crate::ir::ast::global::constant::ConstantDefinition,
-    object: &mut crate::ir::IRCompileObject,
+    object: &mut ELFObject,
 ) -> Result<(), crate::ir::error::IRError> {
     use crate::ir::ast::common::literal::LiteralValue;
 

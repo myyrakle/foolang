@@ -1,27 +1,13 @@
-use crate::ir::{
-    ast::{global::GlobalStatement, CodeUnit},
-    data::object::IRCompileObject,
-    error::IRError,
-    IRCompiler,
-};
+use crate::ir::{ast::CodeUnit, data::IRCompiledObject, error::IRError, IRCompiler};
 
-pub mod constant;
+pub mod amd64_linux;
 
 impl IRCompiler {
-    pub fn compile(&self, code_unit: CodeUnit) -> Result<IRCompileObject, IRError> {
-        let mut compiled_object = IRCompileObject::new();
+    pub fn compile(&self, code_unit: CodeUnit) -> Result<IRCompiledObject, IRError> {
+        let compiled_object = amd64_linux::compile(code_unit)?;
 
-        for statement in code_unit.statements {
-            match statement {
-                GlobalStatement::Constant(constant) => {
-                    constant::compile_constant_definition(&constant, &mut compiled_object)?;
-                }
-                GlobalStatement::DefineFunction(function) => {
-                    // Compile function definition
-                    // Placeholder for actual compilation logic
-                }
-            }
-        }
+        // TODO: 플랫폼별 분기 처리
+        let compiled_object = IRCompiledObject::ELF(compiled_object);
 
         Ok(compiled_object)
     }

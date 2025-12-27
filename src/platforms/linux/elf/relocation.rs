@@ -1,4 +1,4 @@
-use crate::ir::data::section::SectionType;
+use super::section::SectionType;
 
 /// 재배치 정보 (링킹 시 주소 패치)
 #[derive(Debug, Clone)]

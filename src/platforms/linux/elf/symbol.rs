@@ -1,4 +1,4 @@
-use crate::ir::data::section::SectionType;
+use super::section::SectionType;
 
 /// 심볼 테이블 엔트리
 #[derive(Debug, Clone)]
