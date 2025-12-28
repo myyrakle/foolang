@@ -105,6 +105,12 @@ pub struct ELFObject {
     pub relocations: Vec<Relocation>,
 }
 
+impl Default for ELFObject {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ELFObject {
     pub fn new() -> Self {
         Self {
@@ -360,10 +366,8 @@ impl ELFObject {
                         .symbols
                         .iter()
                         .find(|s| s.name == reloc.symbol)
-                        .expect(&format!(
-                            "Symbol '{}' not found in symbol table",
-                            reloc.symbol
-                        ));
+                        .unwrap_or_else(|| panic!("Symbol '{}' not found in symbol table",
+                            reloc.symbol));
 
                     // 심볼의 실제 메모리 주소 계산
                     let symbol_addr = match symbol.section {
