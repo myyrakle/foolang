@@ -358,7 +358,10 @@ impl ELFObject {
                         .symbols
                         .iter()
                         .find(|s| s.name == reloc.symbol)
-                        .expect(&format!("Symbol '{}' not found in symbol table", reloc.symbol));
+                        .expect(&format!(
+                            "Symbol '{}' not found in symbol table",
+                            reloc.symbol
+                        ));
 
                     // 심볼의 실제 메모리 주소 계산
                     let symbol_addr = match symbol.section {
@@ -673,7 +676,7 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             modrm_digit_reg(0, Register::RAX), // ModR/M byte for mov rax, imm32
-            crate::platforms::amd64::syscall::SYS_WRITE,
+            crate::platforms::linux::syscall::amd64::SYS_WRITE,
             0x00,
             0x00,
             0x00, // mov rax, 1 (sys_write)
@@ -694,7 +697,7 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             modrm_digit_reg(0, Register::RDX), // ModR/M byte for mov rdx, imm32
-            0x0e, // 14 (Hello World 문자열 길이)
+            0x0e,                              // 14 (Hello World 문자열 길이)
             0x00,
             0x00,
             0x00, // mov rdx, 14
@@ -703,7 +706,7 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             modrm_digit_reg(0, Register::RAX), // ModR/M byte for mov rax, imm32
-            crate::platforms::amd64::syscall::SYS_EXIT,
+            crate::platforms::linux::syscall::amd64::SYS_EXIT,
             0x00,
             0x00,
             0x00, // mov rax, 60 (sys_exit)
@@ -778,7 +781,7 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             modrm_digit_reg(0, Register::RAX), // ModR/M byte for mov rax, imm32
-            crate::platforms::amd64::syscall::SYS_WRITE,
+            crate::platforms::linux::syscall::amd64::SYS_WRITE,
             0x00,
             0x00,
             0x00, // mov rax, 1 (sys_write)
@@ -799,7 +802,7 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             modrm_digit_reg(0, Register::RDX), // ModR/M byte for mov rdx, imm32
-            0x0e, // 14 (Hello World 문자열 길이)
+            0x0e,                              // 14 (Hello World 문자열 길이)
             0x00,
             0x00,
             0x00, // mov rdx, 14
@@ -808,7 +811,7 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             modrm_digit_reg(0, Register::RAX), // ModR/M byte for mov rax, imm32
-            crate::platforms::amd64::syscall::SYS_EXIT,
+            crate::platforms::linux::syscall::amd64::SYS_EXIT,
             0x00,
             0x00,
             0x00, // mov rax, 60 (sys_exit)

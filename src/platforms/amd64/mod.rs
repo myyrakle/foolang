@@ -16,15 +16,6 @@ pub mod modrm {
     pub const XOR_RDI_RDI: u8 = 0xFF;
 }
 
-/// Linux system call numbers for x86-64
-pub mod syscall {
-    /// sys_write - Write to file descriptor
-    pub const SYS_WRITE: u8 = 1;
-
-    /// sys_exit - Terminate process
-    pub const SYS_EXIT: u8 = 60;
-}
-
 /// Standard file descriptors
 pub mod fd {
     /// Standard output
@@ -155,7 +146,7 @@ mod tests {
     // ModR/M construction tests
     #[test]
     fn test_modrm_reg_reg() {
-        use crate::platforms::amd64::register::{modrm_reg_reg};
+        use crate::platforms::amd64::register::modrm_reg_reg;
 
         // MOV RAX, RBX (Reg=0, R/M=3)
         assert_eq!(modrm_reg_reg(Register::RAX, Register::RBX), 0xC3);
@@ -169,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_modrm_digit_reg() {
-        use crate::platforms::amd64::register::{modrm_digit_reg};
+        use crate::platforms::amd64::register::modrm_digit_reg;
 
         // MUL RBX (Digit=4, R/M=3)
         assert_eq!(modrm_digit_reg(4, Register::RBX), 0xE3);
