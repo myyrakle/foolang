@@ -15,6 +15,7 @@ pub enum ELFOutputType {
 }
 
 /// ELF 섹션 인덱스 상수
+#[allow(dead_code)]
 mod section_indices {
     pub const NULL: usize = 0;
     pub const TEXT: usize = 1;
@@ -28,6 +29,7 @@ mod section_indices {
 }
 
 /// .shstrtab 섹션 내의 섹션 이름 문자열 오프셋
+#[allow(dead_code)]
 mod section_name_offsets {
     pub const NULL: u32 = 0;
     pub const TEXT: u32 = 1; // ".text\0" (6 bytes)
@@ -101,6 +103,12 @@ pub struct ELFObject {
 
     /// 재배치 정보 - 링킹 시 주소 패치가 필요한 위치
     pub relocations: Vec<Relocation>,
+}
+
+impl Default for ELFObject {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ELFObject {
@@ -358,10 +366,8 @@ impl ELFObject {
                         .symbols
                         .iter()
                         .find(|s| s.name == reloc.symbol)
-                        .expect(&format!(
-                            "Symbol '{}' not found in symbol table",
-                            reloc.symbol
-                        ));
+                        .unwrap_or_else(|| panic!("Symbol '{}' not found in symbol table",
+                            reloc.symbol));
 
                     // 심볼의 실제 메모리 주소 계산
                     let symbol_addr = match symbol.section {
