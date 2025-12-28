@@ -16,12 +16,6 @@ pub mod modrm {
     pub const XOR_RDI_RDI: u8 = 0xFF;
 }
 
-/// Standard file descriptors
-pub mod fd {
-    /// Standard output
-    pub const STDOUT: u8 = 1;
-}
-
 #[cfg(test)]
 mod tests {
     use crate::platforms::amd64::{instruction::Instruction, register::Register};

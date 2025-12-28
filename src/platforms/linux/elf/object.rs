@@ -683,7 +683,7 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             modrm_digit_reg(0, Register::RDI), // ModR/M byte for mov rdi, imm32
-            crate::platforms::amd64::fd::STDOUT,
+            crate::platforms::linux::fd::STDOUT,
             0x00,
             0x00,
             0x00, // mov rdi, 1 (stdout)
@@ -788,7 +788,7 @@ mod tests {
             RexPrefix::RexW as u8,
             Instruction::MovImm as u8,
             modrm_digit_reg(0, Register::RDI), // ModR/M byte for mov rdi, imm32
-            crate::platforms::amd64::fd::STDOUT,
+            crate::platforms::linux::fd::STDOUT,
             0x00,
             0x00,
             0x00, // mov rdi, 1 (stdout)
