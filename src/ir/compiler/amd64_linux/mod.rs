@@ -7,6 +7,8 @@ use crate::{
 };
 
 pub mod constant;
+pub mod function;
+pub mod instruction;
 
 pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
     let mut compiled_object = ELFObject::new();
@@ -16,12 +18,79 @@ pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
             GlobalStatement::Constant(constant) => {
                 constant::compile_constant(&constant, &mut compiled_object)?;
             }
-            GlobalStatement::DefineFunction(_function) => {
-                // Compile function definition
-                // Placeholder for actual compilation logic
+            GlobalStatement::DefineFunction(function) => {
+                function::compile_function(&function, &mut compiled_object)?;
             }
         }
     }
 
     Ok(compiled_object)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        ir::{
+            ast::{
+                common::literal::LiteralValue,
+                global::{
+                    constant::ConstantDefinition, function::FunctionDefinition, GlobalStatement,
+                },
+                local::{
+                    instruction::{call::CallInstruction, InstructionStatement},
+                    LocalStatement, LocalStatements,
+                },
+                CodeUnit,
+            },
+            IRCompiler,
+        },
+        platforms::{linux::elf::object::ELFOutputType, target::Target},
+    };
+
+    #[test]
+    fn test_compile() {
+        let compiler = IRCompiler::new();
+
+        let code_unit = CodeUnit {
+            filename: "example.foolang".into(),
+            statements: vec![
+                GlobalStatement::Constant(ConstantDefinition {
+                    constant_name: "HELLWORLD_TEXT".into(),
+                    value: LiteralValue::String("Hello, world!".into()),
+                }),
+                GlobalStatement::DefineFunction(FunctionDefinition {
+                    function_name: "main".into(),
+                    arguments: vec![],
+                    return_type: None,
+                    function_body: LocalStatements {
+                        statements: vec![LocalStatement::Instruction(InstructionStatement::Call(
+                            CallInstruction {
+                                function_name: "printf".into(),
+                                parameters: vec![],
+                            },
+                        ))],
+                    },
+                }),
+            ],
+        };
+
+        let target = Target::Amd64Linux;
+
+        let object = compiler.compile(&target, code_unit);
+
+        std::fs::write(
+            "output.exe",
+            match object {
+                Ok(obj) => match obj {
+                    crate::ir::data::IRCompiledObject::ELF(elf_obj) => {
+                        elf_obj.encode(ELFOutputType::Executable)
+                    }
+                },
+                Err(_) => vec![],
+            },
+        )
+        .expect("Failed to write output.exe");
+
+        println!("This is a placeholder main function.");
+    }
 }
