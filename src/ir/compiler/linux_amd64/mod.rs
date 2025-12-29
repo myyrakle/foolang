@@ -74,7 +74,7 @@ mod tests {
             ],
         };
 
-        let target = Target::Amd64Linux;
+        let target = Target::LinuxAmd64;
 
         let object = compiler.compile(&target, code_unit);
 

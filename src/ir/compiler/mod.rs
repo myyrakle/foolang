@@ -3,7 +3,7 @@ use crate::{
     platforms::target::Target,
 };
 
-pub mod amd64_linux;
+pub mod linux_amd64;
 
 impl IRCompiler {
     pub fn compile(
@@ -12,8 +12,8 @@ impl IRCompiler {
         code_unit: CodeUnit,
     ) -> Result<IRCompiledObject, IRError> {
         match target {
-            Target::Amd64Linux => {
-                let compiled_object = amd64_linux::compile(code_unit)?;
+            Target::LinuxAmd64 => {
+                let compiled_object = linux_amd64::compile(code_unit)?;
                 let compiled_object = IRCompiledObject::ELF(compiled_object);
 
                 Ok(compiled_object)
