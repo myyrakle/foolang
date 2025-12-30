@@ -27,6 +27,16 @@ fn compile_statement(stmt: &LocalStatement, object: &mut ELFObject) -> Result<()
                 InstructionStatement::Add(_) => {
                     return Err(IRError::new("Add instruction not yet implemented"));
                 }
+                InstructionStatement::Return(_instruction) => todo!(),
+                InstructionStatement::Sub(_instruction) => todo!(),
+                InstructionStatement::Mul(_instruction) => todo!(),
+                InstructionStatement::Div(_instruction) => todo!(),
+                InstructionStatement::Branch(_instruction) => todo!(),
+                InstructionStatement::Jump(_instruction) => todo!(),
+                InstructionStatement::Compare(_instruction) => todo!(),
+                InstructionStatement::Alloca(_instruction) => todo!(),
+                InstructionStatement::Load(_instruction) => todo!(),
+                InstructionStatement::Store(_instruction) => todo!(),
             }
         }
         LocalStatement::Assignment(_) => {

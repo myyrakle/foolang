@@ -346,7 +346,7 @@ mod tests {
     #[test]
     fn test_executable_header() {
         let header = ELFHeader64::executable_x86_64(0x401000);
-        assert_eq!(header.file_type as u16, 2);   // ET_EXEC
+        assert_eq!(header.file_type as u16, 3);   // ET_DYN (PIE executable)
         assert_eq!(header.entry, 0x401000);        // Entry point
         assert_eq!(header.phoff, 64);              // Program headers after ELF header
         assert_eq!(header.phnum, 2);               // 2 segments
