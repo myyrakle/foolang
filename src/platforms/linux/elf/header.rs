@@ -240,14 +240,14 @@ impl ELFHeader64 {
             version: 1,
             entry: entry_point,
             phoff: 64, // ELF 헤더 직후
-            shoff: 0,  // Section Headers는 선택적
+            shoff: 0,  // 나중에 패치됨
             flags: 0,
             ehsize: 64,
             phentsize: 56, // Program Header 크기 (64-bit)
             phnum: 2,      // .text + .rodata
-            shentsize: 0,
-            shnum: 0,
-            shstrndx: 0,
+            shentsize: 64, // Section Header 크기 (64-bit)
+            shnum: 6,      // null, .text, .rodata, .symtab, .strtab, .shstrtab
+            shstrndx: 5,   // .shstrtab 섹션 인덱스
         }
     }
 

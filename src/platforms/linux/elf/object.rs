@@ -402,6 +402,102 @@ impl ELFObject {
         // .rodata 섹션 데이터
         binary.extend_from_slice(&self.rodata_section.data);
 
+        // 심볼 테이블과 문자열 테이블 추가 (디버깅 정보용)
+        let strtab_offset = binary.len();
+        let (strtab_data, string_offsets) = self.build_string_table();
+        binary.extend_from_slice(&strtab_data);
+        let strtab_size = strtab_data.len();
+
+        let shstrtab_offset = binary.len();
+        let shstrtab_data = self.build_section_string_table();
+        binary.extend_from_slice(&shstrtab_data);
+        let shstrtab_size = shstrtab_data.len();
+
+        let symtab_offset = binary.len();
+        let symtab_data = self.build_symbol_table(&string_offsets);
+        binary.extend_from_slice(&symtab_data);
+        let symtab_size = symtab_data.len();
+
+        // Section Headers 작성 (디버깅 정보용)
+        let section_headers_start = binary.len();
+
+        // 0: NULL section
+        self.write_null_section_header(&mut binary);
+
+        // 1: .text (SHT_PROGBITS, flags=AX)
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::TEXT,
+            SectionHeaderType::ProgBits as u32,
+            self.text_section.flags.to_elf_flags(),
+            text_file_offset,
+            text_size,
+            16,
+            0,
+            0,
+            0,
+        );
+
+        // 2: .rodata (SHT_PROGBITS, flags=A)
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::RODATA,
+            SectionHeaderType::ProgBits as u32,
+            self.rodata_section.flags.to_elf_flags(),
+            rodata_file_offset,
+            rodata_size,
+            1,
+            0,
+            0,
+            0,
+        );
+
+        // 3: .symtab (SHT_SYMTAB)
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::SYMTAB,
+            SectionHeaderType::SymTab as u32,
+            0,
+            symtab_offset,
+            symtab_size,
+            8,
+            4, // link to .strtab
+            1, // info: first global symbol index
+            elf_constants::SIZEOF_ELF64_SYM,
+        );
+
+        // 4: .strtab (SHT_STRTAB)
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::STRTAB,
+            SectionHeaderType::StrTab as u32,
+            0,
+            strtab_offset,
+            strtab_size,
+            1,
+            0,
+            0,
+            0,
+        );
+
+        // 5: .shstrtab (SHT_STRTAB)
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::SHSTRTAB,
+            SectionHeaderType::StrTab as u32,
+            0,
+            shstrtab_offset,
+            shstrtab_size,
+            1,
+            0,
+            0,
+            0,
+        );
+
+        // ELF Header의 섹션 헤더 오프셋 업데이트
+        let section_headers_offset = section_headers_start as u64;
+        self.patch_elf_header(&mut binary, section_headers_offset);
+
         binary
     }
 
