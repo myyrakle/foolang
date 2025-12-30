@@ -180,7 +180,7 @@ impl ELFObject {
 
         // 심볼 테이블 (.symtab)
         let symtab_offset = binary.len();
-        let symtab_data = self.build_symbol_table(&string_offsets);
+        let (symtab_data, first_global_index) = self.build_symbol_table(&string_offsets);
         binary.extend_from_slice(&symtab_data);
         let symtab_size = symtab_data.len();
 
@@ -253,7 +253,6 @@ impl ELFObject {
         );
 
         // 5: .symtab (SHT_SYMTAB, link=strtab section, info=first non-local symbol index)
-        // link: 6 (.strtab), info: 2 (첫 번째 글로벌 심볼의 인덱스)
         self.write_section_header(
             &mut binary,
             section_name_offsets::SYMTAB,
@@ -263,7 +262,7 @@ impl ELFObject {
             symtab_size,
             8,
             section_indices::STRTAB as u32,
-            2,
+            first_global_index,
             elf_constants::SIZEOF_ELF64_SYM,
         );
 
@@ -408,6 +407,9 @@ impl ELFObject {
                         section::SectionType::Bss => {
                             panic!("BSS section not supported in executable yet")
                         }
+                        section::SectionType::Undefined => {
+                            panic!("Undefined symbols should not be resolved in executable mode")
+                        }
                     };
 
                     // PC-relative 계산: target_addr - (current_addr + 4)
@@ -443,7 +445,7 @@ impl ELFObject {
         let shstrtab_size = shstrtab_data.len();
 
         let symtab_offset = binary.len();
-        let symtab_data = self.build_symbol_table(&string_offsets);
+        let (symtab_data, first_global_index) = self.build_symbol_table(&string_offsets);
         binary.extend_from_slice(&symtab_data);
         let symtab_size = symtab_data.len();
 
@@ -491,7 +493,7 @@ impl ELFObject {
             symtab_size,
             8,
             4, // link to .strtab
-            1, // info: first global symbol index
+            first_global_index,
             elf_constants::SIZEOF_ELF64_SYM,
         );
 
@@ -674,14 +676,29 @@ impl ELFObject {
     fn build_symbol_table(
         &self,
         string_offsets: &std::collections::HashMap<String, u32>,
-    ) -> Vec<u8> {
+    ) -> (Vec<u8>, u32) {
         let mut symtab = Vec::new();
 
         // NULL symbol (first entry must be null)
         symtab.extend_from_slice(&[0u8; 24]);
 
+        // Sort symbols: local symbols must come before global/weak symbols
+        let mut sorted_symbols = self.symbol_table.symbols.clone();
+        sorted_symbols.sort_by_key(|s| match s.binding {
+            symbol::SymbolBinding::Local => 0,
+            symbol::SymbolBinding::Global => 1,
+            symbol::SymbolBinding::Weak => 2,
+        });
+
+        // Calculate sh_info: index of the first global symbol
+        // Index 0 is the NULL symbol, so we start counting from 1
+        let first_global_index = 1 + sorted_symbols
+            .iter()
+            .take_while(|s| matches!(s.binding, symbol::SymbolBinding::Local))
+            .count() as u32;
+
         // Add symbols
-        for symbol in &self.symbol_table.symbols {
+        for symbol in &sorted_symbols {
             // st_name
             let name_offset = string_offsets.get(&symbol.name).unwrap_or(&0);
             symtab.extend_from_slice(&name_offset.to_le_bytes());
@@ -710,6 +727,7 @@ impl ELFObject {
                 section::SectionType::RoData => 2,
                 section::SectionType::Data => 3,
                 section::SectionType::Bss => 4,
+                section::SectionType::Undefined => 0, // SHN_UNDEF (외부 심볼)
             };
             symtab.extend_from_slice(&section_index.to_le_bytes());
 
@@ -720,7 +738,7 @@ impl ELFObject {
             symtab.extend_from_slice(&(symbol.size as u64).to_le_bytes());
         }
 
-        symtab
+        (symtab, first_global_index)
     }
 
     fn build_relocation_table(&self) -> Vec<u8> {

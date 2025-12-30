@@ -80,6 +80,8 @@ pub enum SectionType {
     Data,
     RoData,
     Bss,
+    /// UNDEFINED - 외부 심볼용
+    Undefined,
 }
 
 /// 섹션 데이터

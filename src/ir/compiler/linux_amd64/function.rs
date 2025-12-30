@@ -40,7 +40,22 @@ pub fn compile_function(
     // LocalStatements 컴파일
     instruction::compile_statements(&function.function_body.statements, object)?;
 
-    // Function epilogue는 instruction.rs에서 sys_exit을 호출하므로 불필요
+    // Function epilogue 생성
+    // xor eax, eax (return 0)
+    object.text_section.data.push(Instruction::Xor as u8);
+    object
+        .text_section
+        .data
+        .push(modrm_reg_reg(Register::RAX, Register::RAX));
+
+    // pop rbp (스택 프레임 복원)
+    object
+        .text_section
+        .data
+        .push(Instruction::Pop as u8 + Register::RBP.number());
+
+    // ret (함수 반환)
+    object.text_section.data.push(Instruction::Ret as u8);
 
     let function_end_offset = object.text_section.data.len();
     let function_size = function_end_offset - function_start_offset;

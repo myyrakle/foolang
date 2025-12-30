@@ -278,6 +278,29 @@ impl Instruction {
     /// Returns SYSCALL instruction bytes as a const array
     pub const SYSCALL_BYTES: [u8; 2] = [0x0F, 0x05];
 
+    /// MOV immediate to 64-bit register base opcode (0xB8 + register number)
+    /// Example: 0xB8 for RAX, 0xB9 for RCX, etc.
+    pub const MOV_IMM64_BASE: u8 = 0xB8;
+
+    /// Call instruction opcode (near relative call)
+    pub const CALL_NEAR: u8 = 0xE8;
+
+    /// Size of 32-bit immediate/displacement in bytes
+    pub const DISPLACEMENT_32_SIZE: usize = 4;
+
+    /// Addend for PC-relative calculations (call instruction next address)
+    pub const CALL_ADDEND: i64 = -4;
+
+    /// ModR/M mode bits for RIP-relative addressing
+    /// mod=00, r/m=101
+    pub const MODRM_RIP_RELATIVE_RM: u8 = 0x05;
+
+    /// Bit shift amount for ModR/M reg field
+    pub const MODRM_REG_SHIFT: u8 = 3;
+
+    /// Bit mask for register number (lower 3 bits)
+    pub const REG_NUMBER_MASK: u8 = 0x7;
+
     /// Returns the ModR/M reg field extension for instructions that require /digit encoding
     ///
     /// For instructions like MUL, DIV, INC, etc., the opcode alone is not sufficient.

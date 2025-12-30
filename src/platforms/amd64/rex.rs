@@ -19,3 +19,15 @@ pub enum RexPrefix {
     /// REX.B (0x41) - Extension of ModR/M r/m field, SIB base, or opcode reg
     RexB = 0x41,
 }
+
+/// REX prefix 조합 상수
+impl RexPrefix {
+    /// REX.W + REX.B (0x49) - 64-bit operand with extended base register (R8-R15)
+    pub const REX_WB: u8 = 0x49;
+
+    /// REX.W + REX.R (0x4C) - 64-bit operand with extended reg field (R8-R15)
+    pub const REX_WR: u8 = 0x4C;
+
+    /// REX.W + REX.R + REX.B (0x4D) - 64-bit operand with both extended registers
+    pub const REX_WRB: u8 = 0x4D;
+}
