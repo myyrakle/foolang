@@ -1,10 +1,7 @@
 use crate::{
     ir::{ast::global::function::FunctionDefinition, error::IRError},
     platforms::{
-        amd64::{
-            register::{modrm_digit_reg, Register},
-            rex::RexPrefix,
-        },
+        amd64::rex::RexPrefix,
         linux::elf::{
             object::ELFObject,
             section::SectionType,
@@ -27,8 +24,8 @@ pub fn compile_function(
     // mov rbp, rsp
     object.text_section.data.extend_from_slice(&[
         RexPrefix::RexW as u8,
-        0x89,                              // mov r/m64, r64
-        modrm_digit_reg(3, Register::RBP), // ModR/M: mod=11(register), reg=RSP, r/m=RBP
+        0x89, // mov r/m64, r64
+        0xE5, // ModR/M: mod=11(3), reg=RSP(4), r/m=RBP(5) = 0xC0 | (4 << 3) | 5
     ]);
 
     // LocalStatements 컴파일

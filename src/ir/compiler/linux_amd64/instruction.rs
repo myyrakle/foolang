@@ -69,13 +69,13 @@ fn compile_call_instruction(
 }
 
 fn compile_printf_as_syscall(object: &mut ELFObject) -> Result<(), IRError> {
-    // HELLWORLD_TEXT 상수의 길이를 symbol table에서 조회
+    // HELLOWORLD_TEXT 상수의 길이를 symbol table에서 조회
     let hello_symbol = object
         .symbol_table
         .symbols
         .iter()
-        .find(|s| s.name == "HELLWORLD_TEXT")
-        .ok_or_else(|| IRError::new("HELLWORLD_TEXT symbol not found"))?;
+        .find(|s| s.name == "HELLOWORLD_TEXT")
+        .ok_or_else(|| IRError::new("HELLOWORLD_TEXT symbol not found"))?;
 
     // constant.rs가 null terminator를 추가하므로, 실제 문자열 길이는 size - 1
     let string_length = hello_symbol.size - 1;
@@ -102,7 +102,7 @@ fn compile_printf_as_syscall(object: &mut ELFObject) -> Result<(), IRError> {
         0x00,
         0x00,
         0x00,
-        // lea rsi, [rip+offset] - HELLWORLD_TEXT 상수 참조 (재배치 필요)
+        // lea rsi, [rip+offset] - HELLOWORLD_TEXT 상수 참조 (재배치 필요)
         RexPrefix::RexW as u8,
         Instruction::Lea as u8,
         LEA_RSI_RIP_REL,
@@ -141,12 +141,12 @@ fn compile_printf_as_syscall(object: &mut ELFObject) -> Result<(), IRError> {
     // .text 섹션에 기계어 코드 추가
     object.text_section.data.append(&mut machine_code);
 
-    // .rodata 섹션의 HELLWORLD_TEXT에 대한 재배치 정보 추가
+    // .rodata 섹션의 HELLOWORLD_TEXT에 대한 재배치 정보 추가
     // lea rsi, [rip+offset] 명령어의 offset 부분을 패치해야 함
     object.relocations.push(Relocation {
         section: SectionType::Text,
         offset: lea_offset_position,
-        symbol: "HELLWORLD_TEXT".to_string(),
+        symbol: "HELLOWORLD_TEXT".to_string(),
         reloc_type: RelocationType::PcRel32,
         addend: 0, // PC-relative 계산 (RIP는 이미 offset 필드 끝을 가리킴)
     });

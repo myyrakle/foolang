@@ -55,7 +55,7 @@ mod tests {
             filename: "example.foolang".into(),
             statements: vec![
                 GlobalStatement::Constant(ConstantDefinition {
-                    constant_name: "HELLWORLD_TEXT".into(),
+                    constant_name: "HELLOWORLD_TEXT".into(),
                     value: LiteralValue::String("Hello, world!".into()),
                 }),
                 GlobalStatement::DefineFunction(FunctionDefinition {
