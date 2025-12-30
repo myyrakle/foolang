@@ -103,6 +103,10 @@ pub struct ELFObject {
 
     /// 재배치 정보 - 링킹 시 주소 패치가 필요한 위치
     pub relocations: Vec<Relocation>,
+
+    /// 엔트리포인트 심볼 이름 (실행 파일용)
+    /// None이면 .text 섹션 시작 주소를 사용
+    pub entry_point_symbol: Option<String>,
 }
 
 impl Default for ELFObject {
@@ -120,7 +124,13 @@ impl ELFObject {
             text_section: Section::new_text(),
             symbol_table: SymbolTable::new(),
             relocations: Vec::new(),
+            entry_point_symbol: None,
         }
+    }
+
+    /// 엔트리포인트 심볼을 설정합니다.
+    pub fn set_entry_point(&mut self, symbol_name: impl Into<String>) {
+        self.entry_point_symbol = Some(symbol_name.into());
     }
 }
 
@@ -314,8 +324,27 @@ impl ELFObject {
         let text_addr = elf_constants::BASE_ADDR + elf_constants::PAGE_SIZE; // .text at 0x1000
         let rodata_addr = elf_constants::BASE_ADDR + (2 * elf_constants::PAGE_SIZE); // .rodata at 0x2000
 
+        // 엔트리포인트 계산
+        let entry_point = if let Some(entry_symbol_name) = &self.entry_point_symbol {
+            // 지정된 심볼을 찾아서 엔트리포인트로 설정
+            self.symbol_table
+                .symbols
+                .iter()
+                .find(|s| s.name == *entry_symbol_name && s.section == section::SectionType::Text)
+                .map(|s| text_addr + s.offset as u64)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Entry point symbol '{}' not found in symbol table",
+                        entry_symbol_name
+                    )
+                })
+        } else {
+            // 엔트리포인트가 지정되지 않으면 .text 섹션 시작 주소 사용
+            text_addr
+        };
+
         // ELF Header (64-bit PIE executable, ET_DYN)
-        self.write_executable_elf_header(&mut binary, text_addr);
+        self.write_executable_elf_header(&mut binary, entry_point);
 
         // Program Headers (LOAD 세그먼트)
         // PT_LOAD for .text (executable)

@@ -13,6 +13,27 @@ pub mod instruction;
 pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
     let mut compiled_object = ELFObject::new();
 
+    // 함수 이름 목록을 수집하여 main 함수가 있는지 확인
+    let mut has_main_function = false;
+
+    for statement in &code_unit.statements {
+        match statement {
+            GlobalStatement::DefineFunction(function) => {
+                if function.function_name == "main" {
+                    has_main_function = true;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // main 함수가 있으면 엔트리포인트로 설정
+    if has_main_function {
+        compiled_object.set_entry_point("main");
+    }
+
+    // 실제 컴파일
     for statement in code_unit.statements {
         match statement {
             GlobalStatement::Constant(constant) => {
@@ -56,7 +77,7 @@ mod tests {
             statements: vec![
                 GlobalStatement::Constant(ConstantDefinition {
                     constant_name: "HELLOWORLD_TEXT".into(),
-                    value: LiteralValue::String("Hello, world!".into()),
+                    value: LiteralValue::String("Hello, world!\n".into()),
                 }),
                 GlobalStatement::DefineFunction(FunctionDefinition {
                     function_name: "main".into(),
