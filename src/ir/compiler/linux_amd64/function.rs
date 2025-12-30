@@ -1,7 +1,11 @@
 use crate::{
     ir::{ast::global::function::FunctionDefinition, error::IRError},
     platforms::{
-        amd64::rex::RexPrefix,
+        amd64::{
+            instruction::Instruction,
+            register::{modrm_reg_reg, Register},
+            rex::RexPrefix,
+        },
         linux::elf::{
             object::ELFObject,
             section::SectionType,
@@ -19,14 +23,19 @@ pub fn compile_function(
     let function_start_offset = object.text_section.data.len();
 
     // Function prologue 생성
-    // push rbp
-    object.text_section.data.push(0x55);
-    // mov rbp, rsp
-    object.text_section.data.extend_from_slice(&[
-        RexPrefix::RexW as u8,
-        0x89, // mov r/m64, r64
-        0xE5, // ModR/M: mod=11(3), reg=RSP(4), r/m=RBP(5) = 0xC0 | (4 << 3) | 5
-    ]);
+    // push rbp (스택 프레임 저장)
+    object
+        .text_section
+        .data
+        .push(Instruction::Push as u8 + Register::RBP.number());
+
+    // mov rbp, rsp (새로운 스택 프레임 설정)
+    object.text_section.data.push(RexPrefix::RexW as u8);
+    object.text_section.data.push(Instruction::Mov as u8);
+    object
+        .text_section
+        .data
+        .push(modrm_reg_reg(Register::RSP, Register::RBP));
 
     // LocalStatements 컴파일
     instruction::compile_statements(&function.function_body.statements, object)?;
