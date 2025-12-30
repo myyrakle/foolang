@@ -5,12 +5,12 @@ use serde::Deserialize;
 /// Defines the supported compilation targets based on architecture and operating system.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Target {
-    Amd64Linux,   // 64-bit x86 architecture on Linux
-    Arm64Linux,   // 64-bit ARM architecture on Linux
-    Amd64Windows, // 64-bit x86 architecture on Windows
-    Arm64Windows, // 64-bit ARM architecture on Windows
-    Amd64Darwin,  // 64-bit x86 architecture on macOS
-    Arm64Darwin,  // 64-bit ARM architecture on macOS
+    LinuxAmd64,   // 64-bit x86 architecture on Linux
+    LinuxArm64,   // 64-bit ARM architecture on Linux
+    WindowsAmd64, // 64-bit x86 architecture on Windows
+    WindowsArm64, // 64-bit ARM architecture on Windows
+    DarwinAmd64,  // 64-bit x86 architecture on macOS
+    DarwinArm64,  // 64-bit ARM architecture on macOS
     WebAssembly,  // WebAssembly target
     JavaScript,   // JavaScript target
 }
@@ -28,12 +28,12 @@ impl<'de> Deserialize<'de> for Target {
     {
         let s: &str = Deserialize::deserialize(deserializer)?;
         match s {
-            "amd64-linux" => Ok(Target::Amd64Linux),
-            "arm64-linux" => Ok(Target::Arm64Linux),
-            "amd64-windows" => Ok(Target::Amd64Windows),
-            "arm64-windows" => Ok(Target::Arm64Windows),
-            "amd64-darwin" => Ok(Target::Amd64Darwin),
-            "arm64-darwin" => Ok(Target::Arm64Darwin),
+            "linux-amd64" => Ok(Target::LinuxAmd64),
+            "linux-arm64" => Ok(Target::LinuxArm64),
+            "windows-amd64" => Ok(Target::WindowsAmd64),
+            "windows-arm64" => Ok(Target::WindowsArm64),
+            "darwin-amd64" => Ok(Target::DarwinAmd64),
+            "darwin-arm64" => Ok(Target::DarwinArm64),
             "webassembly" => Ok(Target::WebAssembly),
             "javascript" => Ok(Target::JavaScript),
             _ => Err(serde::de::Error::custom(format!("Unknown target: {}", s))),
@@ -44,12 +44,12 @@ impl<'de> Deserialize<'de> for Target {
 impl Display for Target {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let target_str = match self {
-            Target::Amd64Linux => "amd64-linux",
-            Target::Arm64Linux => "arm64-linux",
-            Target::Amd64Windows => "amd64-windows",
-            Target::Arm64Windows => "arm64-windows",
-            Target::Amd64Darwin => "amd64-darwin",
-            Target::Arm64Darwin => "arm64-darwin",
+            Target::LinuxAmd64 => "linux-amd64",
+            Target::LinuxArm64 => "linux-arm64",
+            Target::WindowsAmd64 => "windows-amd64",
+            Target::WindowsArm64 => "windows-arm64",
+            Target::DarwinAmd64 => "darwin-amd64",
+            Target::DarwinArm64 => "darwin-arm64",
             Target::WebAssembly => "webassembly",
             Target::JavaScript => "javascript",
         };
@@ -62,12 +62,12 @@ impl FromStr for Target {
 
     fn from_str(input: &str) -> Result<Target, Self::Err> {
         match input {
-            "amd64-linux" => Ok(Target::Amd64Linux),
-            "arm64-linux" => Ok(Target::Arm64Linux),
-            "amd64-windows" => Ok(Target::Amd64Windows),
-            "arm64-windows" => Ok(Target::Arm64Windows),
-            "amd64-darwin" => Ok(Target::Amd64Darwin),
-            "arm64-darwin" => Ok(Target::Arm64Darwin),
+            "amd64-linux" => Ok(Target::LinuxAmd64),
+            "arm64-linux" => Ok(Target::LinuxArm64),
+            "windows-amd64" => Ok(Target::WindowsAmd64),
+            "windows-arm64" => Ok(Target::WindowsArm64),
+            "darwin-amd64" => Ok(Target::DarwinAmd64),
+            "darwin-arm64" => Ok(Target::DarwinArm64),
             _ => Err(format!("Unknown target: {}", input).into()),
         }
     }
@@ -77,21 +77,21 @@ impl FromStr for Target {
 pub fn detect_current_target() -> Target {
     if cfg!(target_arch = "x86_64") {
         if cfg!(target_os = "linux") {
-            Target::Amd64Linux
+            Target::LinuxAmd64
         } else if cfg!(target_os = "windows") {
-            Target::Amd64Windows
+            Target::WindowsAmd64
         } else if cfg!(target_os = "macos") {
-            Target::Amd64Darwin
+            Target::DarwinAmd64
         } else {
             unimplemented!("Unsupported OS for x86_64 architecture")
         }
     } else if cfg!(target_arch = "aarch64") {
         if cfg!(target_os = "linux") {
-            Target::Arm64Linux
+            Target::LinuxArm64
         } else if cfg!(target_os = "windows") {
-            Target::Arm64Windows
+            Target::WindowsArm64
         } else if cfg!(target_os = "macos") {
-            Target::Arm64Darwin
+            Target::DarwinArm64
         } else {
             unimplemented!("Unsupported OS for aarch64 architecture")
         }
