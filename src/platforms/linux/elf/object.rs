@@ -103,6 +103,10 @@ pub struct ELFObject {
 
     /// 재배치 정보 - 링킹 시 주소 패치가 필요한 위치
     pub relocations: Vec<Relocation>,
+
+    /// 엔트리포인트 심볼 이름 (실행 파일용)
+    /// None이면 .text 섹션 시작 주소를 사용
+    pub entry_point_symbol: Option<String>,
 }
 
 impl Default for ELFObject {
@@ -120,7 +124,13 @@ impl ELFObject {
             text_section: Section::new_text(),
             symbol_table: SymbolTable::new(),
             relocations: Vec::new(),
+            entry_point_symbol: None,
         }
+    }
+
+    /// 엔트리포인트 심볼을 설정합니다.
+    pub fn set_entry_point(&mut self, symbol_name: impl Into<String>) {
+        self.entry_point_symbol = Some(symbol_name.into());
     }
 }
 
@@ -170,7 +180,7 @@ impl ELFObject {
 
         // 심볼 테이블 (.symtab)
         let symtab_offset = binary.len();
-        let symtab_data = self.build_symbol_table(&string_offsets);
+        let (symtab_data, first_global_index) = self.build_symbol_table(&string_offsets);
         binary.extend_from_slice(&symtab_data);
         let symtab_size = symtab_data.len();
 
@@ -243,7 +253,6 @@ impl ELFObject {
         );
 
         // 5: .symtab (SHT_SYMTAB, link=strtab section, info=first non-local symbol index)
-        // link: 6 (.strtab), info: 2 (첫 번째 글로벌 심볼의 인덱스)
         self.write_section_header(
             &mut binary,
             section_name_offsets::SYMTAB,
@@ -253,7 +262,7 @@ impl ELFObject {
             symtab_size,
             8,
             section_indices::STRTAB as u32,
-            2,
+            first_global_index,
             elf_constants::SIZEOF_ELF64_SYM,
         );
 
@@ -314,8 +323,27 @@ impl ELFObject {
         let text_addr = elf_constants::BASE_ADDR + elf_constants::PAGE_SIZE; // .text at 0x1000
         let rodata_addr = elf_constants::BASE_ADDR + (2 * elf_constants::PAGE_SIZE); // .rodata at 0x2000
 
+        // 엔트리포인트 계산
+        let entry_point = if let Some(entry_symbol_name) = &self.entry_point_symbol {
+            // 지정된 심볼을 찾아서 엔트리포인트로 설정
+            self.symbol_table
+                .symbols
+                .iter()
+                .find(|s| s.name == *entry_symbol_name && s.section == section::SectionType::Text)
+                .map(|s| text_addr + s.offset as u64)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Entry point symbol '{}' not found in symbol table",
+                        entry_symbol_name
+                    )
+                })
+        } else {
+            // 엔트리포인트가 지정되지 않으면 .text 섹션 시작 주소 사용
+            text_addr
+        };
+
         // ELF Header (64-bit PIE executable, ET_DYN)
-        self.write_executable_elf_header(&mut binary, text_addr);
+        self.write_executable_elf_header(&mut binary, entry_point);
 
         // Program Headers (LOAD 세그먼트)
         // PT_LOAD for .text (executable)
@@ -379,6 +407,9 @@ impl ELFObject {
                         section::SectionType::Bss => {
                             panic!("BSS section not supported in executable yet")
                         }
+                        section::SectionType::Undefined => {
+                            panic!("Undefined symbols should not be resolved in executable mode")
+                        }
                     };
 
                     // PC-relative 계산: target_addr - (current_addr + 4)
@@ -401,6 +432,102 @@ impl ELFObject {
 
         // .rodata 섹션 데이터
         binary.extend_from_slice(&self.rodata_section.data);
+
+        // 심볼 테이블과 문자열 테이블 추가 (디버깅 정보용)
+        let strtab_offset = binary.len();
+        let (strtab_data, string_offsets) = self.build_string_table();
+        binary.extend_from_slice(&strtab_data);
+        let strtab_size = strtab_data.len();
+
+        let shstrtab_offset = binary.len();
+        let shstrtab_data = self.build_section_string_table();
+        binary.extend_from_slice(&shstrtab_data);
+        let shstrtab_size = shstrtab_data.len();
+
+        let symtab_offset = binary.len();
+        let (symtab_data, first_global_index) = self.build_symbol_table(&string_offsets);
+        binary.extend_from_slice(&symtab_data);
+        let symtab_size = symtab_data.len();
+
+        // Section Headers 작성 (디버깅 정보용)
+        let section_headers_start = binary.len();
+
+        // 0: NULL section
+        self.write_null_section_header(&mut binary);
+
+        // 1: .text (SHT_PROGBITS, flags=AX)
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::TEXT,
+            SectionHeaderType::ProgBits as u32,
+            self.text_section.flags.to_elf_flags(),
+            text_file_offset,
+            text_size,
+            16,
+            0,
+            0,
+            0,
+        );
+
+        // 2: .rodata (SHT_PROGBITS, flags=A)
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::RODATA,
+            SectionHeaderType::ProgBits as u32,
+            self.rodata_section.flags.to_elf_flags(),
+            rodata_file_offset,
+            rodata_size,
+            1,
+            0,
+            0,
+            0,
+        );
+
+        // 3: .symtab (SHT_SYMTAB)
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::SYMTAB,
+            SectionHeaderType::SymTab as u32,
+            0,
+            symtab_offset,
+            symtab_size,
+            8,
+            4, // link to .strtab
+            first_global_index,
+            elf_constants::SIZEOF_ELF64_SYM,
+        );
+
+        // 4: .strtab (SHT_STRTAB)
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::STRTAB,
+            SectionHeaderType::StrTab as u32,
+            0,
+            strtab_offset,
+            strtab_size,
+            1,
+            0,
+            0,
+            0,
+        );
+
+        // 5: .shstrtab (SHT_STRTAB)
+        self.write_section_header(
+            &mut binary,
+            section_name_offsets::SHSTRTAB,
+            SectionHeaderType::StrTab as u32,
+            0,
+            shstrtab_offset,
+            shstrtab_size,
+            1,
+            0,
+            0,
+            0,
+        );
+
+        // ELF Header의 섹션 헤더 오프셋 업데이트
+        let section_headers_offset = section_headers_start as u64;
+        self.patch_elf_header(&mut binary, section_headers_offset);
 
         binary
     }
@@ -549,14 +676,29 @@ impl ELFObject {
     fn build_symbol_table(
         &self,
         string_offsets: &std::collections::HashMap<String, u32>,
-    ) -> Vec<u8> {
+    ) -> (Vec<u8>, u32) {
         let mut symtab = Vec::new();
 
         // NULL symbol (first entry must be null)
         symtab.extend_from_slice(&[0u8; 24]);
 
+        // Sort symbols: local symbols must come before global/weak symbols
+        let mut sorted_symbols = self.symbol_table.symbols.clone();
+        sorted_symbols.sort_by_key(|s| match s.binding {
+            symbol::SymbolBinding::Local => 0,
+            symbol::SymbolBinding::Global => 1,
+            symbol::SymbolBinding::Weak => 2,
+        });
+
+        // Calculate sh_info: index of the first global symbol
+        // Index 0 is the NULL symbol, so we start counting from 1
+        let first_global_index = 1 + sorted_symbols
+            .iter()
+            .take_while(|s| matches!(s.binding, symbol::SymbolBinding::Local))
+            .count() as u32;
+
         // Add symbols
-        for symbol in &self.symbol_table.symbols {
+        for symbol in &sorted_symbols {
             // st_name
             let name_offset = string_offsets.get(&symbol.name).unwrap_or(&0);
             symtab.extend_from_slice(&name_offset.to_le_bytes());
@@ -585,6 +727,7 @@ impl ELFObject {
                 section::SectionType::RoData => 2,
                 section::SectionType::Data => 3,
                 section::SectionType::Bss => 4,
+                section::SectionType::Undefined => 0, // SHN_UNDEF (외부 심볼)
             };
             symtab.extend_from_slice(&section_index.to_le_bytes());
 
@@ -595,7 +738,7 @@ impl ELFObject {
             symtab.extend_from_slice(&(symbol.size as u64).to_le_bytes());
         }
 
-        symtab
+        (symtab, first_global_index)
     }
 
     fn build_relocation_table(&self) -> Vec<u8> {

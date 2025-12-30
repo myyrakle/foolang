@@ -6,6 +6,7 @@ use crate::{
     platforms::linux::elf::object::ELFObject,
 };
 
+pub mod call;
 pub mod constant;
 pub mod function;
 pub mod instruction;
@@ -13,6 +14,27 @@ pub mod instruction;
 pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
     let mut compiled_object = ELFObject::new();
 
+    // 함수 이름 목록을 수집하여 main 함수가 있는지 확인
+    let mut has_main_function = false;
+
+    for statement in &code_unit.statements {
+        match statement {
+            GlobalStatement::DefineFunction(function) => {
+                if function.function_name == "main" {
+                    has_main_function = true;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // main 함수가 있으면 엔트리포인트로 설정
+    if has_main_function {
+        compiled_object.set_entry_point("main");
+    }
+
+    // 실제 컴파일
     for statement in code_unit.statements {
         match statement {
             GlobalStatement::Constant(constant) => {
@@ -47,6 +69,8 @@ mod tests {
         platforms::{linux::elf::object::ELFOutputType, target::Target},
     };
 
+    // 컴파일 후 링크해서 최종 실행
+    // gcc output_with_libc.o -o output_linked.exe && ./output_linked.exe
     #[test]
     fn test_compile() {
         let compiler = IRCompiler::new();
@@ -65,8 +89,10 @@ mod tests {
                     function_body: LocalStatements {
                         statements: vec![LocalStatement::Instruction(InstructionStatement::Call(
                             CallInstruction {
-                                function_name: "printf".into(),
-                                parameters: vec![],
+                                function_name: "puts".into(),
+                                parameters: vec![crate::ir::ast::common::Operand::Literal(
+                                    LiteralValue::String("Hello, world!".into()),
+                                )],
                             },
                         ))],
                     },
@@ -78,19 +104,35 @@ mod tests {
 
         let object = compiler.compile(&target, code_unit);
 
+        // 실행 파일 생성
+        // std::fs::write(
+        //     "output.exe",
+        //     match &object {
+        //         Ok(obj) => match obj {
+        //             crate::ir::data::IRCompiledObject::ELF(elf_obj) => {
+        //                 elf_obj.encode(ELFOutputType::Executable)
+        //             }
+        //         },
+        //         Err(_) => vec![],
+        //     },
+        // )
+        // .expect("Failed to write output.exe");
+
+        // 재배치 가능한 오브젝트 파일도 생성
         std::fs::write(
-            "output.exe",
+            "output_with_libc.o",
             match object {
                 Ok(obj) => match obj {
                     crate::ir::data::IRCompiledObject::ELF(elf_obj) => {
-                        elf_obj.encode(ELFOutputType::Executable)
+                        elf_obj.encode(ELFOutputType::Relocatable)
                     }
                 },
                 Err(_) => vec![],
             },
         )
-        .expect("Failed to write output.exe");
+        .expect("Failed to write output_with_libc.o");
 
-        println!("This is a placeholder main function.");
+        println!("Generated output.exe (standalone) and output_with_libc.o (relocatable)");
+        println!("To link with libc: gcc output_with_libc.o -o output_linked");
     }
 }
