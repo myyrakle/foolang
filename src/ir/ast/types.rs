@@ -1,7 +1,19 @@
 /// IR 타입 시스템
-/// AMD64 아키텍처에서 사용 가능한 기본 타입들을 정의합니다.
+/// IR 수준에서 사용 가능한 기본 타입들을 정의합니다.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum IRType {
+    Primitive(IRPrimitiveType),
+    Custom(IRCustomType),
+}
+
+// 사용자 정의 타입 (예: 구조체, 클래스 등)
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct IRCustomType {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum IRPrimitiveType {
     // 정수 타입
     Int8,
     Int16,
@@ -28,16 +40,16 @@ pub enum IRType {
     Void,
 }
 
-impl IRType {
+impl IRPrimitiveType {
     /// 타입의 바이트 크기를 반환합니다.
     pub fn size_in_bytes(&self) -> usize {
         match self {
-            IRType::Int8 | IRType::UInt8 | IRType::Bool => 1,
-            IRType::Int16 | IRType::UInt16 => 2,
-            IRType::Int32 | IRType::UInt32 | IRType::Float32 => 4,
-            IRType::Int64 | IRType::UInt64 | IRType::Float64 => 8,
-            IRType::Pointer(_) => 8, // 64-bit 포인터
-            IRType::Void => 0,
+            IRPrimitiveType::Int8 | IRPrimitiveType::UInt8 | IRPrimitiveType::Bool => 1,
+            IRPrimitiveType::Int16 | IRPrimitiveType::UInt16 => 2,
+            IRPrimitiveType::Int32 | IRPrimitiveType::UInt32 | IRPrimitiveType::Float32 => 4,
+            IRPrimitiveType::Int64 | IRPrimitiveType::UInt64 | IRPrimitiveType::Float64 => 8,
+            IRPrimitiveType::Pointer(_) => 8, // 64-bit 포인터
+            IRPrimitiveType::Void => 0,
         }
     }
 
@@ -45,14 +57,14 @@ impl IRType {
     pub fn is_integer(&self) -> bool {
         matches!(
             self,
-            IRType::Int8
-                | IRType::Int16
-                | IRType::Int32
-                | IRType::Int64
-                | IRType::UInt8
-                | IRType::UInt16
-                | IRType::UInt32
-                | IRType::UInt64
+            IRPrimitiveType::Int8
+                | IRPrimitiveType::Int16
+                | IRPrimitiveType::Int32
+                | IRPrimitiveType::Int64
+                | IRPrimitiveType::UInt8
+                | IRPrimitiveType::UInt16
+                | IRPrimitiveType::UInt32
+                | IRPrimitiveType::UInt64
         )
     }
 
@@ -60,36 +72,49 @@ impl IRType {
     pub fn is_signed(&self) -> bool {
         matches!(
             self,
-            IRType::Int8 | IRType::Int16 | IRType::Int32 | IRType::Int64
+            IRPrimitiveType::Int8
+                | IRPrimitiveType::Int16
+                | IRPrimitiveType::Int32
+                | IRPrimitiveType::Int64
         )
     }
 
     /// 타입이 부동소수점 타입인지 확인합니다.
     pub fn is_float(&self) -> bool {
-        matches!(self, IRType::Float32 | IRType::Float64)
+        matches!(self, IRPrimitiveType::Float32 | IRPrimitiveType::Float64)
     }
 
     /// 타입이 포인터 타입인지 확인합니다.
     pub fn is_pointer(&self) -> bool {
-        matches!(self, IRType::Pointer(_))
+        matches!(self, IRPrimitiveType::Pointer(_))
     }
 
     /// 타입의 문자열 표현을 반환합니다.
-    pub fn to_string(&self) -> String {
+    pub fn type_to_string(&self) -> String {
         match self {
-            IRType::Int8 => "i8".to_string(),
-            IRType::Int16 => "i16".to_string(),
-            IRType::Int32 => "i32".to_string(),
-            IRType::Int64 => "i64".to_string(),
-            IRType::UInt8 => "u8".to_string(),
-            IRType::UInt16 => "u16".to_string(),
-            IRType::UInt32 => "u32".to_string(),
-            IRType::UInt64 => "u64".to_string(),
-            IRType::Float32 => "f32".to_string(),
-            IRType::Float64 => "f64".to_string(),
-            IRType::Bool => "bool".to_string(),
-            IRType::Pointer(inner) => format!("*{}", inner.to_string()),
-            IRType::Void => "void".to_string(),
+            IRPrimitiveType::Int8 => "i8".to_string(),
+            IRPrimitiveType::Int16 => "i16".to_string(),
+            IRPrimitiveType::Int32 => "i32".to_string(),
+            IRPrimitiveType::Int64 => "i64".to_string(),
+            IRPrimitiveType::UInt8 => "u8".to_string(),
+            IRPrimitiveType::UInt16 => "u16".to_string(),
+            IRPrimitiveType::UInt32 => "u32".to_string(),
+            IRPrimitiveType::UInt64 => "u64".to_string(),
+            IRPrimitiveType::Float32 => "f32".to_string(),
+            IRPrimitiveType::Float64 => "f64".to_string(),
+            IRPrimitiveType::Bool => "bool".to_string(),
+            IRPrimitiveType::Pointer(inner) => format!("*{}", inner.type_to_string()),
+            IRPrimitiveType::Void => "void".to_string(),
+        }
+    }
+}
+
+impl IRType {
+    /// 타입의 문자열 표현을 반환합니다.
+    pub fn type_to_string(&self) -> String {
+        match self {
+            IRType::Primitive(prim) => prim.type_to_string(),
+            IRType::Custom(custom) => custom.name.clone(),
         }
     }
 }
@@ -100,34 +125,42 @@ mod tests {
 
     #[test]
     fn test_type_sizes() {
-        assert_eq!(IRType::Int8.size_in_bytes(), 1);
-        assert_eq!(IRType::Int16.size_in_bytes(), 2);
-        assert_eq!(IRType::Int32.size_in_bytes(), 4);
-        assert_eq!(IRType::Int64.size_in_bytes(), 8);
-        assert_eq!(IRType::UInt64.size_in_bytes(), 8);
-        assert_eq!(IRType::Float32.size_in_bytes(), 4);
-        assert_eq!(IRType::Float64.size_in_bytes(), 8);
-        assert_eq!(IRType::Bool.size_in_bytes(), 1);
-        assert_eq!(IRType::Pointer(Box::new(IRType::Int32)).size_in_bytes(), 8);
-        assert_eq!(IRType::Void.size_in_bytes(), 0);
+        assert_eq!(IRPrimitiveType::Int8.size_in_bytes(), 1);
+        assert_eq!(IRPrimitiveType::Int16.size_in_bytes(), 2);
+        assert_eq!(IRPrimitiveType::Int32.size_in_bytes(), 4);
+        assert_eq!(IRPrimitiveType::Int64.size_in_bytes(), 8);
+        assert_eq!(IRPrimitiveType::UInt64.size_in_bytes(), 8);
+        assert_eq!(IRPrimitiveType::Float32.size_in_bytes(), 4);
+        assert_eq!(IRPrimitiveType::Float64.size_in_bytes(), 8);
+        assert_eq!(IRPrimitiveType::Bool.size_in_bytes(), 1);
+        assert_eq!(
+            IRPrimitiveType::Pointer(Box::new(IRType::Primitive(IRPrimitiveType::Int32)))
+                .size_in_bytes(),
+            8
+        );
+        assert_eq!(IRPrimitiveType::Void.size_in_bytes(), 0);
     }
 
     #[test]
     fn test_type_checks() {
-        assert!(IRType::Int32.is_integer());
-        assert!(IRType::Int32.is_signed());
-        assert!(!IRType::UInt32.is_signed());
-        assert!(IRType::Float64.is_float());
-        assert!(IRType::Pointer(Box::new(IRType::Int32)).is_pointer());
+        assert!(IRPrimitiveType::Int32.is_integer());
+        assert!(IRPrimitiveType::Int32.is_signed());
+        assert!(!IRPrimitiveType::UInt32.is_signed());
+        assert!(IRPrimitiveType::Float64.is_float());
+        assert!(
+            IRPrimitiveType::Pointer(Box::new(IRType::Primitive(IRPrimitiveType::Int32)))
+                .is_pointer()
+        );
     }
 
     #[test]
     fn test_type_to_string() {
-        assert_eq!(IRType::Int64.to_string(), "i64");
-        assert_eq!(IRType::UInt32.to_string(), "u32");
-        assert_eq!(IRType::Float64.to_string(), "f64");
+        assert_eq!(IRPrimitiveType::Int64.type_to_string(), "i64");
+        assert_eq!(IRPrimitiveType::UInt32.type_to_string(), "u32");
+        assert_eq!(IRPrimitiveType::Float64.type_to_string(), "f64");
         assert_eq!(
-            IRType::Pointer(Box::new(IRType::Int32)).to_string(),
+            IRPrimitiveType::Pointer(Box::new(IRType::Primitive(IRPrimitiveType::Int32)))
+                .type_to_string(),
             "*i32"
         );
     }
