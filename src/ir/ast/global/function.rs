@@ -1,9 +1,9 @@
-use crate::ir::ast::local::LocalStatements;
+use crate::ir::ast::{local::LocalStatements, types::IRType};
 
 #[derive(Debug)]
 pub struct FunctionDefinition {
     pub function_name: String,
-    pub return_type: Option<String>,
+    pub return_type: IRType,
     pub arguments: Vec<FunctionArgument>,
     pub function_body: LocalStatements,
 }

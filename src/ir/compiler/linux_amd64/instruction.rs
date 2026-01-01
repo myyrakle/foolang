@@ -1,6 +1,9 @@
 use crate::{
     ir::{
-        ast::local::LocalStatement, compiler::linux_amd64::call::compile_call_instruction,
+        ast::local::LocalStatement,
+        compiler::linux_amd64::{
+            call::compile_call_instruction, return_::compile_return_instruction,
+        },
         error::IRError,
     },
     platforms::linux::elf::object::ELFObject,
@@ -27,7 +30,9 @@ fn compile_statement(stmt: &LocalStatement, object: &mut ELFObject) -> Result<()
                 InstructionStatement::Add(_) => {
                     return Err(IRError::new("Add instruction not yet implemented"));
                 }
-                InstructionStatement::Return(_instruction) => todo!(),
+                InstructionStatement::Return(instruction) => {
+                    compile_return_instruction(instruction, object)?;
+                }
                 InstructionStatement::Sub(_instruction) => todo!(),
                 InstructionStatement::Mul(_instruction) => todo!(),
                 InstructionStatement::Div(_instruction) => todo!(),

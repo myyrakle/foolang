@@ -6,6 +6,18 @@ pub enum IRType {
     Custom(IRCustomType),
 }
 
+impl From<IRPrimitiveType> for IRType {
+    fn from(prim: IRPrimitiveType) -> Self {
+        IRType::Primitive(prim)
+    }
+}
+
+impl From<IRCustomType> for IRType {
+    fn from(custom: IRCustomType) -> Self {
+        IRType::Custom(custom)
+    }
+}
+
 // 사용자 정의 타입 (예: 구조체, 클래스 등)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IRCustomType {
