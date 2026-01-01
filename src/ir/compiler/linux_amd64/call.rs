@@ -186,10 +186,43 @@ fn compile_parameter_to_register(
                 return Err(IRError::new("Float64 parameters not yet implemented"));
             }
         },
-        Operand::Identifier(_id) => {
-            return Err(IRError::new(
-                "Identifier parameters (variables) not yet implemented",
-            ));
+        Operand::Identifier(id) => {
+            // 심볼 테이블에서 identifier 찾기
+            let symbol = object.symbol_table.find_symbol(&id.name).ok_or_else(|| {
+                IRError::new(&format!("Symbol '{}' not found in symbol table", id.name))
+            })?;
+
+            // 상수나 변수의 주소를 레지스터에 로드
+            // lea target_reg, [rip + offset]
+            let lea_offset = object.text_section.data.len();
+
+            if target_reg.requires_rex() {
+                object.text_section.data.push(RexPrefix::REX_WR);
+            } else {
+                object.text_section.data.push(RexPrefix::RexW as u8);
+            }
+            object.text_section.data.push(Instruction::Lea as u8);
+
+            // ModR/M byte: mod=00 (RIP-relative), reg=target_reg, r/m=101 (RIP+disp32)
+            let modrm = ((target_reg.number() & Instruction::REG_NUMBER_MASK)
+                << Instruction::MODRM_REG_SHIFT)
+                | Instruction::MODRM_RIP_RELATIVE_RM;
+            object.text_section.data.push(modrm);
+
+            // placeholder for displacement
+            object
+                .text_section
+                .data
+                .extend_from_slice(&[0x00; Instruction::DISPLACEMENT_32_SIZE]);
+
+            // relocation 추가
+            object.relocations.push(Relocation {
+                section: SectionType::Text,
+                offset: lea_offset + 3, // LEA 명령어의 disp32 위치
+                symbol: symbol.name.clone(),
+                reloc_type: RelocationType::PcRel32,
+                addend: Instruction::CALL_ADDEND,
+            });
         }
     }
 

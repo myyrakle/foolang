@@ -63,7 +63,7 @@ mod tests {
                     instruction::{call::CallInstruction, InstructionStatement},
                     LocalStatement, LocalStatements,
                 },
-                types::{IRPrimitiveType, IRType},
+                types::IRPrimitiveType,
                 CodeUnit,
             },
             error::IRError,
@@ -89,19 +89,15 @@ mod tests {
             expected_error: Option<IRError>,
         }
 
-        let test_cases = vec![TestCase {
-            name: "간단한 Hello World 출력",
-            expected_output: "Hello, world!\n",
-            want_error: false,
-            expected_error: None,
-            code_unit: CodeUnit {
-                filename: "example.foolang".into(),
-                statements: vec![
-                    GlobalStatement::Constant(ConstantDefinition {
-                        constant_name: "HELLOWORLD_TEXT".into(),
-                        value: LiteralValue::String("Hello, world!".into()),
-                    }),
-                    GlobalStatement::DefineFunction(FunctionDefinition {
+        let test_cases = vec![
+            TestCase {
+                name: "간단한 Hello World 출력",
+                expected_output: "Hello, world!\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
                         function_name: "main".into(),
                         arguments: vec![],
                         return_type: IRPrimitiveType::Void.into(),
@@ -115,10 +111,42 @@ mod tests {
                                 }),
                             )],
                         },
-                    }),
-                ],
+                    })],
+                },
             },
-        }];
+            TestCase {
+                name: "간단한 Hello World 출력 (상수 사용)",
+                expected_output: "Hello, world!\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "HELLOWORLD_TEXT".into(),
+                            value: LiteralValue::String("Hello, world!".into()),
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![LocalStatement::Instruction(
+                                    InstructionStatement::Call(CallInstruction {
+                                        function_name: "puts".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Identifier(
+                                                "HELLOWORLD_TEXT".into(),
+                                            ),
+                                        ],
+                                    }),
+                                )],
+                            },
+                        }),
+                    ],
+                },
+            },
+        ];
 
         let target = Target::LinuxAmd64;
 
