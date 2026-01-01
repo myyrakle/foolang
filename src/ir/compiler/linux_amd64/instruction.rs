@@ -1,8 +1,12 @@
 use crate::{
     ir::{
-        ast::local::LocalStatement,
+        ast::local::{
+            assignment::AssignmentStatementValue, instruction::InstructionStatement, LocalStatement,
+        },
         compiler::linux_amd64::{
-            call::compile_call_instruction, return_::compile_return_instruction,
+            call::compile_call_instruction,
+            return_::compile_return_instruction,
+            function::FunctionContext,
         },
         error::IRError,
     },
@@ -11,45 +15,134 @@ use crate::{
 
 pub fn compile_statements(
     statements: &[LocalStatement],
+    context: &mut FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
     for statement in statements {
-        compile_statement(statement, object)?;
+        compile_statement(statement, context, object)?;
     }
     Ok(())
 }
 
-fn compile_statement(stmt: &LocalStatement, object: &mut ELFObject) -> Result<(), IRError> {
+fn compile_statement(
+    stmt: &LocalStatement,
+    context: &mut FunctionContext,
+    object: &mut ELFObject,
+) -> Result<(), IRError> {
     match stmt {
         LocalStatement::Instruction(statement) => {
             use crate::ir::ast::local::instruction::InstructionStatement;
             match statement {
                 InstructionStatement::Call(instruction) => {
-                    compile_call_instruction(instruction, object)?;
+                    compile_call_instruction(instruction, context, object)?;
                 }
                 InstructionStatement::Add(_) => {
-                    return Err(IRError::new("Add instruction not yet implemented"));
+                    return Err(IRError::new("Add instruction need assignment"));
                 }
                 InstructionStatement::Return(instruction) => {
-                    compile_return_instruction(instruction, object)?;
+                    compile_return_instruction(instruction, context, object)?;
                 }
-                InstructionStatement::Sub(_instruction) => todo!(),
-                InstructionStatement::Mul(_instruction) => todo!(),
-                InstructionStatement::Div(_instruction) => todo!(),
+                InstructionStatement::Sub(_) => {
+                    return Err(IRError::new("Sub instruction need assignment"));
+                }
+                InstructionStatement::Mul(_) => {
+                    return Err(IRError::new("Mul instruction need assignment"));
+                }
+                InstructionStatement::Div(_) => {
+                    return Err(IRError::new("Div instruction need assignment"));
+                }
                 InstructionStatement::Branch(_instruction) => todo!(),
                 InstructionStatement::Jump(_instruction) => todo!(),
-                InstructionStatement::Compare(_instruction) => todo!(),
-                InstructionStatement::Alloca(_instruction) => todo!(),
-                InstructionStatement::Load(_instruction) => todo!(),
+                InstructionStatement::Compare(_) => {
+                    return Err(IRError::new("Compare instruction need assignment"));
+                }
+                InstructionStatement::Alloca(_) => {
+                    return Err(IRError::new("Alloca instruction need assignment"));
+                }
+                InstructionStatement::Load(_instruction) => {
+                    return Err(IRError::new("Load instruction need assignment"));
+                }
                 InstructionStatement::Store(_instruction) => todo!(),
             }
         }
-        LocalStatement::Assignment(_) => {
-            return Err(IRError::new("Assignment statement not yet implemented"));
+        LocalStatement::Assignment(assignment_statement) => {
+            use crate::ir::compiler::linux_amd64::function::VariableLocation;
+            use crate::platforms::amd64::{instruction::Instruction, register::Register, rex::RexPrefix, register::modrm_reg_reg};
+
+            // assignment value 컴파일 (결과는 RAX에 저장됨)
+            match &assignment_statement.value {
+                AssignmentStatementValue::Literal(_literal) => {
+                    return Err(IRError::new("Literal assignment not yet implemented"));
+                }
+                AssignmentStatementValue::Instruction(InstructionStatement::Add(_)) => {
+                    return Err(IRError::new("Add instruction not yet implemented"));
+                }
+                AssignmentStatementValue::Instruction(InstructionStatement::Sub(_)) => {
+                    return Err(IRError::new("Sub instruction not yet implemented"));
+                }
+                AssignmentStatementValue::Instruction(InstructionStatement::Mul(_)) => {
+                    return Err(IRError::new("Mul instruction not yet implemented"));
+                }
+                AssignmentStatementValue::Instruction(InstructionStatement::Div(_)) => {
+                    return Err(IRError::new("Div instruction not yet implemented"));
+                }
+                AssignmentStatementValue::Instruction(InstructionStatement::Call(instruction)) => {
+                    // call instruction 컴파일 (결과는 RAX에)
+                    compile_call_instruction(instruction, context, object)?;
+                }
+                AssignmentStatementValue::Instruction(InstructionStatement::Compare(_)) => {
+                    return Err(IRError::new("Compare instruction not yet implemented"));
+                }
+                AssignmentStatementValue::Instruction(InstructionStatement::Alloca(_)) => {
+                    return Err(IRError::new("Alloca instruction not yet implemented"));
+                }
+                AssignmentStatementValue::Instruction(InstructionStatement::Load(_)) => {
+                    return Err(IRError::new("Load instruction not yet implemented"));
+                }
+                _ => {
+                    return Err(IRError::new("Not supported instruction in assignment"));
+                }
+            }
+
+            // 변수 할당 (레지스터 우선, 부족하면 스택)
+            let var_name = assignment_statement.name.name.clone();
+            let var_loc = context.allocate_variable(var_name);
+
+            // RAX의 값을 변수 위치에 저장
+            match var_loc {
+                VariableLocation::Register(dst_reg) => {
+                    // mov dst_reg, rax
+                    if dst_reg != Register::RAX {
+                        object.text_section.data.push(RexPrefix::RexW as u8);
+                        object.text_section.data.push(Instruction::Mov as u8);
+                        object
+                            .text_section
+                            .data
+                            .push(modrm_reg_reg(Register::RAX, dst_reg));
+                    }
+                    // RAX에 할당된 경우 이미 RAX에 있으므로 아무것도 안함
+                }
+                VariableLocation::Stack(offset) => {
+                    // mov [rbp + offset], rax
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                    object.text_section.data.push(Instruction::Mov as u8);
+
+                    // ModR/M byte: mod=10 (disp32), reg=000 (RAX), r/m=101 (RBP)
+                    let modrm = (0b10 << 6) | (0b000 << 3) | 0b101;
+                    object.text_section.data.push(modrm);
+
+                    // displacement
+                    object
+                        .text_section
+                        .data
+                        .extend_from_slice(&offset.to_le_bytes());
+                }
+            }
         }
         LocalStatement::Label(_) => {
             return Err(IRError::new("Label statement not yet implemented"));
         }
     }
+
     Ok(())
 }

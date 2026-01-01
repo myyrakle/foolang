@@ -60,7 +60,10 @@ mod tests {
                     constant::ConstantDefinition, function::FunctionDefinition, GlobalStatement,
                 },
                 local::{
-                    instruction::{call::CallInstruction, InstructionStatement},
+                    assignment::AssignmentStatement,
+                    instruction::{
+                        call::CallInstruction, return_::ReturnInstruction, InstructionStatement,
+                    },
                     LocalStatement, LocalStatements,
                 },
                 types::IRPrimitiveType,
@@ -115,7 +118,7 @@ mod tests {
                 },
             },
             TestCase {
-                name: "간단한 Hello World 출력 (상수 사용)",
+                name: "간단한 Hello World 출력 (함수 호출 포함)",
                 expected_output: "Hello, world!\n",
                 want_error: false,
                 expected_error: None,
@@ -127,20 +130,46 @@ mod tests {
                             value: LiteralValue::String("Hello, world!".into()),
                         }),
                         GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_text".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![InstructionStatement::Return(ReturnInstruction {
+                                    return_value: Some(
+                                        crate::ir::ast::common::Operand::Identifier(
+                                            "HELLOWORLD_TEXT".into(),
+                                        ),
+                                    ),
+                                })
+                                .into()],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
                             function_name: "main".into(),
                             arguments: vec![],
                             return_type: IRPrimitiveType::Void.into(),
                             function_body: LocalStatements {
-                                statements: vec![LocalStatement::Instruction(
-                                    InstructionStatement::Call(CallInstruction {
-                                        function_name: "puts".into(),
-                                        parameters: vec![
-                                            crate::ir::ast::common::Operand::Identifier(
-                                                "HELLOWORLD_TEXT".into(),
-                                            ),
-                                        ],
-                                    }),
-                                )],
+                                statements: vec![
+                                    AssignmentStatement {
+                                        name: "text".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_text".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "text".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                ],
                             },
                         }),
                     ],

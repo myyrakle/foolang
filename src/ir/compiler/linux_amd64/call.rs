@@ -1,5 +1,8 @@
 use crate::{
-    ir::error::IRError,
+    ir::{
+        error::IRError,
+        compiler::linux_amd64::function::FunctionContext,
+    },
     platforms::{
         amd64::{instruction::Instruction, register::Register, rex::RexPrefix},
         linux::elf::{
@@ -12,6 +15,7 @@ use crate::{
 
 pub fn compile_call_instruction(
     instruction: &crate::ir::ast::local::instruction::call::CallInstruction,
+    context: &mut FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
     // x86-64 System V ABI 호출 규약:
@@ -43,7 +47,7 @@ pub fn compile_call_instruction(
     // 매개변수를 레지스터에 로드
     for (i, param) in parameters.iter().enumerate() {
         let target_reg = param_registers[i];
-        compile_parameter_to_register(param, target_reg, object)?;
+        compile_parameter_to_register(param, target_reg, context, object)?;
     }
 
     // call 명령어 생성
@@ -89,6 +93,7 @@ pub fn compile_call_instruction(
 fn compile_parameter_to_register(
     param: &crate::ir::ast::common::Operand,
     target_reg: Register,
+    context: &FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
     use crate::ir::ast::common::{literal::LiteralValue, Operand};
@@ -187,42 +192,86 @@ fn compile_parameter_to_register(
             }
         },
         Operand::Identifier(id) => {
-            // 심볼 테이블에서 identifier 찾기
-            let symbol = object.symbol_table.find_symbol(&id.name).ok_or_else(|| {
-                IRError::new(&format!("Symbol '{}' not found in symbol table", id.name))
-            })?;
+            use crate::ir::compiler::linux_amd64::function::VariableLocation;
+            use crate::platforms::amd64::register::modrm_reg_reg;
 
-            // 상수나 변수의 주소를 레지스터에 로드
-            // lea target_reg, [rip + offset]
-            let lea_offset = object.text_section.data.len();
+            // 먼저 로컬 변수 확인
+            if let Some(var_loc) = context.get_variable(&id.name) {
+                match var_loc {
+                    VariableLocation::Register(src_reg) => {
+                        // 레지스터에 저장된 로컬 변수
+                        if *src_reg != target_reg {
+                            // mov target_reg, src_reg
+                            object.text_section.data.push(RexPrefix::RexW as u8);
+                            object.text_section.data.push(Instruction::Mov as u8);
+                            object
+                                .text_section
+                                .data
+                                .push(modrm_reg_reg(*src_reg, target_reg));
+                        }
+                        // 같은 레지스터면 아무것도 안함
+                    }
+                    VariableLocation::Stack(offset) => {
+                        // 스택에 저장된 로컬 변수
+                        // mov target_reg, [rbp + offset]
+                        if target_reg.requires_rex() {
+                            object.text_section.data.push(RexPrefix::REX_WR);
+                        } else {
+                            object.text_section.data.push(RexPrefix::RexW as u8);
+                        }
+                        object.text_section.data.push(0x8B); // MOV r64, r/m64
 
-            if target_reg.requires_rex() {
-                object.text_section.data.push(RexPrefix::REX_WR);
+                        // ModR/M byte: mod=10 (disp32), reg=target_reg, r/m=101 (RBP)
+                        let modrm = (0b10 << 6)
+                            | ((target_reg.number() & 0x7) << 3)
+                            | 0b101;
+                        object.text_section.data.push(modrm);
+
+                        // displacement (오프셋)
+                        object
+                            .text_section
+                            .data
+                            .extend_from_slice(&offset.to_le_bytes());
+                    }
+                }
+            } else if let Some(symbol) = object.symbol_table.find_symbol(&id.name) {
+                // 전역 상수/변수: 주소를 레지스터에 로드
+                // lea target_reg, [rip + offset]
+                let lea_offset = object.text_section.data.len();
+
+                if target_reg.requires_rex() {
+                    object.text_section.data.push(RexPrefix::REX_WR);
+                } else {
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                }
+                object.text_section.data.push(Instruction::Lea as u8);
+
+                // ModR/M byte: mod=00 (RIP-relative), reg=target_reg, r/m=101 (RIP+disp32)
+                let modrm = ((target_reg.number() & Instruction::REG_NUMBER_MASK)
+                    << Instruction::MODRM_REG_SHIFT)
+                    | Instruction::MODRM_RIP_RELATIVE_RM;
+                object.text_section.data.push(modrm);
+
+                // placeholder for displacement
+                object
+                    .text_section
+                    .data
+                    .extend_from_slice(&[0x00; Instruction::DISPLACEMENT_32_SIZE]);
+
+                // relocation 추가
+                object.relocations.push(Relocation {
+                    section: SectionType::Text,
+                    offset: lea_offset + 3, // LEA 명령어의 disp32 위치
+                    symbol: symbol.name.clone(),
+                    reloc_type: RelocationType::PcRel32,
+                    addend: Instruction::CALL_ADDEND,
+                });
             } else {
-                object.text_section.data.push(RexPrefix::RexW as u8);
+                return Err(IRError::new(&format!(
+                    "Variable '{}' not found (neither local nor global)",
+                    id.name
+                )));
             }
-            object.text_section.data.push(Instruction::Lea as u8);
-
-            // ModR/M byte: mod=00 (RIP-relative), reg=target_reg, r/m=101 (RIP+disp32)
-            let modrm = ((target_reg.number() & Instruction::REG_NUMBER_MASK)
-                << Instruction::MODRM_REG_SHIFT)
-                | Instruction::MODRM_RIP_RELATIVE_RM;
-            object.text_section.data.push(modrm);
-
-            // placeholder for displacement
-            object
-                .text_section
-                .data
-                .extend_from_slice(&[0x00; Instruction::DISPLACEMENT_32_SIZE]);
-
-            // relocation 추가
-            object.relocations.push(Relocation {
-                section: SectionType::Text,
-                offset: lea_offset + 3, // LEA 명령어의 disp32 위치
-                symbol: symbol.name.clone(),
-                reloc_type: RelocationType::PcRel32,
-                addend: Instruction::CALL_ADDEND,
-            });
         }
     }
 
