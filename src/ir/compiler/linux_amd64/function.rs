@@ -88,13 +88,39 @@ impl FunctionContext {
     }
 
     /// 필요한 스택 크기 계산 (16바이트 정렬)
+    ///
+    /// x86-64 System V ABI 요구사항:
+    /// - CALL 명령어 실행 직전: RSP % 16 == 0
+    /// - 함수 진입 시점: RSP % 16 == 8 (return address)
+    ///
+    /// Prologue 실행 후 스택 상태:
+    /// 1. push rbp          -> RSP % 16 == 8
+    /// 2. sub rsp, X        -> RSP % 16 == 8 (X는 16의 배수)
+    /// 3. push N개 레지스터 -> RSP % 16 == (8 - N*8) % 16
+    ///
+    /// CALL 전 RSP를 16바이트 정렬하려면:
+    /// - N이 홀수: (8 - N*8) % 16 == 0 (정렬됨)
+    /// - N이 짝수: (8 - N*8) % 16 == 8 (8바이트 추가 필요)
     pub fn required_stack_size(&self) -> i32 {
-        if self.stack_offset == 0 {
+        let local_size = if self.stack_offset == 0 {
             0
         } else {
-            // 16바이트 정렬
-            let size = -self.stack_offset;
-            ((size + 15) / 16) * 16
+            -self.stack_offset
+        };
+
+        // callee-saved 레지스터 개수
+        let callee_saved_count = self.used_callee_saved.len();
+
+        // 정렬 보정: callee-saved 레지스터가 짝수 개면 8바이트 추가
+        let alignment_padding = if callee_saved_count % 2 == 0 { 8 } else { 0 };
+
+        let total_size = local_size + alignment_padding;
+
+        // 16바이트 정렬
+        if total_size == 0 {
+            0
+        } else {
+            ((total_size + 15) / 16) * 16
         }
     }
 }
