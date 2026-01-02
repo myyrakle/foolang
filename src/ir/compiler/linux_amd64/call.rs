@@ -202,12 +202,25 @@ fn compile_parameter_to_register(
                         // 레지스터에 저장된 로컬 변수
                         if *src_reg != target_reg {
                             // mov target_reg, src_reg
-                            object.text_section.data.push(RexPrefix::RexW as u8);
-                            object.text_section.data.push(Instruction::Mov as u8);
+                            // REX prefix: target_reg가 R8-R15면 REX.R, src_reg가 R8-R15면 REX.B 필요
+                            let needs_rex_r = target_reg.requires_rex();
+                            let needs_rex_b = src_reg.requires_rex();
+
+                            if needs_rex_r && needs_rex_b {
+                                object.text_section.data.push(RexPrefix::REX_WRB);
+                            } else if needs_rex_r {
+                                object.text_section.data.push(RexPrefix::REX_WR);
+                            } else if needs_rex_b {
+                                object.text_section.data.push(RexPrefix::REX_WB);
+                            } else {
+                                object.text_section.data.push(RexPrefix::RexW as u8);
+                            }
+                            // 0x8B = MOV r, r/m (reg 필드가 destination, r/m 필드가 source)
+                            object.text_section.data.push(0x8B);
                             object
                                 .text_section
                                 .data
-                                .push(modrm_reg_reg(*src_reg, target_reg));
+                                .push(modrm_reg_reg(target_reg, *src_reg));
                         }
                         // 같은 레지스터면 아무것도 안함
                     }

@@ -113,12 +113,18 @@ fn compile_statement(
                 VariableLocation::Register(dst_reg) => {
                     // mov dst_reg, rax
                     if dst_reg != Register::RAX {
-                        object.text_section.data.push(RexPrefix::RexW as u8);
-                        object.text_section.data.push(Instruction::Mov as u8);
+                        // R8-R15는 REX.R 비트 필요
+                        if dst_reg.requires_rex() {
+                            object.text_section.data.push(RexPrefix::REX_WR);
+                        } else {
+                            object.text_section.data.push(RexPrefix::RexW as u8);
+                        }
+                        // 0x8B = MOV r, r/m (reg 필드가 destination, r/m 필드가 source)
+                        object.text_section.data.push(0x8B);
                         object
                             .text_section
                             .data
-                            .push(modrm_reg_reg(Register::RAX, dst_reg));
+                            .push(modrm_reg_reg(dst_reg, Register::RAX));
                     }
                     // RAX에 할당된 경우 이미 RAX에 있으므로 아무것도 안함
                 }
