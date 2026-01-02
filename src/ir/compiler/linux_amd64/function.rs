@@ -94,13 +94,13 @@ impl FunctionContext {
     /// - 함수 진입 시점: RSP % 16 == 8 (return address)
     ///
     /// Prologue 실행 후 스택 상태:
-    /// 1. push rbp          -> RSP % 16 == 8
-    /// 2. sub rsp, X        -> RSP % 16 == 8 (X는 16의 배수)
-    /// 3. push N개 레지스터 -> RSP % 16 == (8 - N*8) % 16
+    /// 1. push rbp          -> RSP % 16 == 0 (return address 8 + rbp 8 = 16)
+    /// 2. push N개 레지스터 -> RSP % 16 == (N*8) % 16
+    /// 3. sub rsp, X        -> RSP % 16 == (N*8 + X) % 16
     ///
-    /// CALL 전 RSP를 16바이트 정렬하려면:
-    /// - N이 홀수: (8 - N*8) % 16 == 0 (정렬됨)
-    /// - N이 짝수: (8 - N*8) % 16 == 8 (8바이트 추가 필요)
+    /// CALL 전 RSP를 16바이트 정렬하려면 (N*8 + X) % 16 == 0:
+    /// - N이 짝수: N*8 % 16 == 0 → X는 16의 배수
+    /// - N이 홀수: N*8 % 16 == 8 → X는 16k+8 형태 (8바이트 추가 필요)
     pub fn required_stack_size(&self) -> i32 {
         let local_size = if self.stack_offset == 0 {
             0
@@ -111,8 +111,8 @@ impl FunctionContext {
         // callee-saved 레지스터 개수
         let callee_saved_count = self.used_callee_saved.len();
 
-        // 정렬 보정: callee-saved 레지스터가 짝수 개면 8바이트 추가
-        let alignment_padding = if callee_saved_count % 2 == 0 { 8 } else { 0 };
+        // 정렬 보정: callee-saved 레지스터가 홀수 개면 8바이트 추가
+        let alignment_padding = if callee_saved_count % 2 == 1 { 8 } else { 0 };
 
         let total_size = local_size + alignment_padding;
 
