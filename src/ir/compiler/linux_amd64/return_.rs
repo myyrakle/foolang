@@ -169,11 +169,15 @@ fn load_value_to_register(
                         }
                         object.text_section.data.push(0x8B); // MOV r64, r/m64
 
-                        // ModR/M byte: mod=10 (disp32), reg=target_reg, r/m=101 (RBP)
+                        // ModR/M byte: mod=10 (disp32), reg=target_reg, r/m=100 (SIB follows)
                         let modrm = (0b10 << 6)
                             | ((target_reg.number() & 0x7) << 3)
-                            | 0b101;
+                            | 0b100;
                         object.text_section.data.push(modrm);
+
+                        // SIB byte: scale=00 (x1), index=100 (none), base=101 (RBP)
+                        let sib = (0b00 << 6) | (0b100 << 3) | 0b101;
+                        object.text_section.data.push(sib);
 
                         // displacement (오프셋)
                         object
