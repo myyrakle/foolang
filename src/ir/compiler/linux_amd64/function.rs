@@ -150,6 +150,18 @@ pub fn compile_function(
         .data
         .push(modrm_reg_reg(Register::RSP, Register::RBP));
 
+    // callee-saved 레지스터 저장: push rbx, push r12, ...
+    // (epilogue에서 역순으로 복원하기 위해 sub rsp 전에 실행)
+    for reg in &context.used_callee_saved {
+        if reg.requires_rex() {
+            object.text_section.data.push(0x41); // REX.B
+        }
+        object
+            .text_section
+            .data
+            .push(Instruction::Push as u8 + (reg.number() & 0x7));
+    }
+
     // 스택 공간 할당: sub rsp, stack_size
     let stack_size = context.required_stack_size();
     if stack_size > 0 {
@@ -160,17 +172,6 @@ pub fn compile_function(
             .text_section
             .data
             .extend_from_slice(&(stack_size as u32).to_le_bytes());
-    }
-
-    // callee-saved 레지스터 저장: push rbx, push r12, ...
-    for reg in &context.used_callee_saved {
-        if reg.requires_rex() {
-            object.text_section.data.push(0x41); // REX.B
-        }
-        object
-            .text_section
-            .data
-            .push(Instruction::Push as u8 + (reg.number() & 0x7));
     }
 
     // 2단계: LocalStatements 컴파일 (변수 할당은 이미 결정됨)
@@ -238,18 +239,8 @@ fn prescan_statements(
 
 /// Function epilogue 생성 (callee-saved 레지스터 복원, 스택 해제, return)
 pub fn generate_epilogue(context: &FunctionContext, object: &mut ELFObject) {
-    // callee-saved 레지스터 복원 (역순으로 pop)
-    for reg in context.used_callee_saved.iter().rev() {
-        if reg.requires_rex() {
-            object.text_section.data.push(0x41); // REX.B
-        }
-        object
-            .text_section
-            .data
-            .push(Instruction::Pop as u8 + (reg.number() & 0x7));
-    }
-
     // 스택 해제: add rsp, stack_size
+    // (prologue의 sub rsp 역순 - pop callee-saved 전에 실행)
     let stack_size = context.required_stack_size();
     if stack_size > 0 {
         object.text_section.data.push(RexPrefix::RexW as u8);
@@ -259,6 +250,17 @@ pub fn generate_epilogue(context: &FunctionContext, object: &mut ELFObject) {
             .text_section
             .data
             .extend_from_slice(&(stack_size as u32).to_le_bytes());
+    }
+
+    // callee-saved 레지스터 복원 (역순으로 pop)
+    for reg in context.used_callee_saved.iter().rev() {
+        if reg.requires_rex() {
+            object.text_section.data.push(0x41); // REX.B
+        }
+        object
+            .text_section
+            .data
+            .push(Instruction::Pop as u8 + (reg.number() & 0x7));
     }
 
     // pop rbp (스택 프레임 복원)
