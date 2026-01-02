@@ -13,6 +13,10 @@ pub enum Instruction {
     /// Opcode: 0x89 (MOV r/m32, r32)
     Mov = 0x89,
 
+    /// MOV - Load from register/memory to register
+    /// Opcode: 0x8B (MOV r32, r/m32)
+    MovLoad = 0x8B,
+
     /// MOV - Move immediate to register/memory
     /// Opcode: 0xC7 (MOV r/m64, imm32)
     MovImm = 0xC7,
@@ -234,6 +238,7 @@ impl Instruction {
     pub fn name(self) -> &'static str {
         match self {
             Instruction::Mov => "MOV",
+            Instruction::MovLoad => "MOV",
             Instruction::MovImm => "MOV",
             Instruction::Push => "PUSH",
             Instruction::Pop => "POP",
@@ -300,6 +305,18 @@ impl Instruction {
 
     /// Bit mask for register number (lower 3 bits)
     pub const REG_NUMBER_MASK: u8 = 0x7;
+
+    /// SUB/ADD r/m64, imm32 opcode
+    /// 사용 시 ModR/M의 reg 필드에 opcode extension 필요:
+    /// - SUB: /5 (digit=5)
+    /// - ADD: /0 (digit=0)
+    pub const ALU_RM64_IMM32: u8 = 0x81;
+
+    /// SUB instruction의 opcode extension digit (/5)
+    pub const OPCODE_EXT_SUB: u8 = 5;
+
+    /// ADD instruction의 opcode extension digit (/0)
+    pub const OPCODE_EXT_ADD: u8 = 0;
 
     /// Returns the ModR/M reg field extension for instructions that require /digit encoding
     ///

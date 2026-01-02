@@ -17,3 +17,21 @@ pub enum LocalStatement {
     Instruction(InstructionStatement),
     Label(LabelDefinition),
 }
+
+impl From<AssignmentStatement> for LocalStatement {
+    fn from(stmt: AssignmentStatement) -> Self {
+        LocalStatement::Assignment(stmt)
+    }
+}
+
+impl From<InstructionStatement> for LocalStatement {
+    fn from(stmt: InstructionStatement) -> Self {
+        LocalStatement::Instruction(stmt)
+    }
+}
+
+impl From<LabelDefinition> for LocalStatement {
+    fn from(label: LabelDefinition) -> Self {
+        LocalStatement::Label(label)
+    }
+}

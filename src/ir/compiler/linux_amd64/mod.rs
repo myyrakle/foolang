@@ -10,6 +10,7 @@ pub mod call;
 pub mod constant;
 pub mod function;
 pub mod instruction;
+pub mod return_;
 
 pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
     let mut compiled_object = ELFObject::new();
@@ -59,11 +60,16 @@ mod tests {
                     constant::ConstantDefinition, function::FunctionDefinition, GlobalStatement,
                 },
                 local::{
-                    instruction::{call::CallInstruction, InstructionStatement},
+                    assignment::AssignmentStatement,
+                    instruction::{
+                        call::CallInstruction, return_::ReturnInstruction, InstructionStatement,
+                    },
                     LocalStatement, LocalStatements,
                 },
+                types::IRPrimitiveType,
                 CodeUnit,
             },
+            error::IRError,
             IRCompiler,
         },
         platforms::{linux::elf::object::ELFOutputType, target::Target},
@@ -72,67 +78,160 @@ mod tests {
     // 컴파일 후 링크해서 최종 실행
     // gcc output_with_libc.o -o output_linked.exe && ./output_linked.exe
     #[test]
-    fn test_compile() {
+    fn test_object_compile_with_gcc() {
         let compiler = IRCompiler::new();
 
-        let code_unit = CodeUnit {
-            filename: "example.foolang".into(),
-            statements: vec![
-                GlobalStatement::Constant(ConstantDefinition {
-                    constant_name: "HELLOWORLD_TEXT".into(),
-                    value: LiteralValue::String("Hello, world!".into()),
-                }),
-                GlobalStatement::DefineFunction(FunctionDefinition {
-                    function_name: "main".into(),
-                    arguments: vec![],
-                    return_type: None,
-                    function_body: LocalStatements {
-                        statements: vec![LocalStatement::Instruction(InstructionStatement::Call(
-                            CallInstruction {
-                                function_name: "puts".into(),
-                                parameters: vec![crate::ir::ast::common::Operand::Literal(
-                                    LiteralValue::String("Hello, world!".into()),
-                                )],
+        let object_filename = "object_compile_test.o";
+        let executable_filename = "object_compile_test.exe";
+
+        struct TestCase {
+            name: &'static str,
+            code_unit: CodeUnit,
+            expected_output: &'static str,
+            want_error: bool,
+            expected_error: Option<IRError>,
+        }
+
+        let test_cases = vec![
+            TestCase {
+                name: "간단한 Hello World 출력",
+                expected_output: "Hello, world!\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![LocalStatement::Instruction(
+                                InstructionStatement::Call(CallInstruction {
+                                    function_name: "puts".into(),
+                                    parameters: vec![crate::ir::ast::common::Operand::Literal(
+                                        LiteralValue::String("Hello, world!".into()),
+                                    )],
+                                }),
+                            )],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "간단한 Hello World 출력 (함수 호출 포함)",
+                expected_output: "Hello, world!\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "HELLOWORLD_TEXT".into(),
+                            value: LiteralValue::String("Hello, world!".into()),
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_text".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![InstructionStatement::Return(ReturnInstruction {
+                                    return_value: Some(
+                                        crate::ir::ast::common::Operand::Identifier(
+                                            "HELLOWORLD_TEXT".into(),
+                                        ),
+                                    ),
+                                })
+                                .into()],
                             },
-                        ))],
-                    },
-                }),
-            ],
-        };
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    AssignmentStatement {
+                                        name: "text".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_text".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "text".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+        ];
 
         let target = Target::LinuxAmd64;
 
-        let object = compiler.compile(&target, code_unit);
+        for test_case in test_cases {
+            let object = compiler.compile(&target, test_case.code_unit);
 
-        // 실행 파일 생성
-        // std::fs::write(
-        //     "output.exe",
-        //     match &object {
-        //         Ok(obj) => match obj {
-        //             crate::ir::data::IRCompiledObject::ELF(elf_obj) => {
-        //                 elf_obj.encode(ELFOutputType::Executable)
-        //             }
-        //         },
-        //         Err(_) => vec![],
-        //     },
-        // )
-        // .expect("Failed to write output.exe");
+            if test_case.want_error {
+                assert!(
+                    object.is_err(),
+                    "Test case '{}' expected an error but got success",
+                    test_case.name
+                );
+                if let Some(expected_err) = test_case.expected_error {
+                    assert_eq!(
+                        object.err().unwrap().to_string(),
+                        expected_err.to_string(),
+                        "Test case '{}' error mismatch",
+                        test_case.name
+                    );
+                }
 
-        // 재배치 가능한 오브젝트 파일도 생성
-        std::fs::write(
-            "output_with_libc.o",
-            match object {
-                Ok(obj) => match obj {
-                    crate::ir::data::IRCompiledObject::ELF(elf_obj) => {
-                        elf_obj.encode(ELFOutputType::Relocatable)
-                    }
-                },
-                Err(_) => vec![],
-            },
-        )
-        .expect("Failed to write output_with_libc.o");
+                continue;
+            }
 
-        println!("Generated output.exe (standalone) and output_with_libc.o (relocatable)");
-        println!("To link with libc: gcc output_with_libc.o -o output_linked");
+            let object = object.expect(&format!(
+                "Test case '{}' compilation failed unexpectedly",
+                test_case.name
+            ));
+
+            let encoded_object = match object {
+                crate::ir::data::IRCompiledObject::ELF(elf_obj) => {
+                    elf_obj.encode(ELFOutputType::Relocatable)
+                }
+            };
+
+            std::fs::write(object_filename, encoded_object)
+                .expect("Failed to write object file");
+
+            // gcc로 링크
+            std::process::Command::new("gcc")
+                .args(&[object_filename, "-o", executable_filename])
+                .status()
+                .expect("Failed to link with gcc");
+
+            let output = std::process::Command::new(format!("./{}", executable_filename))
+                .output()
+                .expect("Failed to execute");
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            println!("Program output: {}", stdout);
+
+            assert_eq!(
+                stdout, test_case.expected_output,
+                "Test case '{}' output mismatch",
+                test_case.name
+            );
+        }
     }
 }

@@ -1,9 +1,10 @@
+pub mod addressing;
 pub mod instruction;
 pub mod register;
 pub mod rex;
 
 // Re-export commonly used ModR/M construction functions
-pub use register::{modrm_digit_reg, modrm_reg_reg};
+pub use register::{modrm_digit_reg, modrm_digit_rsp, modrm_reg_reg};
 
 /// ModR/M byte constants for common register operations
 pub mod modrm {
