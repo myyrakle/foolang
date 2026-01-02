@@ -1,10 +1,12 @@
 use crate::{
-    ir::{
-        error::IRError,
-        compiler::linux_amd64::function::FunctionContext,
-    },
+    ir::{compiler::linux_amd64::function::FunctionContext, error::IRError},
     platforms::{
-        amd64::{instruction::Instruction, register::Register, rex::RexPrefix},
+        amd64::{
+            addressing::{modrm_rbp_disp32, modrm_rip_relative, sib_rbp_no_index},
+            instruction::Instruction,
+            register::Register,
+            rex::RexPrefix,
+        },
         linux::elf::{
             object::ELFObject,
             relocation::{Relocation, RelocationType},
@@ -150,10 +152,10 @@ fn compile_parameter_to_register(
                 object.text_section.data.push(Instruction::Lea as u8);
 
                 // ModR/M byte: mod=00 (RIP-relative), reg=target_reg, r/m=101 (RIP+disp32)
-                let modrm = ((target_reg.number() & Instruction::REG_NUMBER_MASK)
-                    << Instruction::MODRM_REG_SHIFT)
-                    | Instruction::MODRM_RIP_RELATIVE_RM;
-                object.text_section.data.push(modrm);
+                object
+                    .text_section
+                    .data
+                    .push(modrm_rip_relative(target_reg.number()));
 
                 // placeholder for displacement
                 object
@@ -215,8 +217,8 @@ fn compile_parameter_to_register(
                             } else {
                                 object.text_section.data.push(RexPrefix::RexW as u8);
                             }
-                            // 0x8B = MOV r, r/m (reg 필드가 destination, r/m 필드가 source)
-                            object.text_section.data.push(0x8B);
+                            // MOV r, r/m (reg 필드가 destination, r/m 필드가 source)
+                            object.text_section.data.push(Instruction::MovLoad as u8);
                             object
                                 .text_section
                                 .data
@@ -232,17 +234,17 @@ fn compile_parameter_to_register(
                         } else {
                             object.text_section.data.push(RexPrefix::RexW as u8);
                         }
-                        object.text_section.data.push(0x8B); // MOV r64, r/m64
+                        // MOV r64, r/m64
+                        object.text_section.data.push(Instruction::MovLoad as u8);
 
-                        // ModR/M byte: mod=10 (disp32), reg=target_reg, r/m=100 (SIB follows)
-                        let modrm = (0b10 << 6)
-                            | ((target_reg.number() & 0x7) << 3)
-                            | 0b100;
-                        object.text_section.data.push(modrm);
+                        // ModR/M byte: [RBP + disp32] addressing
+                        object
+                            .text_section
+                            .data
+                            .push(modrm_rbp_disp32(target_reg.number()));
 
-                        // SIB byte: scale=00 (x1), index=100 (none), base=101 (RBP)
-                        let sib = (0b00 << 6) | (0b100 << 3) | 0b101;
-                        object.text_section.data.push(sib);
+                        // SIB byte: scale=1, index=none, base=RBP
+                        object.text_section.data.push(sib_rbp_no_index());
 
                         // displacement (오프셋)
                         object
@@ -264,10 +266,10 @@ fn compile_parameter_to_register(
                 object.text_section.data.push(Instruction::Lea as u8);
 
                 // ModR/M byte: mod=00 (RIP-relative), reg=target_reg, r/m=101 (RIP+disp32)
-                let modrm = ((target_reg.number() & Instruction::REG_NUMBER_MASK)
-                    << Instruction::MODRM_REG_SHIFT)
-                    | Instruction::MODRM_RIP_RELATIVE_RM;
-                object.text_section.data.push(modrm);
+                object
+                    .text_section
+                    .data
+                    .push(modrm_rip_relative(target_reg.number()));
 
                 // placeholder for displacement
                 object

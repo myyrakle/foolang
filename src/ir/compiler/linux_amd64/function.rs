@@ -3,7 +3,7 @@ use crate::{
     platforms::{
         amd64::{
             instruction::Instruction,
-            register::{modrm_reg_reg, Register},
+            register::{modrm_digit_rsp, modrm_reg_reg, Register},
             rex::RexPrefix,
         },
         linux::elf::{
@@ -154,20 +154,25 @@ pub fn compile_function(
     // (epilogue에서 역순으로 복원하기 위해 sub rsp 전에 실행)
     for reg in &context.used_callee_saved {
         if reg.requires_rex() {
-            object.text_section.data.push(0x41); // REX.B
+            object.text_section.data.push(RexPrefix::RexB as u8); // REX.B
         }
-        object
-            .text_section
-            .data
-            .push(Instruction::Push as u8 + (reg.number() & 0x7));
+        object.text_section.data.push(
+            Instruction::Push as u8 + (reg.number() & Instruction::REG_NUMBER_MASK),
+        );
     }
 
     // 스택 공간 할당: sub rsp, stack_size
     let stack_size = context.required_stack_size();
     if stack_size > 0 {
         object.text_section.data.push(RexPrefix::RexW as u8);
-        object.text_section.data.push(0x81); // SUB r/m64, imm32
-        object.text_section.data.push(0xEC); // ModR/M: 11 101 100 (RSP)
+        object
+            .text_section
+            .data
+            .push(Instruction::ALU_RM64_IMM32); // SUB r/m64, imm32
+        object
+            .text_section
+            .data
+            .push(modrm_digit_rsp(Instruction::OPCODE_EXT_SUB)); // ModR/M: SUB rsp
         object
             .text_section
             .data
@@ -244,8 +249,14 @@ pub fn generate_epilogue(context: &FunctionContext, object: &mut ELFObject) {
     let stack_size = context.required_stack_size();
     if stack_size > 0 {
         object.text_section.data.push(RexPrefix::RexW as u8);
-        object.text_section.data.push(0x81); // ADD r/m64, imm32
-        object.text_section.data.push(0xC4); // ModR/M: 11 000 100 (RSP)
+        object
+            .text_section
+            .data
+            .push(Instruction::ALU_RM64_IMM32); // ADD r/m64, imm32
+        object
+            .text_section
+            .data
+            .push(modrm_digit_rsp(Instruction::OPCODE_EXT_ADD)); // ModR/M: ADD rsp
         object
             .text_section
             .data
@@ -255,12 +266,11 @@ pub fn generate_epilogue(context: &FunctionContext, object: &mut ELFObject) {
     // callee-saved 레지스터 복원 (역순으로 pop)
     for reg in context.used_callee_saved.iter().rev() {
         if reg.requires_rex() {
-            object.text_section.data.push(0x41); // REX.B
+            object.text_section.data.push(RexPrefix::RexB as u8); // REX.B
         }
-        object
-            .text_section
-            .data
-            .push(Instruction::Pop as u8 + (reg.number() & 0x7));
+        object.text_section.data.push(
+            Instruction::Pop as u8 + (reg.number() & Instruction::REG_NUMBER_MASK),
+        );
     }
 
     // pop rbp (스택 프레임 복원)

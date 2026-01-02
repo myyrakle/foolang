@@ -149,32 +149,60 @@ impl Register {
     }
 }
 
-/// Constructs a ModR/M byte for register-to-register operations
+// ModR/M byte 구성 상수
+/// ModR/M의 Mod 필드: 11 = register-direct 모드 (레지스터 간 직접 연산)
+const MODRM_MOD_REGISTER_DIRECT: u8 = 0b11;
+
+/// ModR/M의 Reg 필드 시프트 비트 수 (3비트)
+const MODRM_REG_FIELD_SHIFT: u8 = 3;
+
+/// 레지스터 번호 마스크 (하위 3비트만 사용)
+const REGISTER_NUMBER_MASK: u8 = 0x7;
+
+/// ModR/M 바이트 생성: register-direct 모드의 베이스 값 (Mod=11, Reg=0, R/M=0)
+const MODRM_REGISTER_DIRECT_BASE: u8 = MODRM_MOD_REGISTER_DIRECT << 6;
+
+/// ModR/M 바이트를 생성합니다 (레지스터 간 연산용)
+///
+/// x86-64 명령어에서 두 레지스터 간 연산을 인코딩할 때 사용합니다.
 ///
 /// ModR/M byte format: [Mod(2) | Reg(3) | R/M(3)]
-/// - Mod = 11 for register-direct mode
-/// - Reg = source/destination register (bits 3-5)
-/// - R/M = source/destination register (bits 0-2)
+/// - Mod = 11: register-direct 모드 (메모리 접근 없이 레지스터 간 직접 연산)
+/// - Reg = 목적지/소스 레지스터 (bits 3-5)
+/// - R/M = 소스/목적지 레지스터 (bits 0-2)
+///
+/// # Parameters
+/// - `reg`: Reg 필드에 인코딩할 레지스터 (보통 destination)
+/// - `rm`: R/M 필드에 인코딩할 레지스터 (보통 source)
 ///
 /// # Examples
 ///
 /// ```
 /// use foolang::platforms::amd64::{Register, modrm_reg_reg};
 ///
-/// // MOV RAX, RBX (destination RAX, source RBX)
+/// // MOV RAX, RBX (RAX = destination, RBX = source)
 /// assert_eq!(modrm_reg_reg(Register::RAX, Register::RBX), 0xC3);
 /// // 0xC3 = 11 000 011 = Mod=11, Reg=0(RAX), R/M=3(RBX)
 /// ```
 pub fn modrm_reg_reg(reg: Register, rm: Register) -> u8 {
-    0xC0 | ((reg.number() & 0x7) << 3) | (rm.number() & 0x7)
+    MODRM_REGISTER_DIRECT_BASE
+        | ((reg.number() & REGISTER_NUMBER_MASK) << MODRM_REG_FIELD_SHIFT)
+        | (rm.number() & REGISTER_NUMBER_MASK)
 }
 
-/// Constructs a ModR/M byte with /digit extension for operations like MUL, DIV, etc.
+/// ModR/M 바이트를 생성합니다 (opcode extension 방식)
+///
+/// 일부 x86-64 명령어(MUL, DIV, INC, DEC 등)는 opcode만으로 구분되지 않고,
+/// ModR/M 바이트의 Reg 필드에 추가 opcode digit을 인코딩합니다.
 ///
 /// ModR/M byte format: [Mod(2) | Digit(3) | R/M(3)]
-/// - Mod = 11 for register-direct mode
-/// - Digit = opcode extension (bits 3-5)
-/// - R/M = register operand (bits 0-2)
+/// - Mod = 11: register-direct 모드
+/// - Digit = opcode extension (bits 3-5) - 명령어 구분용
+/// - R/M = 피연산자 레지스터 (bits 0-2)
+///
+/// # Parameters
+/// - `opcode_digit`: Reg 필드에 인코딩할 opcode extension (0-7)
+/// - `rm`: R/M 필드에 인코딩할 피연산자 레지스터
 ///
 /// # Examples
 ///
@@ -185,6 +213,37 @@ pub fn modrm_reg_reg(reg: Register, rm: Register) -> u8 {
 /// assert_eq!(modrm_digit_reg(4, Register::RBX), 0xE3);
 /// // 0xE3 = 11 100 011 = Mod=11, Digit=4, R/M=3(RBX)
 /// ```
-pub fn modrm_digit_reg(digit: u8, rm: Register) -> u8 {
-    0xC0 | ((digit & 0x7) << 3) | (rm.number() & 0x7)
+pub fn modrm_digit_reg(opcode_digit: u8, rm: Register) -> u8 {
+    MODRM_REGISTER_DIRECT_BASE
+        | ((opcode_digit & REGISTER_NUMBER_MASK) << MODRM_REG_FIELD_SHIFT)
+        | (rm.number() & REGISTER_NUMBER_MASK)
+}
+
+/// RSP 레지스터를 대상으로 하는 register-direct ModR/M 바이트 생성
+///
+/// SUB rsp, imm32 또는 ADD rsp, imm32 등의 명령어에서 사용됩니다.
+///
+/// # Parameters
+/// - `opcode_digit`: Reg 필드에 인코딩할 opcode extension (0-7)
+///
+/// # Returns
+/// ModR/M 바이트: [Mod=11 | Digit | R/M=100(RSP)]
+///
+/// # Examples
+///
+/// ```
+/// use foolang::platforms::amd64::register::modrm_digit_rsp;
+///
+/// // SUB rsp, imm32 (opcode 81 /5)
+/// assert_eq!(modrm_digit_rsp(5), 0xEC);
+/// // 0xEC = 11 101 100 = Mod=11, Digit=5, R/M=4(RSP)
+///
+/// // ADD rsp, imm32 (opcode 81 /0)
+/// assert_eq!(modrm_digit_rsp(0), 0xC4);
+/// // 0xC4 = 11 000 100 = Mod=11, Digit=0, R/M=4(RSP)
+/// ```
+pub fn modrm_digit_rsp(opcode_digit: u8) -> u8 {
+    MODRM_REGISTER_DIRECT_BASE
+        | ((opcode_digit & REGISTER_NUMBER_MASK) << MODRM_REG_FIELD_SHIFT)
+        | Register::RSP.number()
 }
