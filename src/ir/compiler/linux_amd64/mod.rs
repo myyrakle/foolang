@@ -200,18 +200,19 @@ mod tests {
                 continue;
             }
 
-            std::fs::write(
-                object_filename,
-                match object {
-                    Ok(obj) => match obj {
-                        crate::ir::data::IRCompiledObject::ELF(elf_obj) => {
-                            elf_obj.encode(ELFOutputType::Relocatable)
-                        }
-                    },
-                    Err(_) => vec![],
-                },
-            )
-            .expect("Failed to write object file");
+            let object = object.expect(&format!(
+                "Test case '{}' compilation failed unexpectedly",
+                test_case.name
+            ));
+
+            let encoded_object = match object {
+                crate::ir::data::IRCompiledObject::ELF(elf_obj) => {
+                    elf_obj.encode(ELFOutputType::Relocatable)
+                }
+            };
+
+            std::fs::write(object_filename, encoded_object)
+                .expect("Failed to write object file");
 
             // gcc로 링크
             std::process::Command::new("gcc")
@@ -221,7 +222,7 @@ mod tests {
 
             let output = std::process::Command::new(format!("./{}", executable_filename))
                 .output()
-                .expect("Failed to executable");
+                .expect("Failed to execute");
 
             let stdout = String::from_utf8_lossy(&output.stdout);
             println!("Program output: {}", stdout);
