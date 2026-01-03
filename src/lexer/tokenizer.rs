@@ -1,4 +1,4 @@
-use crate::{error::Errors, utils::logger::Logger};
+use crate::error::Errors;
 
 use super::{
     general::GeneralToken, keyword::Keyword, operator::OperatorToken, primary::PrimaryToken,
@@ -14,7 +14,7 @@ pub struct Tokenizer {
 
 impl Tokenizer {
     pub fn new(text: String) -> Self {
-        Logger::info(format!("echo: {:?}", text));
+        log::info!("echo: {:?}", text);
         Self {
             last_char: None,
             buffer: text.chars().collect(),

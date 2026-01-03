@@ -19,14 +19,25 @@ use clap::Parser;
 
 use crate::error::Errors;
 
+fn setup_logging() {
+    unsafe {
+        if std::env::var("RUST_LOG").is_err() {
+            std::env::set_var("RUST_LOG", "info");
+        }
+    }
+    env_logger::init();
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Errors> {
+    setup_logging();
+
     let command = Command::parse();
 
     match command.action {
         SubCommand::Build(action) => {
             let result = execute_build(action).await?;
-            println!("executable: {}", result.executable_filename);
+            log::debug!("executable: {}", result.executable_filename);
         }
     }
 
