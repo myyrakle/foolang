@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-use super::instruction;
+use super::statements;
 use std::collections::HashMap;
 
 /// 변수 저장 위치
@@ -156,19 +156,17 @@ pub fn compile_function(
         if reg.requires_rex() {
             object.text_section.data.push(RexPrefix::RexB as u8); // REX.B
         }
-        object.text_section.data.push(
-            Instruction::Push as u8 + (reg.number() & Instruction::REG_NUMBER_MASK),
-        );
+        object
+            .text_section
+            .data
+            .push(Instruction::Push as u8 + (reg.number() & Instruction::REG_NUMBER_MASK));
     }
 
     // 스택 공간 할당: sub rsp, stack_size
     let stack_size = context.required_stack_size();
     if stack_size > 0 {
         object.text_section.data.push(RexPrefix::RexW as u8);
-        object
-            .text_section
-            .data
-            .push(Instruction::ALU_RM64_IMM32); // SUB r/m64, imm32
+        object.text_section.data.push(Instruction::ALU_RM64_IMM32); // SUB r/m64, imm32
         object
             .text_section
             .data
@@ -180,7 +178,7 @@ pub fn compile_function(
     }
 
     // 2단계: LocalStatements 컴파일 (변수 할당은 이미 결정됨)
-    instruction::compile_statements(&function.function_body.statements, &mut context, object)?;
+    statements::compile_statements(&function.function_body.statements, &mut context, object)?;
 
     // 마지막 statement가 return instruction인지 확인
     let has_explicit_return = function
@@ -249,10 +247,7 @@ pub fn generate_epilogue(context: &FunctionContext, object: &mut ELFObject) {
     let stack_size = context.required_stack_size();
     if stack_size > 0 {
         object.text_section.data.push(RexPrefix::RexW as u8);
-        object
-            .text_section
-            .data
-            .push(Instruction::ALU_RM64_IMM32); // ADD r/m64, imm32
+        object.text_section.data.push(Instruction::ALU_RM64_IMM32); // ADD r/m64, imm32
         object
             .text_section
             .data
@@ -268,9 +263,10 @@ pub fn generate_epilogue(context: &FunctionContext, object: &mut ELFObject) {
         if reg.requires_rex() {
             object.text_section.data.push(RexPrefix::RexB as u8); // REX.B
         }
-        object.text_section.data.push(
-            Instruction::Pop as u8 + (reg.number() & Instruction::REG_NUMBER_MASK),
-        );
+        object
+            .text_section
+            .data
+            .push(Instruction::Pop as u8 + (reg.number() & Instruction::REG_NUMBER_MASK));
     }
 
     // pop rbp (스택 프레임 복원)

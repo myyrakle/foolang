@@ -9,8 +9,8 @@ use crate::{
 pub mod call;
 pub mod constant;
 pub mod function;
-pub mod instruction;
 pub mod return_;
+pub mod statements;
 
 pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
     let mut compiled_object = ELFObject::new();
@@ -208,8 +208,7 @@ mod tests {
                 }
             };
 
-            std::fs::write(object_filename, encoded_object)
-                .expect("Failed to write object file");
+            std::fs::write(object_filename, encoded_object).expect("Failed to write object file");
 
             // gcc로 링크
             std::process::Command::new("gcc")
