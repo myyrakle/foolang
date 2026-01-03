@@ -3,10 +3,9 @@ use crate::{
         ast::local::{
             assignment::AssignmentStatementValue, instruction::InstructionStatement, LocalStatement,
         },
-        compiler::linux_amd64::{
-            call::compile_call_instruction,
+        compile::linux_amd64::{
+            call::compile_call_instruction, function::FunctionContext,
             return_::compile_return_instruction,
-            function::FunctionContext,
         },
         error::IRError,
     },
@@ -69,8 +68,11 @@ fn compile_statement(
             }
         }
         LocalStatement::Assignment(assignment_statement) => {
-            use crate::ir::compiler::linux_amd64::function::VariableLocation;
-            use crate::platforms::amd64::{instruction::Instruction, register::Register, rex::RexPrefix, register::modrm_reg_reg};
+            use crate::ir::compile::linux_amd64::function::VariableLocation;
+            use crate::platforms::amd64::{
+                instruction::Instruction, register::modrm_reg_reg, register::Register,
+                rex::RexPrefix,
+            };
 
             // assignment value 컴파일 (결과는 RAX에 저장됨)
             match &assignment_statement.value {
@@ -123,10 +125,7 @@ fn compile_statement(
                             object.text_section.data.push(RexPrefix::RexW as u8);
                         }
                         // MOV r, r/m (reg 필드가 destination, r/m 필드가 source)
-                        object
-                            .text_section
-                            .data
-                            .push(Instruction::MovLoad as u8);
+                        object.text_section.data.push(Instruction::MovLoad as u8);
                         object
                             .text_section
                             .data

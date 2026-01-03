@@ -19,14 +19,11 @@ pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
     let mut has_main_function = false;
 
     for statement in &code_unit.statements {
-        match statement {
-            GlobalStatement::DefineFunction(function) => {
-                if function.function_name == "main" {
-                    has_main_function = true;
-                    break;
-                }
+        if let GlobalStatement::DefineFunction(function) = statement {
+            if function.function_name == "main" {
+                has_main_function = true;
+                break;
             }
-            _ => {}
         }
     }
 

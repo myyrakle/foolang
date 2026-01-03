@@ -1,7 +1,7 @@
 use crate::{
     ir::{
+        compile::linux_amd64::function::{generate_epilogue, FunctionContext},
         error::IRError,
-        compiler::linux_amd64::function::{FunctionContext, generate_epilogue},
     },
     platforms::{
         amd64::{
@@ -132,7 +132,7 @@ fn load_value_to_register(
             }
         },
         Operand::Identifier(id) => {
-            use crate::ir::compiler::linux_amd64::function::VariableLocation;
+            use crate::ir::compile::linux_amd64::function::VariableLocation;
             use crate::platforms::amd64::register::modrm_reg_reg;
 
             // 먼저 로컬 변수 확인
@@ -156,10 +156,7 @@ fn load_value_to_register(
                                 object.text_section.data.push(RexPrefix::RexW as u8);
                             }
                             // MOV r, r/m (reg 필드가 destination, r/m 필드가 source)
-                            object
-                                .text_section
-                                .data
-                                .push(Instruction::MovLoad as u8);
+                            object.text_section.data.push(Instruction::MovLoad as u8);
                             object
                                 .text_section
                                 .data
@@ -176,10 +173,7 @@ fn load_value_to_register(
                             object.text_section.data.push(RexPrefix::RexW as u8);
                         }
                         // MOV r64, r/m64
-                        object
-                            .text_section
-                            .data
-                            .push(Instruction::MovLoad as u8);
+                        object.text_section.data.push(Instruction::MovLoad as u8);
 
                         // ModR/M byte: [RBP + disp32] addressing
                         object

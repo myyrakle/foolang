@@ -1,5 +1,5 @@
 use crate::{
-    ir::{compiler::linux_amd64::function::FunctionContext, error::IRError},
+    ir::{compile::linux_amd64::function::FunctionContext, error::IRError},
     platforms::{
         amd64::{
             addressing::{modrm_rbp_disp32, modrm_rip_relative, sib_rbp_no_index},
@@ -194,7 +194,7 @@ fn compile_parameter_to_register(
             }
         },
         Operand::Identifier(id) => {
-            use crate::ir::compiler::linux_amd64::function::VariableLocation;
+            use crate::ir::compile::linux_amd64::function::VariableLocation;
             use crate::platforms::amd64::register::modrm_reg_reg;
 
             // 먼저 로컬 변수 확인
