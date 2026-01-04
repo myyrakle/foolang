@@ -6,7 +6,9 @@ use crate::{
             LocalStatement,
         },
         compile::linux_amd64::{
-            call::compile_call_instruction, function::FunctionContext,
+            branch::{compile_jump_instruction, compile_label_definition},
+            call::compile_call_instruction,
+            function::FunctionContext,
             return_::compile_return_instruction,
         },
         error::IRError,
@@ -41,8 +43,8 @@ fn compile_statement(
         LocalStatement::Assignment(assignment_statement) => {
             compile_assignment_statement(assignment_statement, context, object)?;
         }
-        LocalStatement::Label(_) => {
-            return Err(IRError::new("Label statement not yet implemented"));
+        LocalStatement::Label(label_definition) => {
+            compile_label_definition(label_definition, context, object)?;
         }
     }
 
@@ -169,7 +171,9 @@ fn compile_instruction_statement(
             return Err(IRError::new("Div instruction need assignment"));
         }
         InstructionStatement::Branch(_instruction) => todo!(),
-        InstructionStatement::Jump(_instruction) => todo!(),
+        InstructionStatement::Jump(instruction) => {
+            compile_jump_instruction(instruction, context, object)?;
+        }
         InstructionStatement::Compare(_) => {
             return Err(IRError::new("Compare instruction need assignment"));
         }
