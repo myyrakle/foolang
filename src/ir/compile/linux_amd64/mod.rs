@@ -6,6 +6,7 @@ use crate::{
     platforms::linux::elf::object::ELFObject,
 };
 
+pub mod branch;
 pub mod call;
 pub mod constant;
 pub mod function;
@@ -59,8 +60,10 @@ mod tests {
                 local::{
                     assignment::AssignmentStatement,
                     instruction::{
-                        call::CallInstruction, return_::ReturnInstruction, InstructionStatement,
+                        branch::JumpInstruction, call::CallInstruction, return_::ReturnInstruction,
+                        InstructionStatement,
                     },
+                    label::LabelDefinition,
                     LocalStatement, LocalStatements,
                 },
                 types::IRPrimitiveType,
@@ -162,6 +165,60 @@ mod tests {
                                             parameters: vec![
                                                 crate::ir::ast::common::Operand::Identifier(
                                                     "text".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "무조건 분기 테스트",
+                expected_output: "SUCCEEDED!\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "FAILED_TEXT".into(),
+                            value: LiteralValue::String("FAILED!".into()),
+                        }),
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "SUCCEEDED_TEXT".into(),
+                            value: LiteralValue::String("SUCCEEDED!".into()),
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(JumpInstruction{
+                                        label: "jump_point".into(),
+                                    }.into()),
+                                     LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "FAILED_TEXT".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                   LocalStatement::Label(LabelDefinition{
+                                        name: "jump_point".into(),
+                                   }),
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "SUCCEEDED_TEXT".into(),
                                                 ),
                                             ],
                                         },
