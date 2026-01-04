@@ -267,7 +267,7 @@ mod tests {
                                             function_name: "puts".into(),
                                             parameters: vec![
                                                 crate::ir::ast::common::Operand::Identifier(
-                                                    "FAILED_TEXT".into(),
+                                                    "FALSE_TEXT".into(),
                                                 ),
                                             ],
                                         },
@@ -285,6 +285,9 @@ mod tests {
                                             ],
                                         },
                                     )),
+                                    LocalStatement::Instruction(InstructionStatement::Return(ReturnInstruction {
+                                        return_value: None,
+                                    })),
                                     LocalStatement::Label(LabelDefinition{
                                         name: "false_point".into(),
                                     }),
@@ -340,7 +343,7 @@ mod tests {
                                             function_name: "puts".into(),
                                             parameters: vec![
                                                 crate::ir::ast::common::Operand::Identifier(
-                                                    "FAILED_TEXT".into(),
+                                                    "TRUE_TEXT".into(),
                                                 ),
                                             ],
                                         },
@@ -358,6 +361,9 @@ mod tests {
                                             ],
                                         },
                                     )),
+                                    LocalStatement::Instruction(InstructionStatement::Return(ReturnInstruction {
+                                        return_value: None,
+                                    })),
                                     LocalStatement::Label(LabelDefinition{
                                         name: "false_point".into(),
                                     }),
