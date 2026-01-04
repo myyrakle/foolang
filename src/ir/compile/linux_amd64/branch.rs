@@ -10,6 +10,28 @@ use crate::{
     platforms::{amd64::instruction::Instruction, linux::elf::object::ELFObject},
 };
 
+// x86-64 점프 명령 관련 상수
+/// 2바이트 opcode의 첫 번째 바이트 (0x0F)
+/// 조건부 점프 명령(JZ, JNZ, JE, JNE 등)에서 사용
+const TWO_BYTE_OPCODE_PREFIX: u8 = 0x0F;
+
+/// JNZ (Jump if Not Zero) 명령어의 두 번째 바이트
+/// 전체 opcode: 0x0F 0x85 cd (near jump)
+const JNZ_OPCODE_SECOND_BYTE: u8 = 0x85;
+
+/// 1바이트 opcode를 사용하는 명령어의 opcode 크기
+const ONE_BYTE_OPCODE_SIZE: usize = 1;
+
+/// 2바이트 opcode를 사용하는 명령어의 opcode 크기
+const TWO_BYTE_OPCODE_SIZE: usize = 2;
+
+/// 32비트 displacement 크기 (4바이트)
+const DISPLACEMENT_SIZE: usize = 4;
+
+/// REX prefix + MOV 명령어에서 displacement까지의 오프셋
+/// REX(1) + MOV opcode(1) + ModR/M(1) = 3
+const REX_MOV_TO_DISP_OFFSET: usize = 3;
+
 /// 라벨 정의 컴파일
 ///
 /// 라벨은 실제 코드를 생성하지 않고, 현재 위치만 기록합니다.
@@ -39,21 +61,23 @@ pub fn compile_label_definition(
             // - 1바이트 opcode (JMP): opcode + 1
             // - 2바이트 opcode (JNZ 등): opcode + 2
             let opcode_byte = object.text_section.data[jump_offset];
-            let displacement_offset = if opcode_byte == 0x0F {
+            let displacement_offset = if opcode_byte == TWO_BYTE_OPCODE_PREFIX {
                 // 2바이트 opcode (조건부 점프)
-                jump_offset + 2
+                jump_offset + TWO_BYTE_OPCODE_SIZE
             } else {
                 // 1바이트 opcode (무조건 점프)
-                jump_offset + 1
+                jump_offset + ONE_BYTE_OPCODE_SIZE
             };
 
             // 상대 오프셋 계산: target - (jump_instruction_end)
-            // jump_instruction_end = displacement_offset + 4
-            let relative_offset = (current_offset as i32) - ((displacement_offset + 4) as i32);
+            // jump_instruction_end = displacement_offset + DISPLACEMENT_SIZE
+            let relative_offset =
+                (current_offset as i32) - ((displacement_offset + DISPLACEMENT_SIZE) as i32);
 
             // displacement 패치
             let bytes = relative_offset.to_le_bytes();
-            object.text_section.data[displacement_offset..displacement_offset + 4]
+            object.text_section.data
+                [displacement_offset..displacement_offset + DISPLACEMENT_SIZE]
                 .copy_from_slice(&bytes);
         }
     }
@@ -87,9 +111,10 @@ pub fn compile_jump_instruction(
     match context.get_label_location(&label_name) {
         Some(LabelLocation::Defined(target_offset)) => {
             // Backward reference: 라벨이 이미 정의됨
-            // 상대 오프셋 계산: target - (current + 5)
-            // current + 5는 JMP 명령 다음 명령의 시작 위치
-            let relative_offset = (*target_offset as i32) - ((displacement_offset + 4) as i32);
+            // 상대 오프셋 계산: target - (displacement_offset + DISPLACEMENT_SIZE)
+            // displacement_offset + DISPLACEMENT_SIZE는 JMP 명령 다음 명령의 시작 위치
+            let relative_offset =
+                (*target_offset as i32) - ((displacement_offset + DISPLACEMENT_SIZE) as i32);
 
             object
                 .text_section
@@ -102,7 +127,7 @@ pub fn compile_jump_instruction(
             object
                 .text_section
                 .data
-                .extend_from_slice(&[0x00, 0x00, 0x00, 0x00]);
+                .extend_from_slice(&[0x00; DISPLACEMENT_SIZE]);
 
             // forward reference 등록
             context.add_label_reference(label_name, jump_offset);
@@ -204,7 +229,7 @@ pub fn compile_branch_instruction(
         };
         object.relocations.push(Relocation {
             section: SectionType::Text,
-            offset: load_offset + 3, // MOV 명령어의 disp32 위치
+            offset: load_offset + REX_MOV_TO_DISP_OFFSET, // MOV 명령어의 disp32 위치
             symbol: symbol.name.clone(),
             reloc_type: RelocationType::PcRel32,
             addend: Instruction::CALL_ADDEND,
@@ -229,8 +254,8 @@ pub fn compile_branch_instruction(
     let jnz_offset = object.text_section.data.len();
 
     // JNZ near opcode (0F 85 cd)
-    object.text_section.data.push(0x0F);
-    object.text_section.data.push(0x85);
+    object.text_section.data.push(TWO_BYTE_OPCODE_PREFIX);
+    object.text_section.data.push(JNZ_OPCODE_SECOND_BYTE);
 
     let true_displacement_offset = object.text_section.data.len();
 
@@ -238,7 +263,8 @@ pub fn compile_branch_instruction(
     match context.get_label_location(&true_label_name) {
         Some(LabelLocation::Defined(target_offset)) => {
             // Backward reference
-            let relative_offset = (*target_offset as i32) - ((true_displacement_offset + 4) as i32);
+            let relative_offset =
+                (*target_offset as i32) - ((true_displacement_offset + DISPLACEMENT_SIZE) as i32);
             object
                 .text_section
                 .data
@@ -249,7 +275,7 @@ pub fn compile_branch_instruction(
             object
                 .text_section
                 .data
-                .extend_from_slice(&[0x00, 0x00, 0x00, 0x00]);
+                .extend_from_slice(&[0x00; DISPLACEMENT_SIZE]);
             context.add_label_reference(true_label_name, jnz_offset);
         }
     }
@@ -266,7 +292,7 @@ pub fn compile_branch_instruction(
         Some(LabelLocation::Defined(target_offset)) => {
             // Backward reference
             let relative_offset =
-                (*target_offset as i32) - ((false_displacement_offset + 4) as i32);
+                (*target_offset as i32) - ((false_displacement_offset + DISPLACEMENT_SIZE) as i32);
             object
                 .text_section
                 .data
@@ -277,7 +303,7 @@ pub fn compile_branch_instruction(
             object
                 .text_section
                 .data
-                .extend_from_slice(&[0x00, 0x00, 0x00, 0x00]);
+                .extend_from_slice(&[0x00; DISPLACEMENT_SIZE]);
             context.add_label_reference(false_label_name, jmp_offset);
         }
     }
