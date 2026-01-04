@@ -177,7 +177,7 @@ mod tests {
             },
             TestCase {
                 name: "무조건 분기 테스트",
-                expected_output: "SUCCESSED!\n",
+                expected_output: "SUCCEEDED!\n",
                 want_error: false,
                 expected_error: None,
                 code_unit: CodeUnit {
@@ -188,8 +188,8 @@ mod tests {
                             value: LiteralValue::String("FAILED!".into()),
                         }),
                         GlobalStatement::Constant(ConstantDefinition {
-                            constant_name: "SUCCESSED_TEXT".into(),
-                            value: LiteralValue::String("SUCCESSED!".into()),
+                            constant_name: "SUCCEEDED_TEXT".into(),
+                            value: LiteralValue::String("SUCCEEDED!".into()),
                         }),
                         GlobalStatement::DefineFunction(FunctionDefinition {
                             function_name: "main".into(),
@@ -218,7 +218,7 @@ mod tests {
                                             function_name: "puts".into(),
                                             parameters: vec![
                                                 crate::ir::ast::common::Operand::Identifier(
-                                                    "SUCCESSED_TEXT".into(),
+                                                    "SUCCEEDED_TEXT".into(),
                                                 ),
                                             ],
                                         },
