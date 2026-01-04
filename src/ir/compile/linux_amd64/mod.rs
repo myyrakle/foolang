@@ -185,11 +185,11 @@ mod tests {
                     statements: vec![
                         GlobalStatement::Constant(ConstantDefinition {
                             constant_name: "FAILED_TEXT".into(),
-                            value: LiteralValue::String("FAILED!\n".into()),
+                            value: LiteralValue::String("FAILED!".into()),
                         }),
                         GlobalStatement::Constant(ConstantDefinition {
                             constant_name: "SUCCESSED_TEXT".into(),
-                            value: LiteralValue::String("SUCCESSED!\n".into()),
+                            value: LiteralValue::String("SUCCESSED!".into()),
                         }),
                         GlobalStatement::DefineFunction(FunctionDefinition {
                             function_name: "main".into(),

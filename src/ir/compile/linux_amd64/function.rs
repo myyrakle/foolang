@@ -26,6 +26,16 @@ pub enum VariableLocation {
     Stack(i32),
 }
 
+/// 라벨 위치 정보
+#[derive(Debug, Clone)]
+pub enum LabelLocation {
+    /// 라벨이 이미 정의됨 (텍스트 섹션 내 오프셋)
+    Defined(usize),
+    /// 라벨이 아직 정의되지 않음 (forward reference)
+    /// Vec<usize>는 이 라벨을 참조하는 점프 명령의 오프셋 목록
+    Undefined(Vec<usize>),
+}
+
 /// 함수 컴파일 컨텍스트
 #[derive(Debug)]
 pub struct FunctionContext {
@@ -41,6 +51,9 @@ pub struct FunctionContext {
 
     /// 사용된 callee-saved 레지스터 목록 (epilogue에서 복원용)
     pub used_callee_saved: Vec<Register>,
+
+    /// 라벨 이름 -> 위치 정보
+    pub labels: HashMap<String, LabelLocation>,
 }
 
 impl FunctionContext {
@@ -57,6 +70,7 @@ impl FunctionContext {
             ],
             stack_offset: 0,
             used_callee_saved: Vec::new(),
+            labels: HashMap::new(),
         }
     }
 
@@ -85,6 +99,29 @@ impl FunctionContext {
     /// 변수의 위치 조회
     pub fn get_variable(&self, name: &str) -> Option<&VariableLocation> {
         self.variables.get(name)
+    }
+
+    /// 라벨 정의 등록 (라벨이 있는 위치의 코드 오프셋 저장)
+    pub fn define_label(&mut self, label_name: String, offset: usize) {
+        self.labels
+            .insert(label_name, LabelLocation::Defined(offset));
+    }
+
+    /// 라벨 참조 추가 (점프 명령에서 사용, forward reference 처리)
+    pub fn add_label_reference(&mut self, label_name: String, jump_offset: usize) {
+        let entry = self
+            .labels
+            .entry(label_name)
+            .or_insert_with(|| LabelLocation::Undefined(Vec::new()));
+
+        if let LabelLocation::Undefined(refs) = entry {
+            refs.push(jump_offset);
+        }
+    }
+
+    /// 라벨의 위치 조회
+    pub fn get_label_location(&self, label_name: &str) -> Option<&LabelLocation> {
+        self.labels.get(label_name)
     }
 
     /// 필요한 스택 크기 계산 (16바이트 정렬)
@@ -179,6 +216,16 @@ pub fn compile_function(
 
     // 2단계: LocalStatements 컴파일 (변수 할당은 이미 결정됨)
     statements::compile_statements(&function.function_body.statements, &mut context, object)?;
+
+    // 3단계: 미정의 라벨 검증
+    for (label_name, location) in &context.labels {
+        if matches!(location, LabelLocation::Undefined(_)) {
+            return Err(IRError::new(&format!(
+                "Label '{}' is referenced but never defined",
+                label_name
+            )));
+        }
+    }
 
     // 마지막 statement가 return instruction인지 확인
     let has_explicit_return = function
