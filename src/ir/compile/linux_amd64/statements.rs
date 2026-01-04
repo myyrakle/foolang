@@ -6,7 +6,9 @@ use crate::{
             LocalStatement,
         },
         compile::linux_amd64::{
-            branch::{compile_jump_instruction, compile_label_definition},
+            branch::{
+                compile_branch_instruction, compile_jump_instruction, compile_label_definition,
+            },
             call::compile_call_instruction,
             function::FunctionContext,
             return_::compile_return_instruction,
@@ -170,7 +172,9 @@ fn compile_instruction_statement(
         InstructionStatement::Div(_) => {
             return Err(IRError::new("Div instruction need assignment"));
         }
-        InstructionStatement::Branch(_instruction) => todo!(),
+        InstructionStatement::Branch(instruction) => {
+            compile_branch_instruction(instruction, context, object)?;
+        }
         InstructionStatement::Jump(instruction) => {
             compile_jump_instruction(instruction, context, object)?;
         }

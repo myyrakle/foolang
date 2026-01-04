@@ -1,6 +1,9 @@
 use crate::{
     ir::{
-        ast::local::{instruction::branch::JumpInstruction, label::LabelDefinition},
+        ast::local::{
+            instruction::branch::{BranchInstruction, JumpInstruction},
+            label::LabelDefinition,
+        },
         compile::linux_amd64::function::{FunctionContext, LabelLocation},
         error::IRError,
     },
@@ -29,8 +32,7 @@ pub fn compile_label_definition(
     }
 
     // 이미 이 라벨을 참조하는 점프가 있었다면 패치
-    if let Some(LabelLocation::Undefined(refs)) = context.get_label_location(&label_name).cloned()
-    {
+    if let Some(LabelLocation::Undefined(refs)) = context.get_label_location(&label_name).cloned() {
         for jump_offset in refs {
             // jump_offset는 JMP 명령어의 opcode 위치
             // displacement는 opcode 다음 바이트부터 시작
@@ -38,8 +40,7 @@ pub fn compile_label_definition(
 
             // 상대 오프셋 계산: target - (jump_instruction_end)
             // jump_instruction_end = displacement_offset + 4
-            let relative_offset =
-                (current_offset as i32) - ((displacement_offset + 4) as i32);
+            let relative_offset = (current_offset as i32) - ((displacement_offset + 4) as i32);
 
             // displacement 패치
             let bytes = relative_offset.to_le_bytes();
@@ -79,8 +80,7 @@ pub fn compile_jump_instruction(
             // Backward reference: 라벨이 이미 정의됨
             // 상대 오프셋 계산: target - (current + 5)
             // current + 5는 JMP 명령 다음 명령의 시작 위치
-            let relative_offset =
-                (*target_offset as i32) - ((displacement_offset + 4) as i32);
+            let relative_offset = (*target_offset as i32) - ((displacement_offset + 4) as i32);
 
             object
                 .text_section
@@ -100,5 +100,13 @@ pub fn compile_jump_instruction(
         }
     }
 
+    Ok(())
+}
+
+pub fn compile_branch_instruction(
+    instruction: &BranchInstruction,
+    context: &mut FunctionContext,
+    object: &mut ELFObject,
+) -> Result<(), IRError> {
     Ok(())
 }

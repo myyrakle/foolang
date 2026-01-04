@@ -60,7 +60,9 @@ mod tests {
                 local::{
                     assignment::AssignmentStatement,
                     instruction::{
-                        branch::JumpInstruction, call::CallInstruction, return_::ReturnInstruction,
+                        branch::{BranchInstruction, JumpInstruction},
+                        call::CallInstruction,
+                        return_::ReturnInstruction,
                         InstructionStatement,
                     },
                     label::LabelDefinition,
@@ -219,6 +221,152 @@ mod tests {
                                             parameters: vec![
                                                 crate::ir::ast::common::Operand::Identifier(
                                                     "SUCCEEDED_TEXT".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "TRUE 분기 테스트",
+                expected_output: "TRUE!\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "FALSE_TEXT".into(),
+                            value: LiteralValue::String("FALSE!".into()),
+                        }),
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "TRUE_TEXT".into(),
+                            value: LiteralValue::String("TRUE!".into()),
+                        }),
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "FLAG".into(),
+                            value: LiteralValue::Int64(1),
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(BranchInstruction{
+                                        condition: "FLAG".into(),
+                                        true_label: "true_point".into(),
+                                        false_label: "false_point".into(),
+                                    }.into()),
+                                     LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "FAILED_TEXT".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                    LocalStatement::Label(LabelDefinition{
+                                            name: "true_point".into(),
+                                    }),
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "TRUE_TEXT".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                    LocalStatement::Label(LabelDefinition{
+                                        name: "false_point".into(),
+                                    }),
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "FALSE_TEXT".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "FALSE 분기 테스트",
+                expected_output: "FALSE!\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "FALSE_TEXT".into(),
+                            value: LiteralValue::String("FALSE!".into()),
+                        }),
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "TRUE_TEXT".into(),
+                            value: LiteralValue::String("TRUE!".into()),
+                        }),
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "FLAG".into(),
+                            value: LiteralValue::Int64(0),
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(BranchInstruction{
+                                        condition: "FLAG".into(),
+                                        true_label: "true_point".into(),
+                                        false_label: "false_point".into(),
+                                    }.into()),
+                                     LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "FAILED_TEXT".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                    LocalStatement::Label(LabelDefinition{
+                                            name: "true_point".into(),
+                                    }),
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "TRUE_TEXT".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                    LocalStatement::Label(LabelDefinition{
+                                        name: "false_point".into(),
+                                    }),
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "FALSE_TEXT".into(),
                                                 ),
                                             ],
                                         },
