@@ -4,7 +4,7 @@ use crate::{
 };
 
 pub mod ast;
-pub mod compiler;
+pub mod compile;
 pub mod data;
 pub mod error;
 

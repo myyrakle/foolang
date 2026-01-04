@@ -9,8 +9,8 @@ use crate::{
 pub mod call;
 pub mod constant;
 pub mod function;
-pub mod instruction;
 pub mod return_;
+pub mod statements;
 
 pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
     let mut compiled_object = ELFObject::new();
@@ -19,14 +19,11 @@ pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
     let mut has_main_function = false;
 
     for statement in &code_unit.statements {
-        match statement {
-            GlobalStatement::DefineFunction(function) => {
-                if function.function_name == "main" {
-                    has_main_function = true;
-                    break;
-                }
+        if let GlobalStatement::DefineFunction(function) = statement {
+            if function.function_name == "main" {
+                has_main_function = true;
+                break;
             }
-            _ => {}
         }
     }
 
@@ -211,8 +208,7 @@ mod tests {
                 }
             };
 
-            std::fs::write(object_filename, encoded_object)
-                .expect("Failed to write object file");
+            std::fs::write(object_filename, encoded_object).expect("Failed to write object file");
 
             // gcc로 링크
             std::process::Command::new("gcc")
