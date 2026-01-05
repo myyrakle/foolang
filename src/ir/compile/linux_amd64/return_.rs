@@ -1,7 +1,7 @@
 use crate::{
     ir::{
         compile::linux_amd64::function::{generate_epilogue, FunctionContext},
-        error::IRError,
+        error::{IRError, IRErrorKind},
     },
     platforms::{
         amd64::{
@@ -128,7 +128,10 @@ fn load_value_to_register(
                     .extend_from_slice(&value.to_le_bytes());
             }
             LiteralValue::Float64(_) => {
-                return Err(IRError::new("Float64 return values not yet implemented"));
+                return Err(IRError::new(
+                    IRErrorKind::NotImplemented,
+                    "Float64 return values not yet implemented",
+                ));
             }
         },
         Operand::Identifier(id) => {
@@ -221,10 +224,13 @@ fn load_value_to_register(
                     addend: Instruction::CALL_ADDEND,
                 });
             } else {
-                return Err(IRError::new(&format!(
-                    "Variable '{}' not found (neither local nor global)",
-                    id.name
-                )));
+                return Err(IRError::new(
+                    IRErrorKind::VariableNotFound,
+                    &format!(
+                        "Variable '{}' not found (neither local nor global)",
+                        id.name
+                    ),
+                ));
             }
         }
     }
