@@ -1,11 +1,23 @@
 #[derive(Debug)]
 pub struct IRError {
+    pub kind: IRErrorKind,
     pub message: String,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum IRErrorKind {
+    VariableNotFound,
+    VariableAlreadyDefined,
+    LabelNotFound,
+    LabelAlreadyDefined,
+    AssignmentRequired,
+    NotImplemented,
+}
+
 impl IRError {
-    pub fn new(message: &str) -> Self {
+    pub fn new(kind: IRErrorKind, message: &str) -> Self {
         Self {
+            kind,
             message: message.to_string(),
         }
     }
@@ -13,6 +25,6 @@ impl IRError {
 
 impl std::fmt::Display for IRError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "IRError: {}", self.message)
+        write!(f, "IRError: {:?} = {} ", self.kind, self.message)
     }
 }

@@ -5,7 +5,7 @@ use crate::{
             label::LabelDefinition,
         },
         compile::linux_amd64::function::{FunctionContext, LabelLocation},
-        error::IRError,
+        error::{IRError, IRErrorKind},
     },
     platforms::{amd64::instruction::Instruction, linux::elf::object::ELFObject},
 };
@@ -47,10 +47,10 @@ pub fn compile_label_definition(
 
     // 라벨이 이미 정의되어 있는지 확인
     if let Some(LabelLocation::Defined(_)) = context.get_label_location(&label_name) {
-        return Err(IRError::new(&format!(
-            "Label '{}' is already defined",
-            label_name
-        )));
+        return Err(IRError::new(
+            IRErrorKind::LabelAlreadyDefined,
+            &format!("Label '{}' is already defined", label_name),
+        ));
     }
 
     // 이미 이 라벨을 참조하는 점프가 있었다면 패치
@@ -76,8 +76,7 @@ pub fn compile_label_definition(
 
             // displacement 패치
             let bytes = relative_offset.to_le_bytes();
-            object.text_section.data
-                [displacement_offset..displacement_offset + DISPLACEMENT_SIZE]
+            object.text_section.data[displacement_offset..displacement_offset + DISPLACEMENT_SIZE]
                 .copy_from_slice(&bytes);
         }
     }
@@ -235,10 +234,13 @@ pub fn compile_branch_instruction(
             addend: Instruction::CALL_ADDEND,
         });
     } else {
-        return Err(IRError::new(&format!(
-            "Condition variable '{}' not found (neither local nor global)",
-            condition_name
-        )));
+        return Err(IRError::new(
+            IRErrorKind::VariableNotFound,
+            &format!(
+                "Condition variable '{}' not found (neither local nor global)",
+                condition_name
+            ),
+        ));
     }
 
     // 2. test rax, rax (RAX가 0인지 체크)

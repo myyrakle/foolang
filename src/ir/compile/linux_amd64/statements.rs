@@ -13,7 +13,7 @@ use crate::{
             function::FunctionContext,
             return_::compile_return_instruction,
         },
-        error::IRError,
+        error::{IRError, IRErrorKind},
     },
     platforms::{
         amd64::addressing::{modrm_rbp_disp32, sib_rbp_no_index},
@@ -66,35 +66,62 @@ fn compile_assignment_statement(
     // assignment value 컴파일 (결과는 RAX에 저장됨)
     match &assignment_statement.value {
         AssignmentStatementValue::Literal(_literal) => {
-            return Err(IRError::new("Literal assignment not yet implemented"));
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                "Literal assignment not yet implemented",
+            ));
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Add(_)) => {
-            return Err(IRError::new("Add instruction not yet implemented"));
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                "Add instruction not yet implemented",
+            ));
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Sub(_)) => {
-            return Err(IRError::new("Sub instruction not yet implemented"));
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                "Sub instruction not yet implemented",
+            ));
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Mul(_)) => {
-            return Err(IRError::new("Mul instruction not yet implemented"));
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                "Mul instruction not yet implemented",
+            ));
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Div(_)) => {
-            return Err(IRError::new("Div instruction not yet implemented"));
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                "Div instruction not yet implemented",
+            ));
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Call(instruction)) => {
             // call instruction 컴파일 (결과는 RAX에)
             compile_call_instruction(instruction, context, object)?;
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Compare(_)) => {
-            return Err(IRError::new("Compare instruction not yet implemented"));
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                "Compare instruction not yet implemented",
+            ));
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Alloca(_)) => {
-            return Err(IRError::new("Alloca instruction not yet implemented"));
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                "Alloca instruction not yet implemented",
+            ));
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Load(_)) => {
-            return Err(IRError::new("Load instruction not yet implemented"));
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                "Load instruction not yet implemented",
+            ));
         }
         _ => {
-            return Err(IRError::new("Not supported instruction in assignment"));
+            return Err(IRError::new(
+                IRErrorKind::AssignmentRequired,
+                "Not supported instruction in assignment",
+            ));
         }
     }
 
@@ -158,19 +185,31 @@ fn compile_instruction_statement(
             compile_call_instruction(instruction, context, object)?;
         }
         InstructionStatement::Add(_) => {
-            return Err(IRError::new("Add instruction need assignment"));
+            return Err(IRError::new(
+                IRErrorKind::AssignmentRequired,
+                "Add instruction need assignment",
+            ));
         }
         InstructionStatement::Return(instruction) => {
             compile_return_instruction(instruction, context, object)?;
         }
         InstructionStatement::Sub(_) => {
-            return Err(IRError::new("Sub instruction need assignment"));
+            return Err(IRError::new(
+                IRErrorKind::AssignmentRequired,
+                "Sub instruction need assignment",
+            ));
         }
         InstructionStatement::Mul(_) => {
-            return Err(IRError::new("Mul instruction need assignment"));
+            return Err(IRError::new(
+                IRErrorKind::AssignmentRequired,
+                "Mul instruction need assignment",
+            ));
         }
         InstructionStatement::Div(_) => {
-            return Err(IRError::new("Div instruction need assignment"));
+            return Err(IRError::new(
+                IRErrorKind::AssignmentRequired,
+                "Div instruction need assignment",
+            ));
         }
         InstructionStatement::Branch(instruction) => {
             compile_branch_instruction(instruction, context, object)?;
@@ -179,13 +218,22 @@ fn compile_instruction_statement(
             compile_jump_instruction(instruction, context, object)?;
         }
         InstructionStatement::Compare(_) => {
-            return Err(IRError::new("Compare instruction need assignment"));
+            return Err(IRError::new(
+                IRErrorKind::AssignmentRequired,
+                "Compare instruction need assignment",
+            ));
         }
         InstructionStatement::Alloca(_) => {
-            return Err(IRError::new("Alloca instruction need assignment"));
+            return Err(IRError::new(
+                IRErrorKind::AssignmentRequired,
+                "Alloca instruction need assignment",
+            ));
         }
         InstructionStatement::Load(_instruction) => {
-            return Err(IRError::new("Load instruction need assignment"));
+            return Err(IRError::new(
+                IRErrorKind::AssignmentRequired,
+                "Load instruction need assignment",
+            ));
         }
         InstructionStatement::Store(_instruction) => todo!(),
     }

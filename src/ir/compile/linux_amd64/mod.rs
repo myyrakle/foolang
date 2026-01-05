@@ -71,7 +71,6 @@ mod tests {
                 types::IRPrimitiveType,
                 CodeUnit,
             },
-            error::IRError,
             IRCompiler,
         },
         platforms::{linux::elf::object::ELFOutputType, target::Target},
@@ -79,8 +78,11 @@ mod tests {
 
     // 컴파일 후 링크해서 최종 실행
     // gcc output_with_libc.o -o output_linked.exe && ./output_linked.exe
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     #[test]
     fn test_object_compile_with_gcc() {
+        use crate::ir::error::IRErrorKind;
+
         let compiler = IRCompiler::new();
 
         let object_filename = "object_compile_test.o";
@@ -91,10 +93,10 @@ mod tests {
             code_unit: CodeUnit,
             expected_output: &'static str,
             want_error: bool,
-            expected_error: Option<IRError>,
+            expected_error: Option<IRErrorKind>,
         }
 
-        let test_cases = vec![
+        let success_cases = vec![
             TestCase {
                 name: "간단한 Hello World 출력",
                 expected_output: "Hello, world!\n",
@@ -385,6 +387,157 @@ mod tests {
             },
         ];
 
+        let error_cases = vec![
+            TestCase {
+                name: "Label 중복 정의 오류",
+                expected_output: "",
+                want_error: true,
+                expected_error: Some(IRErrorKind::LabelAlreadyDefined),
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                LocalStatement::Label(LabelDefinition {
+                                    name: "start".into(),
+                                }),
+                                LocalStatement::Label(LabelDefinition {
+                                    name: "start".into(),
+                                }),
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "puts".into(),
+                                        parameters: vec![crate::ir::ast::common::Operand::Literal(
+                                            LiteralValue::String("Hello, world!".into()),
+                                        )],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "존재하지 않는 Label 에 대한 점프",
+                expected_output: "",
+                want_error: true,
+                expected_error: Some(IRErrorKind::LabelNotFound),
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                LocalStatement::Instruction(
+                                    JumpInstruction {
+                                        label: "undefined_label".into(),
+                                    }
+                                    .into(),
+                                ),
+                                LocalStatement::Label(LabelDefinition {
+                                    name: "start".into(),
+                                }),
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "puts".into(),
+                                        parameters: vec![crate::ir::ast::common::Operand::Literal(
+                                            LiteralValue::String("Hello, world!".into()),
+                                        )],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "존재하지 않는 분기에 대한 branch",
+                expected_output: "",
+                want_error: true,
+                expected_error: Some(IRErrorKind::VariableNotFound),
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "FALSE_TEXT".into(),
+                            value: LiteralValue::String("FALSE!".into()),
+                        }),
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "TRUE_TEXT".into(),
+                            value: LiteralValue::String("TRUE!".into()),
+                        }),
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "FLAG".into(),
+                            value: LiteralValue::Int64(1),
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(
+                                        BranchInstruction {
+                                            condition: "UNDEFINED_VAR".into(),
+                                            true_label: "true_point".into(),
+                                            false_label: "false_point".into(),
+                                        }
+                                        .into(),
+                                    ),
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "FALSE_TEXT".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                    LocalStatement::Label(LabelDefinition {
+                                        name: "true_point".into(),
+                                    }),
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "TRUE_TEXT".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        ReturnInstruction { return_value: None },
+                                    )),
+                                    LocalStatement::Label(LabelDefinition {
+                                        name: "false_point".into(),
+                                    }),
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier(
+                                                    "FALSE_TEXT".into(),
+                                                ),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+        ];
+
+        let test_cases = success_cases.into_iter().chain(error_cases.into_iter());
+
         let target = Target::LinuxAmd64;
 
         for test_case in test_cases {
@@ -396,10 +549,11 @@ mod tests {
                     "Test case '{}' expected an error but got success",
                     test_case.name
                 );
+
                 if let Some(expected_err) = test_case.expected_error {
                     assert_eq!(
-                        object.err().unwrap().to_string(),
-                        expected_err.to_string(),
+                        object.err().unwrap().kind,
+                        expected_err,
                         "Test case '{}' error mismatch",
                         test_case.name
                     );

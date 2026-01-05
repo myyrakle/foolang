@@ -1,5 +1,8 @@
 use crate::{
-    ir::{compile::linux_amd64::function::FunctionContext, error::IRError},
+    ir::{
+        compile::linux_amd64::function::FunctionContext,
+        error::{IRError, IRErrorKind},
+    },
     platforms::{
         amd64::{
             addressing::{modrm_rbp_disp32, modrm_rip_relative, sib_rbp_no_index},
@@ -42,6 +45,7 @@ pub fn compile_call_instruction(
     // 최대 6개 이상의 매개변수는 스택 사용 (TODO: 추후 구현)
     if parameters.len() > 6 {
         return Err(IRError::new(
+            IRErrorKind::NotImplemented,
             "More than 6 parameters not yet supported (stack parameters not implemented)",
         ));
     }
@@ -190,7 +194,10 @@ fn compile_parameter_to_register(
                     .extend_from_slice(&value.to_le_bytes());
             }
             LiteralValue::Float64(_) => {
-                return Err(IRError::new("Float64 parameters not yet implemented"));
+                return Err(IRError::new(
+                    IRErrorKind::NotImplemented,
+                    "Float64 parameters not yet implemented",
+                ));
             }
         },
         Operand::Identifier(id) => {
@@ -286,10 +293,13 @@ fn compile_parameter_to_register(
                     addend: Instruction::CALL_ADDEND,
                 });
             } else {
-                return Err(IRError::new(&format!(
-                    "Variable '{}' not found (neither local nor global)",
-                    id.name
-                )));
+                return Err(IRError::new(
+                    IRErrorKind::VariableNotFound,
+                    &format!(
+                        "Variable '{}' not found (neither local nor global)",
+                        id.name
+                    ),
+                ));
             }
         }
     }

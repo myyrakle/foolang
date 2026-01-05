@@ -1,5 +1,8 @@
 use crate::{
-    ir::{ast::global::function::FunctionDefinition, error::IRError},
+    ir::{
+        ast::global::function::FunctionDefinition,
+        error::{IRError, IRErrorKind},
+    },
     platforms::{
         amd64::{
             instruction::Instruction,
@@ -220,10 +223,10 @@ pub fn compile_function(
     // 3단계: 미정의 라벨 검증
     for (label_name, location) in &context.labels {
         if matches!(location, LabelLocation::Undefined(_)) {
-            return Err(IRError::new(&format!(
-                "Label '{}' is referenced but never defined",
-                label_name
-            )));
+            return Err(IRError::new(
+                IRErrorKind::LabelNotFound,
+                &format!("Label '{}' is referenced but never defined", label_name),
+            ));
         }
     }
 
