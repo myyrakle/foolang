@@ -6,6 +6,7 @@ use crate::{
             LocalStatement,
         },
         compile::linux_amd64::{
+            alloca::compile_alloca_instruction,
             branch::{
                 compile_branch_instruction, compile_jump_instruction, compile_label_definition,
             },
@@ -105,11 +106,8 @@ fn compile_assignment_statement(
                 "Compare instruction not yet implemented",
             ));
         }
-        AssignmentStatementValue::Instruction(InstructionStatement::Alloca(_)) => {
-            return Err(IRError::new(
-                IRErrorKind::NotImplemented,
-                "Alloca instruction not yet implemented",
-            ));
+        AssignmentStatementValue::Instruction(InstructionStatement::Alloca(instruction)) => {
+            compile_alloca_instruction(instruction, context, object)?;
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Load(_)) => {
             return Err(IRError::new(

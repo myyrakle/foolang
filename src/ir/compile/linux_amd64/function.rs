@@ -57,6 +57,10 @@ pub struct FunctionContext {
 
     /// 라벨 이름 -> 위치 정보
     pub labels: HashMap<String, LabelLocation>,
+
+    /// prologue에서 할당한 실제 스택 크기
+    /// epilogue에서 동일한 크기를 복원하기 위해 저장
+    pub allocated_stack_size: i32,
 }
 
 impl FunctionContext {
@@ -74,6 +78,7 @@ impl FunctionContext {
             stack_offset: 0,
             used_callee_saved: Vec::new(),
             labels: HashMap::new(),
+            allocated_stack_size: 0,
         }
     }
 
@@ -204,6 +209,7 @@ pub fn compile_function(
 
     // 스택 공간 할당: sub rsp, stack_size
     let stack_size = context.required_stack_size();
+    context.allocated_stack_size = stack_size; // 할당한 크기 저장
     if stack_size > 0 {
         object.text_section.data.push(RexPrefix::RexW as u8);
         object.text_section.data.push(Instruction::ALU_RM64_IMM32); // SUB r/m64, imm32
@@ -292,9 +298,10 @@ fn prescan_statements(
 
 /// Function epilogue 생성 (callee-saved 레지스터 복원, 스택 해제, return)
 pub fn generate_epilogue(context: &FunctionContext, object: &mut ELFObject) {
-    // 스택 해제: add rsp, stack_size
+    // 스택 해제: add rsp, allocated_stack_size
     // (prologue의 sub rsp 역순 - pop callee-saved 전에 실행)
-    let stack_size = context.required_stack_size();
+    // prologue에서 할당한 크기와 동일한 크기를 복원
+    let stack_size = context.allocated_stack_size;
     if stack_size > 0 {
         object.text_section.data.push(RexPrefix::RexW as u8);
         object.text_section.data.push(Instruction::ALU_RM64_IMM32); // ADD r/m64, imm32

@@ -247,3 +247,65 @@ pub fn modrm_digit_rsp(opcode_digit: u8) -> u8 {
         | ((opcode_digit & REGISTER_NUMBER_MASK) << MODRM_REG_FIELD_SHIFT)
         | Register::RSP.number()
 }
+
+/// ModR/M의 Mod 필드: 01 = [reg + disp8] (8비트 변위)
+const MODRM_MOD_DISP8: u8 = 0b01;
+
+/// ModR/M의 Mod 필드: 10 = [reg + disp32] (32비트 변위)
+const MODRM_MOD_DISP32: u8 = 0b10;
+
+/// ModR/M 바이트를 생성합니다 (메모리 주소 지정: [base_reg + disp8])
+///
+/// 메모리 접근 시 베이스 레지스터에 8비트 변위를 더한 주소를 인코딩합니다.
+///
+/// ModR/M byte format: [Mod(2) | Reg(3) | R/M(3)]
+/// - Mod = 01: [reg + disp8] 모드 (8비트 변위)
+/// - Reg = 목적지/소스 레지스터 또는 opcode extension
+/// - R/M = 베이스 레지스터 (bits 0-2)
+///
+/// # Parameters
+/// - `reg`: Reg 필드에 인코딩할 레지스터
+/// - `base`: R/M 필드에 인코딩할 베이스 레지스터
+///
+/// # Examples
+///
+/// ```
+/// use foolang::platforms::amd64::{Register, modrm_reg_base_disp8};
+///
+/// // LEA RAX, [RBP + disp8]
+/// assert_eq!(modrm_reg_base_disp8(Register::RAX, Register::RBP), 0x45);
+/// // 0x45 = 01 000 101 = Mod=01, Reg=0(RAX), R/M=5(RBP)
+/// ```
+pub fn modrm_reg_base_disp8(reg: Register, base: Register) -> u8 {
+    (MODRM_MOD_DISP8 << 6)
+        | ((reg.number() & REGISTER_NUMBER_MASK) << MODRM_REG_FIELD_SHIFT)
+        | (base.number() & REGISTER_NUMBER_MASK)
+}
+
+/// ModR/M 바이트를 생성합니다 (메모리 주소 지정: [base_reg + disp32])
+///
+/// 메모리 접근 시 베이스 레지스터에 32비트 변위를 더한 주소를 인코딩합니다.
+///
+/// ModR/M byte format: [Mod(2) | Reg(3) | R/M(3)]
+/// - Mod = 10: [reg + disp32] 모드 (32비트 변위)
+/// - Reg = 목적지/소스 레지스터 또는 opcode extension
+/// - R/M = 베이스 레지스터 (bits 0-2)
+///
+/// # Parameters
+/// - `reg`: Reg 필드에 인코딩할 레지스터
+/// - `base`: R/M 필드에 인코딩할 베이스 레지스터
+///
+/// # Examples
+///
+/// ```
+/// use foolang::platforms::amd64::{Register, modrm_reg_base_disp32};
+///
+/// // LEA RAX, [RBP + disp32]
+/// assert_eq!(modrm_reg_base_disp32(Register::RAX, Register::RBP), 0x85);
+/// // 0x85 = 10 000 101 = Mod=10, Reg=0(RAX), R/M=5(RBP)
+/// ```
+pub fn modrm_reg_base_disp32(reg: Register, base: Register) -> u8 {
+    (MODRM_MOD_DISP32 << 6)
+        | ((reg.number() & REGISTER_NUMBER_MASK) << MODRM_REG_FIELD_SHIFT)
+        | (base.number() & REGISTER_NUMBER_MASK)
+}
