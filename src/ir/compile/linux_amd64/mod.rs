@@ -79,6 +79,7 @@ mod tests {
 
     // 컴파일 후 링크해서 최종 실행
     // gcc output_with_libc.o -o output_linked.exe && ./output_linked.exe
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     #[test]
     fn test_object_compile_with_gcc() {
         let compiler = IRCompiler::new();
@@ -94,7 +95,7 @@ mod tests {
             expected_error: Option<IRError>,
         }
 
-        let test_cases = vec![
+        let success_cases = vec![
             TestCase {
                 name: "간단한 Hello World 출력",
                 expected_output: "Hello, world!\n",
@@ -384,6 +385,10 @@ mod tests {
                 },
             },
         ];
+
+        let error_cases = vec![];
+
+        let test_cases = success_cases.into_iter().chain(error_cases.into_iter());
 
         let target = Target::LinuxAmd64;
 
