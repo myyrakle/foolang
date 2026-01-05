@@ -4,7 +4,7 @@ pub struct IRError {
     pub message: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum IRErrorKind {
     VariableNotFound,
     VariableAlreadyDefined,
