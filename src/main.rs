@@ -43,3 +43,7 @@ async fn main() -> Result<(), Errors> {
 
     Ok(())
 }
+
+fn factorial(n: u128) -> u128 {
+    (1..=n).product()
+}

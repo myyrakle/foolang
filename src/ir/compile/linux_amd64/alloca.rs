@@ -20,7 +20,12 @@ pub fn compile_alloca_instruction(
     // 타입 크기 계산
     let type_size = alloca_instruction.type_.size_in_bytes();
 
-    // 스택 오프셋 조정 (타입 크기만큼 스택에 공간 할당)
+    // 스택 오프셋 계산: 일반 로컬 변수 다음부터 alloca 공간 할당
+    // stack_offset은 음수이므로, 거기서 더 빼면 더 깊은 스택 위치로 이동
+    //
+    // 중요: prescan_statements에서 이미 모든 alloca의 크기를 pending_alloca_size에
+    // 누적했고, required_stack_size()가 이를 포함하여 prologue에서 충분한 스택을
+    // 미리 할당했으므로, 여기서 stack_offset을 조정해도 안전함
     context.stack_offset -= type_size as i32;
     let stack_offset = context.stack_offset;
 
