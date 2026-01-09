@@ -3,9 +3,11 @@ use crate::ir::ast::{
     types::IRPrimitiveType,
 };
 
+/// Stack Allocation Instruction (memory allocation on the stack)
+/// return pointer to the allocated memory
 #[derive(Debug)]
 pub struct AllocaInstruction {
-    pub _type: IRPrimitiveType,
+    pub type_: IRPrimitiveType,
 }
 
 #[derive(Debug)]

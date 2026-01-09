@@ -247,3 +247,152 @@ pub fn modrm_digit_rsp(opcode_digit: u8) -> u8 {
         | ((opcode_digit & REGISTER_NUMBER_MASK) << MODRM_REG_FIELD_SHIFT)
         | Register::RSP.number()
 }
+
+/// ModR/M의 Mod 필드: 01 = [reg + disp8] (8비트 변위)
+const MODRM_MOD_DISP8: u8 = 0b01;
+
+/// ModR/M의 Mod 필드: 10 = [reg + disp32] (32비트 변위)
+const MODRM_MOD_DISP32: u8 = 0b10;
+
+/// ModR/M 바이트를 생성합니다 (메모리 주소 지정: [base_reg + disp8])
+///
+/// 메모리 접근 시 베이스 레지스터에 8비트 변위를 더한 주소를 인코딩합니다.
+///
+/// ModR/M byte format: [Mod(2) | Reg(3) | R/M(3)]
+/// - Mod = 01: [reg + disp8] 모드 (8비트 변위)
+/// - Reg = 목적지/소스 레지스터 또는 opcode extension
+/// - R/M = 베이스 레지스터 (bits 0-2)
+///
+/// # Parameters
+/// - `reg`: Reg 필드에 인코딩할 레지스터
+/// - `base`: R/M 필드에 인코딩할 베이스 레지스터
+///
+/// # Panics
+/// RSP(4) 또는 R12(12)를 베이스 레지스터로 사용하면 panic합니다.
+/// x86-64 인코딩에서 R/M 필드가 0b100인 경우 SIB 바이트가 필수이므로,
+/// 이 함수로는 해당 레지스터를 베이스로 사용할 수 없습니다.
+///
+/// # Examples
+///
+/// ```
+/// use foolang::platforms::amd64::{Register, modrm_reg_base_disp8};
+///
+/// // LEA RAX, [RBP + disp8]
+/// assert_eq!(modrm_reg_base_disp8(Register::RAX, Register::RBP), 0x45);
+/// // 0x45 = 01 000 101 = Mod=01, Reg=0(RAX), R/M=5(RBP)
+/// ```
+pub fn modrm_reg_base_disp8(reg: Register, base: Register) -> u8 {
+    // RSP(4) 또는 R12(12)를 베이스로 사용하면 R/M 필드가 0b100이 되어
+    // x86-64 인코딩 규칙상 SIB 바이트가 필수이므로 지원하지 않음
+    let base_number = base.number() & REGISTER_NUMBER_MASK;
+    if base_number == 0b100 {
+        panic!(
+            "modrm_reg_base_disp8: RSP or R12 cannot be used as base register (requires SIB byte). Got: {}",
+            base.name()
+        );
+    }
+
+    (MODRM_MOD_DISP8 << 6)
+        | ((reg.number() & REGISTER_NUMBER_MASK) << MODRM_REG_FIELD_SHIFT)
+        | base_number
+}
+
+/// ModR/M 바이트를 생성합니다 (메모리 주소 지정: [base_reg + disp32])
+///
+/// 메모리 접근 시 베이스 레지스터에 32비트 변위를 더한 주소를 인코딩합니다.
+///
+/// ModR/M byte format: [Mod(2) | Reg(3) | R/M(3)]
+/// - Mod = 10: [reg + disp32] 모드 (32비트 변위)
+/// - Reg = 목적지/소스 레지스터 또는 opcode extension
+/// - R/M = 베이스 레지스터 (bits 0-2)
+///
+/// # Parameters
+/// - `reg`: Reg 필드에 인코딩할 레지스터
+/// - `base`: R/M 필드에 인코딩할 베이스 레지스터
+///
+/// # Panics
+/// RSP(4) 또는 R12(12)를 베이스 레지스터로 사용하면 panic합니다.
+/// x86-64 인코딩에서 R/M 필드가 0b100인 경우 SIB 바이트가 필수이므로,
+/// 이 함수로는 해당 레지스터를 베이스로 사용할 수 없습니다.
+///
+/// # Examples
+///
+/// ```
+/// use foolang::platforms::amd64::{Register, modrm_reg_base_disp32};
+///
+/// // LEA RAX, [RBP + disp32]
+/// assert_eq!(modrm_reg_base_disp32(Register::RAX, Register::RBP), 0x85);
+/// // 0x85 = 10 000 101 = Mod=10, Reg=0(RAX), R/M=5(RBP)
+/// ```
+pub fn modrm_reg_base_disp32(reg: Register, base: Register) -> u8 {
+    // RSP(4) 또는 R12(12)를 베이스로 사용하면 R/M 필드가 0b100이 되어
+    // x86-64 인코딩 규칙상 SIB 바이트가 필수이므로 지원하지 않음
+    let base_number = base.number() & REGISTER_NUMBER_MASK;
+    if base_number == 0b100 {
+        panic!(
+            "modrm_reg_base_disp32: RSP or R12 cannot be used as base register (requires SIB byte). Got: {}",
+            base.name()
+        );
+    }
+
+    (MODRM_MOD_DISP32 << 6)
+        | ((reg.number() & REGISTER_NUMBER_MASK) << MODRM_REG_FIELD_SHIFT)
+        | base_number
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "RSP or R12 cannot be used as base register")]
+    fn test_modrm_reg_base_disp8_panics_with_rsp() {
+        // RSP를 베이스로 사용하면 panic 발생
+        modrm_reg_base_disp8(Register::RAX, Register::RSP);
+    }
+
+    #[test]
+    #[should_panic(expected = "RSP or R12 cannot be used as base register")]
+    fn test_modrm_reg_base_disp8_panics_with_r12() {
+        // R12를 베이스로 사용하면 panic 발생
+        modrm_reg_base_disp8(Register::RAX, Register::R12);
+    }
+
+    #[test]
+    #[should_panic(expected = "RSP or R12 cannot be used as base register")]
+    fn test_modrm_reg_base_disp32_panics_with_rsp() {
+        // RSP를 베이스로 사용하면 panic 발생
+        modrm_reg_base_disp32(Register::RAX, Register::RSP);
+    }
+
+    #[test]
+    #[should_panic(expected = "RSP or R12 cannot be used as base register")]
+    fn test_modrm_reg_base_disp32_panics_with_r12() {
+        // R12를 베이스로 사용하면 panic 발생
+        modrm_reg_base_disp32(Register::RAX, Register::R12);
+    }
+
+    #[test]
+    fn test_modrm_reg_base_disp8_works_with_valid_registers() {
+        // RBP는 정상적으로 동작
+        assert_eq!(modrm_reg_base_disp8(Register::RAX, Register::RBP), 0x45);
+
+        // RBX도 정상적으로 동작
+        assert_eq!(modrm_reg_base_disp8(Register::RAX, Register::RBX), 0x43);
+
+        // R13도 정상적으로 동작 (R13의 하위 3비트는 0b101로 RSP와 다름)
+        assert_eq!(modrm_reg_base_disp8(Register::RAX, Register::R13), 0x45);
+    }
+
+    #[test]
+    fn test_modrm_reg_base_disp32_works_with_valid_registers() {
+        // RBP는 정상적으로 동작
+        assert_eq!(modrm_reg_base_disp32(Register::RAX, Register::RBP), 0x85);
+
+        // RBX도 정상적으로 동작
+        assert_eq!(modrm_reg_base_disp32(Register::RAX, Register::RBX), 0x83);
+
+        // R13도 정상적으로 동작
+        assert_eq!(modrm_reg_base_disp32(Register::RAX, Register::R13), 0x85);
+    }
+}

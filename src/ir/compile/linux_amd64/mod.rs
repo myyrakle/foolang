@@ -6,6 +6,7 @@ use crate::{
     platforms::linux::elf::object::ELFObject,
 };
 
+pub mod alloca;
 pub mod branch;
 pub mod call;
 pub mod constant;
@@ -60,6 +61,7 @@ mod tests {
                 local::{
                     assignment::AssignmentStatement,
                     instruction::{
+                        alloca::AllocaInstruction,
                         branch::{BranchInstruction, JumpInstruction},
                         call::CallInstruction,
                         return_::ReturnInstruction,
@@ -117,6 +119,96 @@ mod tests {
                                     )],
                                 }),
                             )],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "alloca 명령어 테스트 (Int64 할당)",
+                expected_output: "Alloca test\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // ptr = alloca i64 (스택에 8바이트 할당)
+                                AssignmentStatement {
+                                    name: "ptr".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Alloca(AllocaInstruction {
+                                            type_: IRPrimitiveType::Int64,
+                                        }),
+                                    ),
+                                }.into(),
+                                // puts 호출
+                                LocalStatement::Instruction(
+                                    InstructionStatement::Call(CallInstruction {
+                                        function_name: "puts".into(),
+                                        parameters: vec![crate::ir::ast::common::Operand::Literal(
+                                            LiteralValue::String("Alloca test".into()),
+                                        )],
+                                    }),
+                                ),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "alloca 명령어 테스트 (여러 타입 할당)",
+                expected_output: "Multiple alloca test\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "example.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // ptr1 = alloca i64
+                                AssignmentStatement {
+                                    name: "ptr1".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Alloca(AllocaInstruction {
+                                            type_: IRPrimitiveType::Int64,
+                                        }),
+                                    ),
+                                }.into(),
+                                // ptr2 = alloca i32
+                                AssignmentStatement {
+                                    name: "ptr2".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Alloca(AllocaInstruction {
+                                            type_: IRPrimitiveType::Int32,
+                                        }),
+                                    ),
+                                }.into(),
+                                // ptr3 = alloca i8
+                                AssignmentStatement {
+                                    name: "ptr3".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Alloca(AllocaInstruction {
+                                            type_: IRPrimitiveType::Int8,
+                                        }),
+                                    ),
+                                }.into(),
+                                // puts 호출
+                                LocalStatement::Instruction(
+                                    InstructionStatement::Call(CallInstruction {
+                                        function_name: "puts".into(),
+                                        parameters: vec![crate::ir::ast::common::Operand::Literal(
+                                            LiteralValue::String("Multiple alloca test".into()),
+                                        )],
+                                    }),
+                                ),
+                            ],
                         },
                     })],
                 },

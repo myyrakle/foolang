@@ -57,6 +57,14 @@ pub struct FunctionContext {
 
     /// 라벨 이름 -> 위치 정보
     pub labels: HashMap<String, LabelLocation>,
+
+    /// prologue에서 할당한 실제 스택 크기
+    /// epilogue에서 동일한 크기를 복원하기 위해 저장
+    pub allocated_stack_size: i32,
+
+    /// alloca 명령어들이 필요로 하는 총 스택 크기
+    /// prescan 단계에서 미리 계산되며, prologue에서 스택을 할당할 때 포함됨
+    pub pending_alloca_size: i32,
 }
 
 impl FunctionContext {
@@ -74,6 +82,8 @@ impl FunctionContext {
             stack_offset: 0,
             used_callee_saved: Vec::new(),
             labels: HashMap::new(),
+            allocated_stack_size: 0,
+            pending_alloca_size: 0,
         }
     }
 
@@ -148,13 +158,16 @@ impl FunctionContext {
             -self.stack_offset
         };
 
+        // alloca 명령어들이 필요로 하는 크기 포함
+        let total_local_size = local_size + self.pending_alloca_size;
+
         // callee-saved 레지스터 개수
         let callee_saved_count = self.used_callee_saved.len();
 
         // 정렬 보정: callee-saved 레지스터가 홀수 개면 8바이트 추가
         let alignment_padding = if callee_saved_count % 2 == 1 { 8 } else { 0 };
 
-        let total_size = local_size + alignment_padding;
+        let total_size = total_local_size + alignment_padding;
 
         // 16바이트 정렬
         if total_size == 0 {
@@ -204,6 +217,7 @@ pub fn compile_function(
 
     // 스택 공간 할당: sub rsp, stack_size
     let stack_size = context.required_stack_size();
+    context.allocated_stack_size = stack_size; // 할당한 크기 저장
     if stack_size > 0 {
         object.text_section.data.push(RexPrefix::RexW as u8);
         object.text_section.data.push(Instruction::ALU_RM64_IMM32); // SUB r/m64, imm32
@@ -274,27 +288,39 @@ pub fn compile_function(
     Ok(())
 }
 
-/// Statement를 미리 스캔하여 필요한 변수를 할당
+/// Statement를 미리 스캔하여 필요한 변수를 할당하고 alloca 크기 계산
 fn prescan_statements(
     statements: &[crate::ir::ast::local::LocalStatement],
     context: &mut FunctionContext,
 ) {
-    use crate::ir::ast::local::LocalStatement;
+    use crate::ir::ast::local::{
+        assignment::AssignmentStatementValue, instruction::InstructionStatement, LocalStatement,
+    };
 
     for stmt in statements {
         if let LocalStatement::Assignment(assignment) = stmt {
             // assignment의 변수 이름을 미리 할당
             let var_name = assignment.name.name.clone();
             context.allocate_variable(var_name);
+
+            // alloca instruction이 있으면 필요한 크기 누적
+            if let AssignmentStatementValue::Instruction(InstructionStatement::Alloca(
+                alloca_inst,
+            )) = &assignment.value
+            {
+                let type_size = alloca_inst.type_.size_in_bytes();
+                context.pending_alloca_size += type_size as i32;
+            }
         }
     }
 }
 
 /// Function epilogue 생성 (callee-saved 레지스터 복원, 스택 해제, return)
 pub fn generate_epilogue(context: &FunctionContext, object: &mut ELFObject) {
-    // 스택 해제: add rsp, stack_size
+    // 스택 해제: add rsp, allocated_stack_size
     // (prologue의 sub rsp 역순 - pop callee-saved 전에 실행)
-    let stack_size = context.required_stack_size();
+    // prologue에서 할당한 크기와 동일한 크기를 복원
+    let stack_size = context.allocated_stack_size;
     if stack_size > 0 {
         object.text_section.data.push(RexPrefix::RexW as u8);
         object.text_section.data.push(Instruction::ALU_RM64_IMM32); // ADD r/m64, imm32
