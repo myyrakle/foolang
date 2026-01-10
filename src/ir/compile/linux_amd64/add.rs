@@ -95,6 +95,25 @@ fn load_operand_to_register(
     Ok(())
 }
 
+/// 정수 immediate 값을 레지스터에 로드하는 헬퍼 함수
+/// MOV reg, imm64 형태의 명령어 생성
+fn emit_mov_imm64(object: &mut ELFObject, target_reg: Register, value: i64) {
+    // REX prefix: R8-R15는 REX.B 필요, 그 외는 REX.W만 필요
+    emit_rex_prefix(object, None, Some(target_reg));
+
+    // Opcode: MOV_IMM64_BASE + 레지스터 번호 (하위 3비트만 사용)
+    object
+        .text_section
+        .data
+        .push(Instruction::MOV_IMM64_BASE + (target_reg.number() & Instruction::REG_NUMBER_MASK));
+
+    // Immediate 값 (8바이트, little-endian)
+    object
+        .text_section
+        .data
+        .extend_from_slice(&value.to_le_bytes());
+}
+
 /// 리터럴 값을 레지스터에 로드
 fn load_literal_to_register(
     lit: &LiteralValue,
@@ -105,55 +124,19 @@ fn load_literal_to_register(
     match (lit, size) {
         (LiteralValue::Int8(value), OperandSize::Int8) => {
             // MOV reg, imm64 (sign-extended)
-            // MOV immediate의 경우 opcode에 레지스터 번호가 인코딩되므로 REX.B 필요
-            emit_rex_prefix(object, None, Some(target_reg));
-            object
-                .text_section
-                .data
-                .push(Instruction::MOV_IMM64_BASE + (target_reg.number() & 0x7));
-            let extended = *value as i64;
-            object
-                .text_section
-                .data
-                .extend_from_slice(&extended.to_le_bytes());
+            emit_mov_imm64(object, target_reg, *value as i64);
         }
         (LiteralValue::Int16(value), OperandSize::Int16) => {
             // MOV reg, imm64 (sign-extended)
-            emit_rex_prefix(object, None, Some(target_reg));
-            object
-                .text_section
-                .data
-                .push(Instruction::MOV_IMM64_BASE + (target_reg.number() & 0x7));
-            let extended = *value as i64;
-            object
-                .text_section
-                .data
-                .extend_from_slice(&extended.to_le_bytes());
+            emit_mov_imm64(object, target_reg, *value as i64);
         }
         (LiteralValue::Int32(value), OperandSize::Int32) => {
             // MOV reg, imm64 (sign-extended)
-            emit_rex_prefix(object, None, Some(target_reg));
-            object
-                .text_section
-                .data
-                .push(Instruction::MOV_IMM64_BASE + (target_reg.number() & 0x7));
-            let extended = *value as i64;
-            object
-                .text_section
-                .data
-                .extend_from_slice(&extended.to_le_bytes());
+            emit_mov_imm64(object, target_reg, *value as i64);
         }
         (LiteralValue::Int64(value), OperandSize::Int64) => {
             // MOV reg, imm64
-            emit_rex_prefix(object, None, Some(target_reg));
-            object
-                .text_section
-                .data
-                .push(Instruction::MOV_IMM64_BASE + (target_reg.number() & 0x7));
-            object
-                .text_section
-                .data
-                .extend_from_slice(&value.to_le_bytes());
+            emit_mov_imm64(object, target_reg, *value);
         }
         (LiteralValue::Float64(value), OperandSize::Float64) => {
             // 부동소수점 리터럴은 메모리에 저장하고 로드해야 함
