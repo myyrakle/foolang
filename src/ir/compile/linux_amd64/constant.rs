@@ -17,6 +17,24 @@ pub fn compile_constant(
 
     // 리틀 엔디안으로 바이너리 데이터 추가
     match &constant.value {
+        LiteralValue::Int8(val) => {
+            // 8비트 정수를 1바이트로 저장
+            object.rodata_section.data.push(*val as u8);
+        }
+        LiteralValue::Int16(val) => {
+            // 16비트 정수를 2바이트 리틀 엔디안으로 변환
+            object
+                .rodata_section
+                .data
+                .extend_from_slice(&val.to_le_bytes());
+        }
+        LiteralValue::Int32(val) => {
+            // 32비트 정수를 4바이트 리틀 엔디안으로 변환
+            object
+                .rodata_section
+                .data
+                .extend_from_slice(&val.to_le_bytes());
+        }
         LiteralValue::Int64(val) => {
             // 64비트 정수를 8바이트 리틀 엔디안으로 변환
             object

@@ -107,6 +107,10 @@ pub struct ELFObject {
     /// 엔트리포인트 심볼 이름 (실행 파일용)
     /// None이면 .text 섹션 시작 주소를 사용
     pub entry_point_symbol: Option<String>,
+
+    /// 정의된 함수 이름 목록 (IR 컴파일 시 사용)
+    /// 함수 호출 시 로컬 함수인지 외부 함수인지 판단하는 데 사용
+    pub defined_functions: std::collections::HashSet<String>,
 }
 
 impl Default for ELFObject {
@@ -125,6 +129,7 @@ impl ELFObject {
             symbol_table: SymbolTable::new(),
             relocations: Vec::new(),
             entry_point_symbol: None,
+            defined_functions: std::collections::HashSet::new(),
         }
     }
 

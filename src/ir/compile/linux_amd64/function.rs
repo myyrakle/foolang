@@ -182,16 +182,30 @@ impl FunctionContext {
         // callee-saved 레지스터 개수
         let callee_saved_count = self.used_callee_saved.len();
 
-        // 정렬 보정: callee-saved 레지스터가 홀수 개면 8바이트 추가
-        let alignment_padding = if callee_saved_count % 2 == 1 { 8 } else { 0 };
-
-        let total_size = total_local_size + alignment_padding;
-
         // 16바이트 정렬
-        if total_size == 0 {
-            0
+        // push rbp 후: RSP % 16 == 0
+        // push N개 레지스터 후: RSP % 16 == (N * 8) % 16
+        //   - N이 짝수: RSP % 16 == 0 → X는 16의 배수 필요
+        //   - N이 홀수: RSP % 16 == 8 → X는 16k+8 형태 필요
+        if total_local_size == 0 {
+            // 로컬 변수가 없을 때
+            if callee_saved_count % 2 == 1 {
+                // 홀수 개 레지스터: 8바이트 할당으로 정렬
+                8
+            } else {
+                // 짝수 개 레지스터: 할당 불필요
+                0
+            }
         } else {
-            ((total_size + 15) / 16) * 16
+            // 로컬 변수가 있을 때: 16바이트 정렬 후, 필요하면 8바이트 추가
+            let aligned = ((total_local_size + 15) / 16) * 16;
+            if callee_saved_count % 2 == 1 {
+                // 홀수 개 레지스터: aligned가 16k 형태이므로 8 더해서 16k+8로
+                aligned + 8
+            } else {
+                // 짝수 개 레지스터: aligned 그대로 (16k)
+                aligned
+            }
         }
     }
 }

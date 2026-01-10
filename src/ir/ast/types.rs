@@ -4,6 +4,7 @@
 pub enum IRType {
     Primitive(IRPrimitiveType),
     Custom(IRCustomType),
+    None,
 }
 
 impl From<IRPrimitiveType> for IRType {
@@ -127,6 +128,7 @@ impl IRType {
         match self {
             IRType::Primitive(prim) => prim.type_to_string(),
             IRType::Custom(custom) => custom.name.clone(),
+            IRType::None => "none".to_string(),
         }
     }
 }

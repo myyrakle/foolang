@@ -49,6 +49,57 @@ fn load_value_to_register(
 
     match operand {
         Operand::Literal(lit) => match lit {
+            LiteralValue::Int8(value) => {
+                // mov target_reg, immediate (8-bit, sign-extended to 64-bit)
+                if target_reg.requires_rex() {
+                    object.text_section.data.push(RexPrefix::REX_WB);
+                } else {
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                }
+                object.text_section.data.push(
+                    Instruction::MOV_IMM64_BASE
+                        + (target_reg.number() & Instruction::REG_NUMBER_MASK),
+                );
+                let extended = *value as i64;
+                object
+                    .text_section
+                    .data
+                    .extend_from_slice(&extended.to_le_bytes());
+            }
+            LiteralValue::Int16(value) => {
+                // mov target_reg, immediate (16-bit, sign-extended to 64-bit)
+                if target_reg.requires_rex() {
+                    object.text_section.data.push(RexPrefix::REX_WB);
+                } else {
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                }
+                object.text_section.data.push(
+                    Instruction::MOV_IMM64_BASE
+                        + (target_reg.number() & Instruction::REG_NUMBER_MASK),
+                );
+                let extended = *value as i64;
+                object
+                    .text_section
+                    .data
+                    .extend_from_slice(&extended.to_le_bytes());
+            }
+            LiteralValue::Int32(value) => {
+                // mov target_reg, immediate (32-bit, sign-extended to 64-bit)
+                if target_reg.requires_rex() {
+                    object.text_section.data.push(RexPrefix::REX_WB);
+                } else {
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                }
+                object.text_section.data.push(
+                    Instruction::MOV_IMM64_BASE
+                        + (target_reg.number() & Instruction::REG_NUMBER_MASK),
+                );
+                let extended = *value as i64;
+                object
+                    .text_section
+                    .data
+                    .extend_from_slice(&extended.to_le_bytes());
+            }
             LiteralValue::Int64(value) => {
                 // mov target_reg, immediate (64-bit)
                 if target_reg.requires_rex() {
