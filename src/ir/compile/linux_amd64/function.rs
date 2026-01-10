@@ -137,6 +137,24 @@ impl FunctionContext {
         self.labels.get(label_name)
     }
 
+    /// 모든 스택 변수의 오프셋을 조정
+    ///
+    /// callee-saved 레지스터가 push된 후 호출되어,
+    /// 모든 스택 변수의 오프셋을 callee-saved 공간만큼 조정합니다.
+    ///
+    /// # Parameters
+    /// - `adjustment`: 조정할 크기 (음수)
+    pub fn adjust_stack_offsets(&mut self, adjustment: i32) {
+        // 이미 할당된 스택 변수들의 오프셋 조정
+        for loc in self.variables.values_mut() {
+            if let VariableLocation::Stack(offset) = loc {
+                *offset -= adjustment;
+            }
+        }
+        // stack_offset도 조정 (이후 할당될 변수들을 위해)
+        self.stack_offset -= adjustment;
+    }
+
     /// 필요한 스택 크기 계산 (16바이트 정렬)
     ///
     /// x86-64 System V ABI 요구사항:
@@ -214,6 +232,14 @@ pub fn compile_function(
             .data
             .push(Instruction::Push as u8 + (reg.number() & Instruction::REG_NUMBER_MASK));
     }
+
+    // 스택 오프셋 보정: callee-saved 레지스터 공간만큼 조정
+    // 프롤로그: push rbp → mov rbp, rsp → push callee-saved → sub rsp
+    // 결과: [rbp-8]부터 callee-saved, 그 아래가 로컬 변수 영역
+    // 따라서 모든 스택 변수의 오프셋에서 callee-saved 크기를 추가로 빼야 함
+    use crate::platforms::amd64::addressing::REGISTER_SIZE;
+    let callee_saved_size = (context.used_callee_saved.len() as i32) * REGISTER_SIZE;
+    context.adjust_stack_offsets(callee_saved_size);
 
     // 스택 공간 할당: sub rsp, stack_size
     let stack_size = context.required_stack_size();

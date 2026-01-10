@@ -30,13 +30,11 @@ pub fn compile_alloca_instruction(
     // 중요: prescan_statements에서 이미 모든 alloca의 크기를 pending_alloca_size에
     // 누적했고, required_stack_size()가 이를 포함하여 prologue에서 충분한 스택을
     // 미리 할당했으므로, 여기서 stack_offset을 조정해도 안전함
+    //
+    // 주의: prologue에서 이미 adjust_stack_offsets()로 callee-saved 공간을 고려했으므로
+    // 여기서는 추가 보정이 필요없음
     context.stack_offset -= type_size as i32;
-    let mut stack_offset = context.stack_offset;
-
-    // RBP 기준 오프셋은 callee-saved 레지스터들의 공간을 고려해야 함
-    // callee-saved 레지스터들이 push되어 있으므로 그 크기만큼 추가로 빼야 함
-    let callee_saved_size = (context.used_callee_saved.len() as i32) * REGISTER_SIZE;
-    stack_offset -= callee_saved_size;
+    let stack_offset = context.stack_offset;
 
     // LEA rax, [rbp + offset] - 스택 주소를 RAX에 로드
     // REX.W prefix (64-bit operand)
