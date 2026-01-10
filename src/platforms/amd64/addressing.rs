@@ -61,6 +61,20 @@ pub const SIB_INDEX_SHIFT: u8 = 3;
 /// 3비트 필드 마스크 (레지스터 번호 등)
 pub const BITS_3_MASK: u8 = 0x7;
 
+// Displacement 관련 상수
+/// disp8 범위의 최소값
+pub const DISP8_MIN: i32 = -128;
+
+/// disp8 범위의 최대값
+pub const DISP8_MAX: i32 = 127;
+
+/// disp8 값: 0 (RBP/R13 특수 케이스에 사용)
+pub const DISP8_ZERO: u8 = 0x00;
+
+// 아키텍처 관련 상수
+/// x86-64 레지스터 크기 (바이트)
+pub const REGISTER_SIZE: i32 = 8;
+
 /// [RBP + disp32] 주소 지정을 위한 ModR/M 바이트 생성
 ///
 /// # Parameters
@@ -95,6 +109,53 @@ pub fn modrm_rip_relative(reg_num: u8) -> u8 {
     (MODRM_MOD_MEMORY_NO_DISP << MODRM_MOD_SHIFT)
         | ((reg_num & BITS_3_MASK) << MODRM_REG_SHIFT)
         | MODRM_RM_SPECIAL
+}
+
+/// 간접 주소 지정 모드 [ptr_reg]에 대한 ModR/M 및 SIB 바이트 생성
+///
+/// 이 함수는 `mov dst_reg, [ptr_reg]` 또는 `mov [ptr_reg], dst_reg` 형태의
+/// 명령어에서 ModR/M 바이트를 생성합니다.
+///
+/// # Special Cases
+/// - RBP(5)/R13(13): Mod=01 + disp8=0 필요
+/// - RSP(4)/R12(12): SIB 바이트 필요
+///
+/// # Parameters
+/// - `dst_reg_num`: 목적지 레지스터 번호 (Reg 필드)
+/// - `ptr_reg_num`: 포인터 레지스터 번호 (R/M 필드)
+///
+/// # Returns
+/// 생성된 바이트들 (ModR/M + 필요시 disp8 또는 SIB)
+pub fn generate_modrm_indirect(dst_reg_num: u8, ptr_reg_num: u8) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    let ptr_reg_masked = ptr_reg_num & BITS_3_MASK;
+
+    if ptr_reg_masked == MODRM_RM_SPECIAL {
+        // RBP or R13 - Use Mod=01 (disp8) with displacement = 0
+        let modrm = (MODRM_MOD_MEMORY_DISP8 << MODRM_MOD_SHIFT)
+            | ((dst_reg_num & BITS_3_MASK) << MODRM_REG_SHIFT)
+            | ptr_reg_masked;
+        bytes.push(modrm);
+        bytes.push(DISP8_ZERO);
+    } else if ptr_reg_masked == MODRM_RM_SIB_FOLLOWS {
+        // RSP or R12 - requires SIB byte
+        let modrm = (MODRM_MOD_MEMORY_NO_DISP << MODRM_MOD_SHIFT)
+            | ((dst_reg_num & BITS_3_MASK) << MODRM_REG_SHIFT)
+            | MODRM_RM_SIB_FOLLOWS;
+        bytes.push(modrm);
+        // SIB: scale=1, index=none(4), base=ptr_reg
+        let sib =
+            (SIB_SCALE_1 << SIB_SCALE_SHIFT) | (SIB_INDEX_NONE << SIB_INDEX_SHIFT) | ptr_reg_masked;
+        bytes.push(sib);
+    } else {
+        // Normal case: Mod=00, no displacement
+        let modrm = (MODRM_MOD_MEMORY_NO_DISP << MODRM_MOD_SHIFT)
+            | ((dst_reg_num & BITS_3_MASK) << MODRM_REG_SHIFT)
+            | ptr_reg_masked;
+        bytes.push(modrm);
+    }
+
+    bytes
 }
 
 #[cfg(test)]

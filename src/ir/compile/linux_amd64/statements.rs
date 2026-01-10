@@ -6,7 +6,9 @@ use crate::{
             LocalStatement,
         },
         compile::linux_amd64::{
-            alloca::compile_alloca_instruction,
+            alloca::{
+                compile_alloca_instruction, compile_load_instruction, compile_store_instruction,
+            },
             branch::{
                 compile_branch_instruction, compile_jump_instruction, compile_label_definition,
             },
@@ -109,11 +111,8 @@ fn compile_assignment_statement(
         AssignmentStatementValue::Instruction(InstructionStatement::Alloca(instruction)) => {
             compile_alloca_instruction(instruction, context, object)?;
         }
-        AssignmentStatementValue::Instruction(InstructionStatement::Load(_)) => {
-            return Err(IRError::new(
-                IRErrorKind::NotImplemented,
-                "Load instruction not yet implemented",
-            ));
+        AssignmentStatementValue::Instruction(InstructionStatement::Load(instruction)) => {
+            compile_load_instruction(instruction, context, object)?;
         }
         _ => {
             return Err(IRError::new(
@@ -233,7 +232,9 @@ fn compile_instruction_statement(
                 "Load instruction need assignment",
             ));
         }
-        InstructionStatement::Store(_instruction) => todo!(),
+        InstructionStatement::Store(instruction) => {
+            compile_store_instruction(instruction, context, object)?;
+        }
     }
 
     Ok(())
