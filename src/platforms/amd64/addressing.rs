@@ -121,26 +121,47 @@ pub fn modrm_rip_relative(reg_num: u8) -> u8 {
 /// - RSP(4)/R12(12): SIB 바이트 필요
 ///
 /// # Parameters
-/// - `dst_reg_num`: 목적지 레지스터 번호 (Reg 필드)
-/// - `ptr_reg_num`: 포인터 레지스터 번호 (R/M 필드)
+/// - `dst_reg_num`: 목적지 레지스터 번호 (Reg 필드, 0-15)
+/// - `ptr_reg_num`: 포인터 레지스터 번호 (R/M 필드, 0-15)
 ///
 /// # Returns
 /// 생성된 바이트들 (ModR/M + 필요시 disp8 또는 SIB)
+///
+/// # Important
+/// 이 함수는 ModR/M 바이트만 생성하며, REX prefix는 생성하지 않습니다.
+/// R8-R15 레지스터를 사용하는 경우, 호출부에서 적절한 REX prefix를 먼저 emit해야 합니다:
+/// - dst_reg가 R8-R15: REX.R 비트 필요
+/// - ptr_reg가 R8-R15: REX.B 비트 필요
+///
+/// # Example
+/// ```ignore
+/// // mov rax, [r15] 생성
+/// // 1. REX.WB prefix (dst=rax이므로 R 불필요, ptr=r15이므로 B 필요)
+/// object.data.push(RexPrefix::REX_WB);
+/// // 2. MOV opcode
+/// object.data.push(Instruction::MovLoad as u8);
+/// // 3. ModR/M bytes
+/// let modrm = generate_modrm_indirect(Register::RAX.number(), Register::R15.number());
+/// object.data.extend_from_slice(&modrm);
+/// ```
 pub fn generate_modrm_indirect(dst_reg_num: u8, ptr_reg_num: u8) -> Vec<u8> {
     let mut bytes = Vec::new();
+
+    // 레지스터 번호를 3비트로 마스킹 (ModR/M은 하위 3비트만 사용)
+    let dst_reg_masked = dst_reg_num & BITS_3_MASK;
     let ptr_reg_masked = ptr_reg_num & BITS_3_MASK;
 
     if ptr_reg_masked == MODRM_RM_SPECIAL {
         // RBP or R13 - Use Mod=01 (disp8) with displacement = 0
         let modrm = (MODRM_MOD_MEMORY_DISP8 << MODRM_MOD_SHIFT)
-            | ((dst_reg_num & BITS_3_MASK) << MODRM_REG_SHIFT)
+            | (dst_reg_masked << MODRM_REG_SHIFT)
             | ptr_reg_masked;
         bytes.push(modrm);
         bytes.push(DISP8_ZERO);
     } else if ptr_reg_masked == MODRM_RM_SIB_FOLLOWS {
         // RSP or R12 - requires SIB byte
         let modrm = (MODRM_MOD_MEMORY_NO_DISP << MODRM_MOD_SHIFT)
-            | ((dst_reg_num & BITS_3_MASK) << MODRM_REG_SHIFT)
+            | (dst_reg_masked << MODRM_REG_SHIFT)
             | MODRM_RM_SIB_FOLLOWS;
         bytes.push(modrm);
         // SIB: scale=1, index=none(4), base=ptr_reg
@@ -150,7 +171,7 @@ pub fn generate_modrm_indirect(dst_reg_num: u8, ptr_reg_num: u8) -> Vec<u8> {
     } else {
         // Normal case: Mod=00, no displacement
         let modrm = (MODRM_MOD_MEMORY_NO_DISP << MODRM_MOD_SHIFT)
-            | ((dst_reg_num & BITS_3_MASK) << MODRM_REG_SHIFT)
+            | (dst_reg_masked << MODRM_REG_SHIFT)
             | ptr_reg_masked;
         bytes.push(modrm);
     }
