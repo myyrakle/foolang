@@ -105,11 +105,12 @@ fn load_literal_to_register(
     match (lit, size) {
         (LiteralValue::Int8(value), OperandSize::Int8) => {
             // MOV reg, imm64 (sign-extended)
-            object.text_section.data.push(RexPrefix::RexW as u8);
+            // MOV immediate의 경우 opcode에 레지스터 번호가 인코딩되므로 REX.B 필요
+            emit_rex_prefix(object, None, Some(target_reg));
             object
                 .text_section
                 .data
-                .push(Instruction::MOV_IMM64_BASE + target_reg.number());
+                .push(Instruction::MOV_IMM64_BASE + (target_reg.number() & 0x7));
             let extended = *value as i64;
             object
                 .text_section
@@ -118,11 +119,11 @@ fn load_literal_to_register(
         }
         (LiteralValue::Int16(value), OperandSize::Int16) => {
             // MOV reg, imm64 (sign-extended)
-            object.text_section.data.push(RexPrefix::RexW as u8);
+            emit_rex_prefix(object, None, Some(target_reg));
             object
                 .text_section
                 .data
-                .push(Instruction::MOV_IMM64_BASE + target_reg.number());
+                .push(Instruction::MOV_IMM64_BASE + (target_reg.number() & 0x7));
             let extended = *value as i64;
             object
                 .text_section
@@ -131,11 +132,11 @@ fn load_literal_to_register(
         }
         (LiteralValue::Int32(value), OperandSize::Int32) => {
             // MOV reg, imm64 (sign-extended)
-            object.text_section.data.push(RexPrefix::RexW as u8);
+            emit_rex_prefix(object, None, Some(target_reg));
             object
                 .text_section
                 .data
-                .push(Instruction::MOV_IMM64_BASE + target_reg.number());
+                .push(Instruction::MOV_IMM64_BASE + (target_reg.number() & 0x7));
             let extended = *value as i64;
             object
                 .text_section
@@ -144,11 +145,11 @@ fn load_literal_to_register(
         }
         (LiteralValue::Int64(value), OperandSize::Int64) => {
             // MOV reg, imm64
-            object.text_section.data.push(RexPrefix::RexW as u8);
+            emit_rex_prefix(object, None, Some(target_reg));
             object
                 .text_section
                 .data
-                .push(Instruction::MOV_IMM64_BASE + target_reg.number());
+                .push(Instruction::MOV_IMM64_BASE + (target_reg.number() & 0x7));
             object
                 .text_section
                 .data
