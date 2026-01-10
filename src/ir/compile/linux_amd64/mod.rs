@@ -626,6 +626,124 @@ mod tests {
                     ],
                 },
             },
+            TestCase {
+                name: "load/store 명령어 테스트 - 기본 Int64",
+                expected_output: "42\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "load_store_test.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // ptr = alloca i64
+                                AssignmentStatement {
+                                    name: "ptr".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Alloca(AllocaInstruction {
+                                            type_: IRPrimitiveType::Int64,
+                                        }),
+                                    ),
+                                }.into(),
+                                // store 42, ptr
+                                LocalStatement::Instruction(InstructionStatement::Store(
+                                    crate::ir::ast::local::instruction::alloca::StoreInstruction {
+                                        ptr: "ptr".into(),
+                                        value: crate::ir::ast::common::Operand::Literal(
+                                            LiteralValue::Int64(42),
+                                        ),
+                                    },
+                                )),
+                                // value = load ptr
+                                AssignmentStatement {
+                                    name: "value".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Load(
+                                            crate::ir::ast::local::instruction::alloca::LoadInstruction {
+                                                ptr: "ptr".into(),
+                                            },
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", value)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("value".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "load/store 명령어 테스트 - 여러 번 store/load",
+                expected_output: "84\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "multiple_store_load.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // ptr = alloca i64
+                                AssignmentStatement {
+                                    name: "ptr".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Alloca(AllocaInstruction {
+                                            type_: IRPrimitiveType::Int64,
+                                        }),
+                                    ),
+                                }.into(),
+                                // store 84, ptr
+                                LocalStatement::Instruction(InstructionStatement::Store(
+                                    crate::ir::ast::local::instruction::alloca::StoreInstruction {
+                                        ptr: "ptr".into(),
+                                        value: crate::ir::ast::common::Operand::Literal(
+                                            LiteralValue::Int64(84),
+                                        ),
+                                    },
+                                )),
+                                // value = load ptr
+                                AssignmentStatement {
+                                    name: "value".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Load(
+                                            crate::ir::ast::local::instruction::alloca::LoadInstruction {
+                                                ptr: "ptr".into(),
+                                            },
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", value)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("value".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
         ];
 
         let test_cases = success_cases.into_iter().chain(error_cases.into_iter());
