@@ -158,6 +158,48 @@ pub fn compile_store_instruction(
         Operand::Literal(lit) => {
             use crate::ir::ast::common::literal::LiteralValue;
             match lit {
+                LiteralValue::Int8(value) => {
+                    // mov rax, immediate (8-bit, sign-extended to 64-bit)
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                    object
+                        .text_section
+                        .data
+                        .push(Instruction::MOV_IMM64_BASE + Register::RAX.number());
+                    // Sign-extend 8-bit to 64-bit
+                    let extended = *value as i64;
+                    object
+                        .text_section
+                        .data
+                        .extend_from_slice(&extended.to_le_bytes());
+                }
+                LiteralValue::Int16(value) => {
+                    // mov rax, immediate (16-bit, sign-extended to 64-bit)
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                    object
+                        .text_section
+                        .data
+                        .push(Instruction::MOV_IMM64_BASE + Register::RAX.number());
+                    // Sign-extend 16-bit to 64-bit
+                    let extended = *value as i64;
+                    object
+                        .text_section
+                        .data
+                        .extend_from_slice(&extended.to_le_bytes());
+                }
+                LiteralValue::Int32(value) => {
+                    // mov rax, immediate (32-bit, sign-extended to 64-bit)
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                    object
+                        .text_section
+                        .data
+                        .push(Instruction::MOV_IMM64_BASE + Register::RAX.number());
+                    // Sign-extend 32-bit to 64-bit
+                    let extended = *value as i64;
+                    object
+                        .text_section
+                        .data
+                        .extend_from_slice(&extended.to_le_bytes());
+                }
                 LiteralValue::Int64(value) => {
                     // mov rax, immediate (64-bit)
                     object.text_section.data.push(RexPrefix::RexW as u8);
@@ -173,7 +215,7 @@ pub fn compile_store_instruction(
                 _ => {
                     return Err(IRError::new(
                         crate::ir::error::IRErrorKind::NotImplemented,
-                        "Only Int64 literals supported for store instruction",
+                        "Only integer literals supported for store instruction",
                     ));
                 }
             }

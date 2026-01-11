@@ -6,6 +6,7 @@ use crate::{
             LocalStatement,
         },
         compile::linux_amd64::{
+            add::compile_add_instruction,
             alloca::{
                 compile_alloca_instruction, compile_load_instruction, compile_store_instruction,
             },
@@ -74,11 +75,8 @@ fn compile_assignment_statement(
                 "Literal assignment not yet implemented",
             ));
         }
-        AssignmentStatementValue::Instruction(InstructionStatement::Add(_)) => {
-            return Err(IRError::new(
-                IRErrorKind::NotImplemented,
-                "Add instruction not yet implemented",
-            ));
+        AssignmentStatementValue::Instruction(InstructionStatement::Add(instruction)) => {
+            compile_add_instruction(instruction, context, object)?;
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Sub(_)) => {
             return Err(IRError::new(

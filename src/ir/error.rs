@@ -12,6 +12,7 @@ pub enum IRErrorKind {
     LabelAlreadyDefined,
     AssignmentRequired,
     NotImplemented,
+    TypeError,
 }
 
 impl IRError {

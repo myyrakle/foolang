@@ -64,21 +64,31 @@ pub fn compile_call_instruction(
         .data
         .extend_from_slice(&[0x00; Instruction::DISPLACEMENT_32_SIZE]);
 
+    // 함수가 로컬인지 외부인지 확인 (defined_functions 목록 사용)
+    let is_local_function = object.defined_functions.contains(function_name);
+
     // 함수 호출에 대한 재배치 정보 추가
+    // 로컬 함수: PC-relative (R_X86_64_PC32)
+    // 외부 함수: PLT를 통한 PC-relative (R_X86_64_PLT32)
     object.relocations.push(Relocation {
         section: SectionType::Text,
         offset: call_offset + 1, // call 명령어의 offset 필드 위치
         symbol: function_name.clone(),
-        reloc_type: RelocationType::PltPcRel32,
+        reloc_type: if is_local_function {
+            RelocationType::PcRel32
+        } else {
+            RelocationType::PltPcRel32
+        },
         addend: Instruction::CALL_ADDEND,
     });
 
-    // 외부 함수 심볼을 UNDEFINED로 추가
-    if !object
-        .symbol_table
-        .symbols
-        .iter()
-        .any(|s| s.name == *function_name)
+    // 외부 함수 심볼을 UNDEFINED로 추가 (로컬 함수가 아닌 경우만)
+    if !is_local_function
+        && !object
+            .symbol_table
+            .symbols
+            .iter()
+            .any(|s| s.name == *function_name)
     {
         use crate::platforms::linux::elf::symbol::{Symbol, SymbolBinding, SymbolType};
 
@@ -106,6 +116,57 @@ fn compile_parameter_to_register(
 
     match param {
         Operand::Literal(lit) => match lit {
+            LiteralValue::Int8(value) => {
+                // mov target_reg, immediate (8-bit, sign-extended to 64-bit)
+                if target_reg.requires_rex() {
+                    object.text_section.data.push(RexPrefix::REX_WB);
+                } else {
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                }
+                object.text_section.data.push(
+                    Instruction::MOV_IMM64_BASE
+                        + (target_reg.number() & Instruction::REG_NUMBER_MASK),
+                );
+                let extended = *value as i64;
+                object
+                    .text_section
+                    .data
+                    .extend_from_slice(&extended.to_le_bytes());
+            }
+            LiteralValue::Int16(value) => {
+                // mov target_reg, immediate (16-bit, sign-extended to 64-bit)
+                if target_reg.requires_rex() {
+                    object.text_section.data.push(RexPrefix::REX_WB);
+                } else {
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                }
+                object.text_section.data.push(
+                    Instruction::MOV_IMM64_BASE
+                        + (target_reg.number() & Instruction::REG_NUMBER_MASK),
+                );
+                let extended = *value as i64;
+                object
+                    .text_section
+                    .data
+                    .extend_from_slice(&extended.to_le_bytes());
+            }
+            LiteralValue::Int32(value) => {
+                // mov target_reg, immediate (32-bit, sign-extended to 64-bit)
+                if target_reg.requires_rex() {
+                    object.text_section.data.push(RexPrefix::REX_WB);
+                } else {
+                    object.text_section.data.push(RexPrefix::RexW as u8);
+                }
+                object.text_section.data.push(
+                    Instruction::MOV_IMM64_BASE
+                        + (target_reg.number() & Instruction::REG_NUMBER_MASK),
+                );
+                let extended = *value as i64;
+                object
+                    .text_section
+                    .data
+                    .extend_from_slice(&extended.to_le_bytes());
+            }
             LiteralValue::Int64(value) => {
                 // mov target_reg, immediate (64-bit)
                 // REX.W + 0xB8+rd id (64-bit immediate)
