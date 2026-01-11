@@ -3,17 +3,19 @@ use crate::{
         ast::{global::GlobalStatement, CodeUnit},
         error::IRError,
     },
-    platforms::linux::elf::{object::ELFObject, section::SectionType},
+    platforms::linux::elf::object::ELFObject,
 };
 
 pub mod add;
 pub mod alloca;
 pub mod branch;
 pub mod call;
+pub mod common;
 pub mod constant;
 pub mod function;
 pub mod return_;
 pub mod statements;
+pub mod sub;
 
 pub fn compile(code_unit: CodeUnit) -> Result<ELFObject, IRError> {
     let mut compiled_object = ELFObject::new();
@@ -1037,6 +1039,280 @@ mod tests {
                                         return_value: Some(crate::ir::ast::common::Operand::Literal(
                                             LiteralValue::Int64(5),
                                         )),
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "SUB 명령어 테스트 - Int64 리터럴 뺄셈",
+                expected_output: "10\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "sub_int64_literal.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = sub 30, 20
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Sub(
+                                            crate::ir::ast::local::instruction::sub::SubInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(30),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(20),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "SUB 명령어 테스트 - 변수 간 뺄셈",
+                expected_output: "15\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "sub_identifier_identifier.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // x = 25
+                                    AssignmentStatement {
+                                        name: "x".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_twenty_five".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // y = 10
+                                    AssignmentStatement {
+                                        name: "y".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_ten".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // result = sub x, y
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Sub(
+                                                crate::ir::ast::local::instruction::sub::SubInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("x".into()),
+                                                    right: crate::ir::ast::common::Operand::Identifier("y".into()),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // printf("%lld\n", result)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "printf".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::String("%lld\n".into()),
+                                                ),
+                                                crate::ir::ast::common::Operand::Identifier("result".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_twenty_five".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        ReturnInstruction {
+                                            return_value: Some(crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::Int64(25),
+                                            )),
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_ten".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        ReturnInstruction {
+                                            return_value: Some(crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::Int64(10),
+                                            )),
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "SUB 명령어 테스트 - 체이닝 연산",
+                expected_output: "10\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "sub_chained.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // x = 50
+                                    AssignmentStatement {
+                                        name: "x".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_fifty".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // y = sub x, 20  (y = 30)
+                                    AssignmentStatement {
+                                        name: "y".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Sub(
+                                                crate::ir::ast::local::instruction::sub::SubInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("x".into()),
+                                                    right: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(20),
+                                                    ),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // result = sub y, 20  (result = 10)
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Sub(
+                                                crate::ir::ast::local::instruction::sub::SubInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("y".into()),
+                                                    right: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(20),
+                                                    ),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // printf("%lld\n", result)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "printf".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::String("%lld\n".into()),
+                                                ),
+                                                crate::ir::ast::common::Operand::Identifier("result".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_fifty".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        ReturnInstruction {
+                                            return_value: Some(crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::Int64(50),
+                                            )),
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "SUB 명령어 테스트 - Int32 리터럴 뺄셈",
+                expected_output: "5\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "sub_int32_literal.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = sub 15, 10
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Sub(
+                                            crate::ir::ast::local::instruction::sub::SubInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int32(15),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int32(10),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
                                     },
                                 )),
                             ],

@@ -16,6 +16,7 @@ use crate::{
             call::compile_call_instruction,
             function::FunctionContext,
             return_::compile_return_instruction,
+            sub::compile_sub_instruction,
         },
         error::{IRError, IRErrorKind},
     },
@@ -78,11 +79,8 @@ fn compile_assignment_statement(
         AssignmentStatementValue::Instruction(InstructionStatement::Add(instruction)) => {
             compile_add_instruction(instruction, context, object)?;
         }
-        AssignmentStatementValue::Instruction(InstructionStatement::Sub(_)) => {
-            return Err(IRError::new(
-                IRErrorKind::NotImplemented,
-                "Sub instruction not yet implemented",
-            ));
+        AssignmentStatementValue::Instruction(InstructionStatement::Sub(instruction)) => {
+            compile_sub_instruction(instruction, context, object)?;
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Mul(_)) => {
             return Err(IRError::new(
@@ -191,7 +189,7 @@ fn compile_instruction_statement(
         InstructionStatement::Sub(_) => {
             return Err(IRError::new(
                 IRErrorKind::AssignmentRequired,
-                "Sub instruction need assignment",
+                "Sub instruction needs assignment",
             ));
         }
         InstructionStatement::Mul(_) => {

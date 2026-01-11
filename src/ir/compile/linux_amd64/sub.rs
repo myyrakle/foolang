@@ -1,6 +1,6 @@
 use crate::{
     ir::{
-        ast::local::instruction::add::AddInstruction,
+        ast::local::instruction::sub::SubInstruction,
         compile::linux_amd64::{
             common::{load_operand_to_register, validate_operand_types},
             function::FunctionContext,
@@ -17,36 +17,36 @@ use crate::{
     },
 };
 
-/// ADD 인스트럭션 컴파일
+/// SUB 인스트럭션 컴파일
 ///
 /// 전략:
 /// 1. 두 operand의 타입 검증 (정수끼리만 가능)
 /// 2. left operand를 RAX에 로드
 /// 3. right operand를 RCX에 로드
-/// 4. ADD RAX, RCX 명령 생성 (결과는 RAX에 저장됨)
-pub fn compile_add_instruction(
-    add_instruction: &AddInstruction,
+/// 4. SUB RAX, RCX 명령 생성 (결과는 RAX에 저장됨)
+pub fn compile_sub_instruction(
+    sub_instruction: &SubInstruction,
     context: &mut FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
     // Step 1: 타입 검증
     validate_operand_types(
-        &add_instruction.left,
-        &add_instruction.right,
+        &sub_instruction.left,
+        &sub_instruction.right,
         context,
-        "ADD",
+        "SUB",
     )?;
 
     // Step 2: left operand를 RAX에 로드
-    load_operand_to_register(&add_instruction.left, Register::RAX, context, object)?;
+    load_operand_to_register(&sub_instruction.left, Register::RAX, context, object)?;
 
     // Step 3: right operand를 RCX에 로드
-    load_operand_to_register(&add_instruction.right, Register::RCX, context, object)?;
+    load_operand_to_register(&sub_instruction.right, Register::RCX, context, object)?;
 
-    // Step 4: ADD 명령 생성 (ADD RAX, RCX)
-    // REX.W + ADD r/m64, r64 (RAX += RCX)
+    // Step 4: SUB 명령 생성 (SUB RAX, RCX)
+    // REX.W + SUB r/m64, r64 (RAX -= RCX)
     object.text_section.data.push(RexPrefix::RexW as u8);
-    object.text_section.data.push(Instruction::Add as u8);
+    object.text_section.data.push(Instruction::Sub as u8);
     // modrm_reg_reg(reg, rm) => reg 필드에 RCX, r/m 필드에 RAX
     object
         .text_section
