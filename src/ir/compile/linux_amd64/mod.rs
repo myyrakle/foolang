@@ -13,6 +13,7 @@ pub mod call;
 pub mod common;
 pub mod constant;
 pub mod function;
+pub mod mul;
 pub mod return_;
 pub mod statements;
 pub mod sub;
@@ -1295,6 +1296,280 @@ mod tests {
                                             crate::ir::ast::local::instruction::sub::SubInstruction {
                                                 left: crate::ir::ast::common::Operand::Literal(
                                                     LiteralValue::Int32(15),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int32(10),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "MUL 명령어 테스트 - Int64 리터럴 곱셈",
+                expected_output: "200\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "mul_int64_literal.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = mul 10, 20
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Mul(
+                                            crate::ir::ast::local::instruction::mul::MulInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(10),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(20),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "MUL 명령어 테스트 - 변수 간 곱셈",
+                expected_output: "60\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "mul_identifier_identifier.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // x = 6
+                                    AssignmentStatement {
+                                        name: "x".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_six".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // y = 10
+                                    AssignmentStatement {
+                                        name: "y".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_ten".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // result = mul x, y
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Mul(
+                                                crate::ir::ast::local::instruction::mul::MulInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("x".into()),
+                                                    right: crate::ir::ast::common::Operand::Identifier("y".into()),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // printf("%lld\n", result)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "printf".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::String("%lld\n".into()),
+                                                ),
+                                                crate::ir::ast::common::Operand::Identifier("result".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_six".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        ReturnInstruction {
+                                            return_value: Some(crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::Int64(6),
+                                            )),
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_ten".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        ReturnInstruction {
+                                            return_value: Some(crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::Int64(10),
+                                            )),
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "MUL 명령어 테스트 - 체이닝 곱셈",
+                expected_output: "200\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "mul_chained.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // x = 2
+                                    AssignmentStatement {
+                                        name: "x".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_two".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // y = mul x, 5  // y = 10
+                                    AssignmentStatement {
+                                        name: "y".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Mul(
+                                                crate::ir::ast::local::instruction::mul::MulInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("x".into()),
+                                                    right: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(5),
+                                                    ),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // result = mul y, 20  // result = 200
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Mul(
+                                                crate::ir::ast::local::instruction::mul::MulInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("y".into()),
+                                                    right: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(20),
+                                                    ),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // printf("%lld\n", result)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "printf".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::String("%lld\n".into()),
+                                                ),
+                                                crate::ir::ast::common::Operand::Identifier("result".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_two".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        ReturnInstruction {
+                                            return_value: Some(crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::Int64(2),
+                                            )),
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "MUL 명령어 테스트 - Int32 리터럴 곱셈",
+                expected_output: "50\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "mul_int32_literal.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = mul 5, 10
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Mul(
+                                            crate::ir::ast::local::instruction::mul::MulInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int32(5),
                                                 ),
                                                 right: crate::ir::ast::common::Operand::Literal(
                                                     LiteralValue::Int32(10),
