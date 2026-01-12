@@ -15,6 +15,7 @@ use crate::{
             },
             call::compile_call_instruction,
             function::FunctionContext,
+            mul::compile_mul_instruction,
             return_::compile_return_instruction,
             sub::compile_sub_instruction,
         },
@@ -82,11 +83,8 @@ fn compile_assignment_statement(
         AssignmentStatementValue::Instruction(InstructionStatement::Sub(instruction)) => {
             compile_sub_instruction(instruction, context, object)?;
         }
-        AssignmentStatementValue::Instruction(InstructionStatement::Mul(_)) => {
-            return Err(IRError::new(
-                IRErrorKind::NotImplemented,
-                "Mul instruction not yet implemented",
-            ));
+        AssignmentStatementValue::Instruction(InstructionStatement::Mul(instruction)) => {
+            compile_mul_instruction(instruction, context, object)?;
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Div(_)) => {
             return Err(IRError::new(
