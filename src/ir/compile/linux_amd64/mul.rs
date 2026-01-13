@@ -9,6 +9,7 @@ use crate::{
     },
     platforms::{
         amd64::{
+            instruction::Instruction,
             register::{modrm_reg_reg, Register},
             rex::RexPrefix,
         },
@@ -46,9 +47,11 @@ pub fn compile_mul_instruction(
     // REX.W + 0F AF /r (IMUL r64, r/m64)
     // RAX = RAX * RCX (signed multiplication)
     object.text_section.data.push(RexPrefix::RexW as u8);
-    object.text_section.data.push(0x0F); // IMUL two-byte opcode prefix
-    object.text_section.data.push(0xAF); // IMUL second byte
-                                         // modrm_reg_reg(reg, rm) => reg 필드에 RAX, r/m 필드에 RCX
+    object
+        .text_section
+        .data
+        .extend_from_slice(&Instruction::IMul.as_bytes()); // IMUL opcode (0x0F 0xAF)
+    // modrm_reg_reg(reg, rm) => reg 필드에 RAX, r/m 필드에 RCX
     object
         .text_section
         .data
