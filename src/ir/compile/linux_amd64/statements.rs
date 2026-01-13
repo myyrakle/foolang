@@ -17,6 +17,7 @@ use crate::{
             div::compile_div_instruction,
             function::FunctionContext,
             mul::compile_mul_instruction,
+            rem::compile_rem_instruction,
             return_::compile_return_instruction,
             sub::compile_sub_instruction,
         },
@@ -89,6 +90,9 @@ fn compile_assignment_statement(
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Div(instruction)) => {
             compile_div_instruction(instruction, context, object)?;
+        }
+        AssignmentStatementValue::Instruction(InstructionStatement::Rem(instruction)) => {
+            compile_rem_instruction(instruction, context, object)?;
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Call(instruction)) => {
             // call instruction 컴파일 (결과는 RAX에)
@@ -198,6 +202,12 @@ fn compile_instruction_statement(
             return Err(IRError::new(
                 IRErrorKind::AssignmentRequired,
                 "Div instruction need assignment",
+            ));
+        }
+        InstructionStatement::Rem(_) => {
+            return Err(IRError::new(
+                IRErrorKind::AssignmentRequired,
+                "Rem instruction need assignment",
             ));
         }
         InstructionStatement::Branch(instruction) => {

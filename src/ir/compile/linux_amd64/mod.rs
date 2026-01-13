@@ -15,6 +15,7 @@ pub mod constant;
 pub mod div;
 pub mod function;
 pub mod mul;
+pub mod rem;
 pub mod return_;
 pub mod statements;
 pub mod sub;
@@ -1845,6 +1846,248 @@ mod tests {
                                             crate::ir::ast::local::instruction::div::DivInstruction {
                                                 left: crate::ir::ast::common::Operand::Literal(
                                                     LiteralValue::Int32(15),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int32(5),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "REM 명령어 테스트 - Int64 리터럴 나머지",
+                expected_output: "10\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "rem_int64_literal.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = rem 100, 30
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Rem(
+                                            crate::ir::ast::local::instruction::rem::RemInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(100),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(30),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "REM 명령어 테스트 - 변수 간 나머지",
+                expected_output: "4\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "rem_identifier_identifier.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // x = 60
+                                    AssignmentStatement {
+                                        name: "x".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_sixty".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // y = 7
+                                    AssignmentStatement {
+                                        name: "y".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_seven".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // result = rem x, y
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Rem(
+                                                crate::ir::ast::local::instruction::rem::RemInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("x".into()),
+                                                    right: crate::ir::ast::common::Operand::Identifier("y".into()),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // printf("%lld\n", result)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "printf".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::String("%lld\n".into()),
+                                                ),
+                                                crate::ir::ast::common::Operand::Identifier("result".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_sixty".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![LocalStatement::Instruction(
+                                    InstructionStatement::Return(crate::ir::ast::local::instruction::return_::ReturnInstruction {
+                                        return_value: Some(crate::ir::ast::common::Operand::Literal(LiteralValue::Int64(60))),
+                                    }),
+                                )],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_seven".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![LocalStatement::Instruction(
+                                    InstructionStatement::Return(crate::ir::ast::local::instruction::return_::ReturnInstruction {
+                                        return_value: Some(crate::ir::ast::common::Operand::Literal(LiteralValue::Int64(7))),
+                                    }),
+                                )],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "REM 명령어 테스트 - 체이닝 나머지",
+                expected_output: "6\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "rem_chaining.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // temp = rem 200, 60
+                                    AssignmentStatement {
+                                        name: "temp".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Rem(
+                                                crate::ir::ast::local::instruction::rem::RemInstruction {
+                                                    left: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(200),
+                                                    ),
+                                                    right: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(60),
+                                                    ),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // result = rem temp, 7
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Rem(
+                                                crate::ir::ast::local::instruction::rem::RemInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("temp".into()),
+                                                    right: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(7),
+                                                    ),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // printf("%lld\n", result)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "printf".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::String("%lld\n".into()),
+                                                ),
+                                                crate::ir::ast::common::Operand::Identifier("result".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "REM 명령어 테스트 - Int32 리터럴 나머지",
+                expected_output: "2\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "rem_int32_literal.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = rem 17, 5
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Rem(
+                                            crate::ir::ast::local::instruction::rem::RemInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int32(17),
                                                 ),
                                                 right: crate::ir::ast::common::Operand::Literal(
                                                     LiteralValue::Int32(5),

@@ -5,6 +5,7 @@ pub mod call;
 pub mod compare;
 pub mod div;
 pub mod mul;
+pub mod rem;
 pub mod return_;
 pub mod sub;
 
@@ -16,6 +17,7 @@ pub enum InstructionStatement {
     Sub(sub::SubInstruction),
     Mul(mul::MulInstruction),
     Div(div::DivInstruction),
+    Rem(rem::RemInstruction),
     Branch(branch::BranchInstruction),
     Jump(branch::JumpInstruction),
     Compare(compare::CompareInstruction),
@@ -57,6 +59,12 @@ impl From<mul::MulInstruction> for InstructionStatement {
 impl From<div::DivInstruction> for InstructionStatement {
     fn from(instr: div::DivInstruction) -> Self {
         InstructionStatement::Div(instr)
+    }
+}
+
+impl From<rem::RemInstruction> for InstructionStatement {
+    fn from(instr: rem::RemInstruction) -> Self {
+        InstructionStatement::Rem(instr)
     }
 }
 
