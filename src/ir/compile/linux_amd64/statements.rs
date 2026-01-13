@@ -14,6 +14,7 @@ use crate::{
                 compile_branch_instruction, compile_jump_instruction, compile_label_definition,
             },
             call::compile_call_instruction,
+            div::compile_div_instruction,
             function::FunctionContext,
             mul::compile_mul_instruction,
             return_::compile_return_instruction,
@@ -86,11 +87,8 @@ fn compile_assignment_statement(
         AssignmentStatementValue::Instruction(InstructionStatement::Mul(instruction)) => {
             compile_mul_instruction(instruction, context, object)?;
         }
-        AssignmentStatementValue::Instruction(InstructionStatement::Div(_)) => {
-            return Err(IRError::new(
-                IRErrorKind::NotImplemented,
-                "Div instruction not yet implemented",
-            ));
+        AssignmentStatementValue::Instruction(InstructionStatement::Div(instruction)) => {
+            compile_div_instruction(instruction, context, object)?;
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Call(instruction)) => {
             // call instruction 컴파일 (결과는 RAX에)

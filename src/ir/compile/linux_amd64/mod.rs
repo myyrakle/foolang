@@ -12,6 +12,7 @@ pub mod branch;
 pub mod call;
 pub mod common;
 pub mod constant;
+pub mod div;
 pub mod function;
 pub mod mul;
 pub mod return_;
@@ -1573,6 +1574,280 @@ mod tests {
                                                 ),
                                                 right: crate::ir::ast::common::Operand::Literal(
                                                     LiteralValue::Int32(10),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "DIV 명령어 테스트 - Int64 리터럴 나눗셈",
+                expected_output: "5\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "div_int64_literal.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = div 100, 20
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Div(
+                                            crate::ir::ast::local::instruction::div::DivInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(100),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(20),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "DIV 명령어 테스트 - 변수 간 나눗셈",
+                expected_output: "6\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "div_identifier_identifier.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // x = 60
+                                    AssignmentStatement {
+                                        name: "x".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_sixty".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // y = 10
+                                    AssignmentStatement {
+                                        name: "y".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_ten".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // result = div x, y
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Div(
+                                                crate::ir::ast::local::instruction::div::DivInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("x".into()),
+                                                    right: crate::ir::ast::common::Operand::Identifier("y".into()),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // printf("%lld\n", result)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "printf".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::String("%lld\n".into()),
+                                                ),
+                                                crate::ir::ast::common::Operand::Identifier("result".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_sixty".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        ReturnInstruction {
+                                            return_value: Some(crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::Int64(60),
+                                            )),
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_ten".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        ReturnInstruction {
+                                            return_value: Some(crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::Int64(10),
+                                            )),
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "DIV 명령어 테스트 - 체이닝 나눗셈",
+                expected_output: "5\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "div_chained.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // x = 200
+                                    AssignmentStatement {
+                                        name: "x".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_two_hundred".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // y = div x, 10  // y = 20
+                                    AssignmentStatement {
+                                        name: "y".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Div(
+                                                crate::ir::ast::local::instruction::div::DivInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("x".into()),
+                                                    right: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(10),
+                                                    ),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // result = div y, 4  // result = 5
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Div(
+                                                crate::ir::ast::local::instruction::div::DivInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("y".into()),
+                                                    right: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(4),
+                                                    ),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // printf("%lld\n", result)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "printf".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::String("%lld\n".into()),
+                                                ),
+                                                crate::ir::ast::common::Operand::Identifier("result".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_two_hundred".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        ReturnInstruction {
+                                            return_value: Some(crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::Int64(200),
+                                            )),
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "DIV 명령어 테스트 - Int32 리터럴 나눗셈",
+                expected_output: "3\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "div_int32_literal.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = div 15, 5
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Div(
+                                            crate::ir::ast::local::instruction::div::DivInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int32(15),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int32(5),
                                                 ),
                                             }
                                         ),

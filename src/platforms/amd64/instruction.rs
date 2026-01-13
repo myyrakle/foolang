@@ -61,6 +61,10 @@ pub enum Instruction {
     /// Internal discriminant uses unique value to avoid enum collision
     IDiv = 0x30F7,
 
+    /// CQO - Convert Quadword to Octaword (sign-extend RAX to RDX:RAX)
+    /// Opcode: 0x99
+    Cqo = 0x99,
+
     /// INC - Increment
     /// Opcode: 0xFF (requires ModR/M with /0 extension in reg field)
     /// Internal discriminant uses unique value to avoid enum collision
@@ -249,6 +253,7 @@ impl Instruction {
             Instruction::IMul => "IMUL",
             Instruction::Div => "DIV",
             Instruction::IDiv => "IDIV",
+            Instruction::Cqo => "CQO",
             Instruction::Inc => "INC",
             Instruction::Dec => "DEC",
             Instruction::Neg => "NEG",
