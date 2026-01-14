@@ -1,4 +1,5 @@
 #![allow(clippy::match_like_matches_macro)]
+#![allow(dead_code)]
 
 use action::build::execute_build;
 use command::{Command, SubCommand};

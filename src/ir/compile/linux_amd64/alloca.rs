@@ -4,10 +4,7 @@ use crate::{
         compile::linux_amd64::function::FunctionContext,
         error::IRError,
     },
-    platforms::{
-        amd64::addressing::*,
-        linux::elf::object::ELFObject,
-    },
+    platforms::{amd64::addressing::*, linux::elf::object::ELFObject},
 };
 
 pub fn compile_alloca_instruction(
