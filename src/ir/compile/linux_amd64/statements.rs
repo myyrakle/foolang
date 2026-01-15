@@ -14,6 +14,7 @@ use crate::{
                 compile_branch_instruction, compile_jump_instruction, compile_label_definition,
             },
             call::compile_call_instruction,
+            compare::compile_compare_instruction,
             div::compile_div_instruction,
             function::FunctionContext,
             mul::compile_mul_instruction,
@@ -98,11 +99,8 @@ fn compile_assignment_statement(
             // call instruction 컴파일 (결과는 RAX에)
             compile_call_instruction(instruction, context, object)?;
         }
-        AssignmentStatementValue::Instruction(InstructionStatement::Compare(_)) => {
-            return Err(IRError::new(
-                IRErrorKind::NotImplemented,
-                "Compare instruction not yet implemented",
-            ));
+        AssignmentStatementValue::Instruction(InstructionStatement::Compare(instruction)) => {
+            compile_compare_instruction(instruction, context, object)?;
         }
         AssignmentStatementValue::Instruction(InstructionStatement::Alloca(instruction)) => {
             compile_alloca_instruction(instruction, context, object)?;

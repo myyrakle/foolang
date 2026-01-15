@@ -4,10 +4,7 @@ use crate::{
         compile::linux_amd64::function::FunctionContext,
         error::IRError,
     },
-    platforms::{
-        amd64::addressing::*,
-        linux::elf::object::ELFObject,
-    },
+    platforms::{amd64::addressing::*, linux::elf::object::ELFObject},
 };
 
 pub fn compile_alloca_instruction(
@@ -44,7 +41,7 @@ pub fn compile_alloca_instruction(
     object.text_section.data.push(Instruction::Lea as u8);
 
     // ModR/M + displacement
-    if stack_offset >= DISP8_MIN && stack_offset <= DISP8_MAX {
+    if (DISP8_MIN..=DISP8_MAX).contains(&stack_offset) {
         // disp8 범위: [rbp + disp8] 인코딩
         object
             .text_section
@@ -60,7 +57,7 @@ pub fn compile_alloca_instruction(
         object
             .text_section
             .data
-            .extend_from_slice(&(stack_offset as i32).to_le_bytes());
+            .extend_from_slice(&stack_offset.to_le_bytes());
     }
 
     Ok(())

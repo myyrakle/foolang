@@ -11,6 +11,7 @@ pub mod alloca;
 pub mod branch;
 pub mod call;
 pub mod common;
+pub mod compare;
 pub mod constant;
 pub mod div;
 pub mod function;
@@ -2113,6 +2114,396 @@ mod tests {
                     })],
                 },
             },
+            TestCase {
+                name: "COMPARE 명령어 테스트 - 같은 값 비교",
+                expected_output: "1\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "compare_equal.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = compare 10, 10
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Compare(
+                                            crate::ir::ast::local::instruction::compare::CompareInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(10),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(10),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "COMPARE 명령어 테스트 - 다른 값 비교",
+                expected_output: "0\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "compare_not_equal.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = compare 10, 20
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Compare(
+                                            crate::ir::ast::local::instruction::compare::CompareInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(10),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int64(20),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "COMPARE 명령어 테스트 - 변수 간 비교",
+                expected_output: "1\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "compare_identifier_identifier.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // x = 60
+                                    AssignmentStatement {
+                                        name: "x".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_sixty".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // y = 60
+                                    AssignmentStatement {
+                                        name: "y".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Call(CallInstruction {
+                                                function_name: "get_sixty".into(),
+                                                parameters: vec![],
+                                            }),
+                                        ),
+                                    }.into(),
+                                    // result = compare x, y
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Compare(
+                                                crate::ir::ast::local::instruction::compare::CompareInstruction {
+                                                    left: crate::ir::ast::common::Operand::Identifier("x".into()),
+                                                    right: crate::ir::ast::common::Operand::Identifier("y".into()),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // printf("%lld\n", result)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "printf".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::String("%lld\n".into()),
+                                                ),
+                                                crate::ir::ast::common::Operand::Identifier("result".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "get_sixty".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Int64.into(),
+                            function_body: LocalStatements {
+                                statements: vec![LocalStatement::Instruction(
+                                    InstructionStatement::Return(crate::ir::ast::local::instruction::return_::ReturnInstruction {
+                                        return_value: Some(crate::ir::ast::common::Operand::Literal(LiteralValue::Int64(60))),
+                                    }),
+                                )],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "COMPARE 명령어 테스트 - Int32 비교",
+                expected_output: "0\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "compare_int32.foolang".into(),
+                    statements: vec![GlobalStatement::DefineFunction(FunctionDefinition {
+                        function_name: "main".into(),
+                        arguments: vec![],
+                        return_type: IRPrimitiveType::Void.into(),
+                        function_body: LocalStatements {
+                            statements: vec![
+                                // result = compare 5, 7
+                                AssignmentStatement {
+                                    name: "result".into(),
+                                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                        InstructionStatement::Compare(
+                                            crate::ir::ast::local::instruction::compare::CompareInstruction {
+                                                left: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int32(5),
+                                                ),
+                                                right: crate::ir::ast::common::Operand::Literal(
+                                                    LiteralValue::Int32(7),
+                                                ),
+                                            }
+                                        ),
+                                    ),
+                                }.into(),
+                                // printf("%lld\n", result)
+                                LocalStatement::Instruction(InstructionStatement::Call(
+                                    CallInstruction {
+                                        function_name: "printf".into(),
+                                        parameters: vec![
+                                            crate::ir::ast::common::Operand::Literal(
+                                                LiteralValue::String("%lld\n".into()),
+                                            ),
+                                            crate::ir::ast::common::Operand::Identifier("result".into()),
+                                        ],
+                                    },
+                                )),
+                            ],
+                        },
+                    })],
+                },
+            },
+            TestCase {
+                name: "COMPARE + BRANCH 연계 테스트 - 같은 값",
+                expected_output: "EQUAL\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "compare_branch_equal.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "EQUAL_TEXT".into(),
+                            value: LiteralValue::String("EQUAL".into()),
+                        }),
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "NOT_EQUAL_TEXT".into(),
+                            value: LiteralValue::String("NOT EQUAL".into()),
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // result = compare 42, 42
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Compare(
+                                                crate::ir::ast::local::instruction::compare::CompareInstruction {
+                                                    left: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(42),
+                                                    ),
+                                                    right: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(42),
+                                                    ),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // branch result, equal_label, not_equal_label
+                                    LocalStatement::Instruction(InstructionStatement::Branch(
+                                        crate::ir::ast::local::instruction::branch::BranchInstruction {
+                                            condition: "result".into(),
+                                            true_label: "equal_label".into(),
+                                            false_label: "not_equal_label".into(),
+                                        },
+                                    )),
+                                    // equal_label:
+                                    crate::ir::ast::local::LocalStatement::Label(
+                                        crate::ir::ast::local::label::LabelDefinition {
+                                            name: "equal_label".into(),
+                                        },
+                                    ),
+                                    // puts(EQUAL_TEXT)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier("EQUAL_TEXT".into()),
+                                            ],
+                                        },
+                                    )),
+                                    // return
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        crate::ir::ast::local::instruction::return_::ReturnInstruction {
+                                            return_value: None,
+                                        },
+                                    )),
+                                    // not_equal_label:
+                                    crate::ir::ast::local::LocalStatement::Label(
+                                        crate::ir::ast::local::label::LabelDefinition {
+                                            name: "not_equal_label".into(),
+                                        },
+                                    ),
+                                    // puts(NOT_EQUAL_TEXT)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier("NOT_EQUAL_TEXT".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
+            TestCase {
+                name: "COMPARE + BRANCH 연계 테스트 - 다른 값",
+                expected_output: "NOT EQUAL\n",
+                want_error: false,
+                expected_error: None,
+                code_unit: CodeUnit {
+                    filename: "compare_branch_not_equal.foolang".into(),
+                    statements: vec![
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "EQUAL_TEXT".into(),
+                            value: LiteralValue::String("EQUAL".into()),
+                        }),
+                        GlobalStatement::Constant(ConstantDefinition {
+                            constant_name: "NOT_EQUAL_TEXT".into(),
+                            value: LiteralValue::String("NOT EQUAL".into()),
+                        }),
+                        GlobalStatement::DefineFunction(FunctionDefinition {
+                            function_name: "main".into(),
+                            arguments: vec![],
+                            return_type: IRPrimitiveType::Void.into(),
+                            function_body: LocalStatements {
+                                statements: vec![
+                                    // result = compare 10, 20
+                                    AssignmentStatement {
+                                        name: "result".into(),
+                                        value: crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                                            InstructionStatement::Compare(
+                                                crate::ir::ast::local::instruction::compare::CompareInstruction {
+                                                    left: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(10),
+                                                    ),
+                                                    right: crate::ir::ast::common::Operand::Literal(
+                                                        LiteralValue::Int64(20),
+                                                    ),
+                                                }
+                                            ),
+                                        ),
+                                    }.into(),
+                                    // branch result, equal_label, not_equal_label
+                                    LocalStatement::Instruction(InstructionStatement::Branch(
+                                        crate::ir::ast::local::instruction::branch::BranchInstruction {
+                                            condition: "result".into(),
+                                            true_label: "equal_label".into(),
+                                            false_label: "not_equal_label".into(),
+                                        },
+                                    )),
+                                    // equal_label:
+                                    crate::ir::ast::local::LocalStatement::Label(
+                                        crate::ir::ast::local::label::LabelDefinition {
+                                            name: "equal_label".into(),
+                                        },
+                                    ),
+                                    // puts(EQUAL_TEXT)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier("EQUAL_TEXT".into()),
+                                            ],
+                                        },
+                                    )),
+                                    // return
+                                    LocalStatement::Instruction(InstructionStatement::Return(
+                                        crate::ir::ast::local::instruction::return_::ReturnInstruction {
+                                            return_value: None,
+                                        },
+                                    )),
+                                    // not_equal_label:
+                                    crate::ir::ast::local::LocalStatement::Label(
+                                        crate::ir::ast::local::label::LabelDefinition {
+                                            name: "not_equal_label".into(),
+                                        },
+                                    ),
+                                    // puts(NOT_EQUAL_TEXT)
+                                    LocalStatement::Instruction(InstructionStatement::Call(
+                                        CallInstruction {
+                                            function_name: "puts".into(),
+                                            parameters: vec![
+                                                crate::ir::ast::common::Operand::Identifier("NOT_EQUAL_TEXT".into()),
+                                            ],
+                                        },
+                                    )),
+                                ],
+                            },
+                        }),
+                    ],
+                },
+            },
         ];
 
         let test_cases = success_cases.into_iter().chain(error_cases.into_iter());
@@ -2156,7 +2547,7 @@ mod tests {
 
             // gcc로 링크
             std::process::Command::new("gcc")
-                .args(&[object_filename, "-o", executable_filename])
+                .args(&[object_filename, "-o", executable_filename, "-no-pie"])
                 .status()
                 .expect("Failed to link with gcc");
 

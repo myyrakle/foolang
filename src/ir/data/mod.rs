@@ -1,6 +1,5 @@
 use crate::platforms::linux::elf::object::ELFObject;
 
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum IRCompiledObject {
     ELF(ELFObject),

@@ -399,8 +399,9 @@ impl ELFObject {
                         .symbols
                         .iter()
                         .find(|s| s.name == reloc.symbol)
-                        .unwrap_or_else(|| panic!("Symbol '{}' not found in symbol table",
-                            reloc.symbol));
+                        .unwrap_or_else(|| {
+                            panic!("Symbol '{}' not found in symbol table", reloc.symbol)
+                        });
 
                     // 심볼의 실제 메모리 주소 계산
                     let symbol_addr = match symbol.section {
@@ -542,6 +543,7 @@ impl ELFObject {
         buffer.extend_from_slice(&header.to_bytes());
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn write_program_header(
         &self,
         buffer: &mut Vec<u8>,
@@ -584,7 +586,7 @@ impl ELFObject {
         buffer.extend_from_slice(&header.to_bytes());
     }
 
-    fn patch_elf_header(&self, buffer: &mut Vec<u8>, section_header_offset: u64) {
+    fn patch_elf_header(&self, buffer: &mut [u8], section_header_offset: u64) {
         // Section header offset은 ELF 헤더의 40번째 바이트
         let offset_pos = 40;
         let bytes = section_header_offset.to_le_bytes();
@@ -595,6 +597,7 @@ impl ELFObject {
         buffer.extend_from_slice(&[0u8; 64]);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn write_section_header(
         &self,
         buffer: &mut Vec<u8>,

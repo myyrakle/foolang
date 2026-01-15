@@ -1,4 +1,4 @@
-/// 산술 연산 인스트럭션에서 사용하는 공통 함수들
+//! 산술 연산 인스트럭션에서 사용하는 공통 함수들
 
 use crate::{
     ir::{
@@ -112,8 +112,8 @@ pub fn emit_rex_prefix(
     reg_field: Option<Register>,
     rm_field: Option<Register>,
 ) {
-    let needs_rex_r = reg_field.map_or(false, |r| r.requires_rex());
-    let needs_rex_b = rm_field.map_or(false, |r| r.requires_rex());
+    let needs_rex_r = reg_field.is_some_and(|r| r.requires_rex());
+    let needs_rex_b = rm_field.is_some_and(|r| r.requires_rex());
 
     let rex = match (needs_rex_r, needs_rex_b) {
         (true, true) => RexPrefix::REX_WRB,

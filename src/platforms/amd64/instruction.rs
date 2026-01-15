@@ -122,6 +122,14 @@ pub enum Instruction {
     /// Opcode: 0x85
     Test = 0x85,
 
+    /// SETE - Set byte if equal (ZF=1)
+    /// Opcode: 0x0F 0x94 (two byte opcode)
+    Sete = 0x0F94,
+
+    /// MOVZX - Move with zero extend
+    /// Opcode: 0x0F 0xB6 (two byte opcode for byte to qword)
+    Movzx = 0x0FB6,
+
     // Control Flow Instructions
     /// JMP - Unconditional jump
     /// Opcode: 0xE9 (near jump)
@@ -266,6 +274,8 @@ impl Instruction {
             Instruction::Sar => "SAR",
             Instruction::Cmp => "CMP",
             Instruction::Test => "TEST",
+            Instruction::Sete => "SETE",
+            Instruction::Movzx => "MOVZX",
             Instruction::Jmp => "JMP",
             Instruction::Je => "JE",
             Instruction::Jne => "JNE",
@@ -322,6 +332,10 @@ impl Instruction {
 
     /// ADD instruction의 opcode extension digit (/0)
     pub const OPCODE_EXT_ADD: u8 = 0;
+
+    /// ModR/M byte for AL register (RAX low byte)
+    /// Mod=11 (register direct), Reg=000, R/M=000 (AL)
+    pub const MODRM_AL_REGISTER: u8 = 0xC0;
 
     /// Returns the ModR/M reg field extension for instructions that require /digit encoding
     ///
