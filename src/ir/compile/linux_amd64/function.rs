@@ -1,7 +1,12 @@
 use crate::{
     ir::{
-        ast::global::function::FunctionDefinition,
+        ast::{global::function::FunctionDefinition, types::IRType},
         error::{IRError, IRErrorKind},
+        ssa::{
+            liveness::LivenessAnalysis,
+            register_allocator::{RegisterAllocator, ValueLocation as SSAValueLocation},
+            BasicBlock, BasicBlockId, SSAValue, SSAValueId,
+        },
     },
     platforms::{
         amd64::{
@@ -42,6 +47,7 @@ pub enum LabelLocation {
 /// 함수 컴파일 컨텍스트
 #[derive(Debug)]
 pub struct FunctionContext {
+    // === 기존 필드들 (변수명 기반, 하위 호환성 유지) ===
     /// 로컬 변수 이름 -> 저장 위치
     pub variables: HashMap<String, VariableLocation>,
 
@@ -65,13 +71,43 @@ pub struct FunctionContext {
     /// alloca 명령어들이 필요로 하는 총 스택 크기
     /// prescan 단계에서 미리 계산되며, prologue에서 스택을 할당할 때 포함됨
     pub pending_alloca_size: i32,
+
+    // === 새로운 SSA 필드들 ===
+    /// SSA 값 관리 (SSA value ID -> SSA value)
+    pub ssa_values: HashMap<SSAValueId, SSAValue>,
+
+    /// 다음 SSA 값 ID
+    pub next_ssa_id: usize,
+
+    /// 변수명 -> SSA 값 ID 스택 (shadowing 지원)
+    /// 같은 변수명에 대한 여러 버전(assignment)을 추적
+    pub variable_versions: HashMap<String, Vec<SSAValueId>>,
+
+    /// Basic block 관리
+    pub basic_blocks: Vec<BasicBlock>,
+
+    /// 현재 작업 중인 basic block
+    pub current_block: BasicBlockId,
+
+    /// 현재 statement 인덱스 (블록 내에서의 위치)
+    pub current_statement_index: usize,
+
+    /// Liveness 분석 결과
+    pub liveness: Option<LivenessAnalysis>,
+
+    /// 레지스터 할당자
+    pub register_allocator: RegisterAllocator,
 }
 
 impl FunctionContext {
     pub fn new() -> Self {
+        // 초기 basic block 생성
+        let initial_block_id = BasicBlockId::new(0);
+        let initial_block = BasicBlock::new(initial_block_id);
+
         Self {
+            // 기존 필드들
             variables: HashMap::new(),
-            // callee-saved 레지스터: RBX, R12, R13, R14, R15
             available_registers: vec![
                 Register::RBX,
                 Register::R12,
@@ -84,6 +120,16 @@ impl FunctionContext {
             labels: HashMap::new(),
             allocated_stack_size: 0,
             pending_alloca_size: 0,
+
+            // 새로운 SSA 필드들
+            ssa_values: HashMap::new(),
+            next_ssa_id: 0,
+            variable_versions: HashMap::new(),
+            basic_blocks: vec![initial_block],
+            current_block: initial_block_id,
+            current_statement_index: 0,
+            liveness: None,
+            register_allocator: RegisterAllocator::new(),
         }
     }
 
@@ -153,6 +199,87 @@ impl FunctionContext {
         }
         // stack_offset도 조정 (이후 할당될 변수들을 위해)
         self.stack_offset -= adjustment;
+    }
+
+    // === SSA 관련 메서드들 ===
+
+    /// 새 SSA 값 생성
+    ///
+    /// Assignment 발생 시 호출되어 새로운 SSA 값 ID를 생성하고 등록
+    pub fn new_ssa_value(&mut self, original_name: Option<String>, type_: IRType) -> SSAValueId {
+        let id = SSAValueId::new(self.next_ssa_id);
+        self.next_ssa_id += 1;
+
+        let value = SSAValue {
+            id,
+            original_name: original_name.clone(),
+            type_,
+            def_block: self.current_block,
+        };
+
+        self.ssa_values.insert(id, value);
+
+        // 변수 버전 스택에 추가
+        if let Some(name) = original_name {
+            self.variable_versions
+                .entry(name)
+                .or_insert_with(Vec::new)
+                .push(id);
+        }
+
+        id
+    }
+
+    /// 변수의 현재 버전(SSA 값) 조회
+    ///
+    /// Operand에서 변수를 참조할 때 현재 유효한 SSA 값을 찾기 위해 사용
+    pub fn get_current_version(&self, var_name: &str) -> Option<SSAValueId> {
+        self.variable_versions
+            .get(var_name)
+            .and_then(|versions| versions.last())
+            .copied()
+    }
+
+    /// SSA 값에 레지스터 또는 스택 할당
+    ///
+    /// Liveness 분석 결과를 기반으로 적절한 저장 위치 결정
+    pub fn allocate_ssa_value(&mut self, value_id: SSAValueId) -> Result<SSAValueLocation, IRError> {
+        // 이미 할당되어 있으면 기존 위치 반환
+        if let Some(existing) = self.register_allocator.get_location(value_id) {
+            return Ok(existing.clone());
+        }
+
+        // Liveness 분석이 있으면 사용, 없으면 단순 할당
+        let liveness = self.liveness.as_ref().ok_or_else(|| {
+            IRError::new(
+                IRErrorKind::NotImplemented,
+                "Liveness analysis not performed",
+            )
+        })?;
+
+        self.register_allocator.allocate(
+            value_id,
+            self.current_block,
+            self.current_statement_index,
+            liveness,
+        )
+    }
+
+    /// SSA 값의 위치 조회 (레지스터 또는 스택)
+    pub fn get_ssa_value_location(&self, value_id: SSAValueId) -> Option<&SSAValueLocation> {
+        self.register_allocator.get_location(value_id)
+    }
+
+    /// 값 사용 후 마지막 사용이면 레지스터 해제
+    pub fn free_ssa_value_if_last_use(&mut self, value_id: SSAValueId) {
+        if let Some(liveness) = &self.liveness {
+            self.register_allocator.free_if_last_use(
+                value_id,
+                self.current_block,
+                self.current_statement_index,
+                liveness,
+            );
+        }
     }
 
     /// 필요한 스택 크기 계산 (16바이트 정렬)
