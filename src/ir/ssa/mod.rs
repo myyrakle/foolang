@@ -1,6 +1,7 @@
 use crate::ir::ast::{local::LocalStatement, types::IRType};
 use std::collections::HashMap;
 
+pub mod cfg_builder;
 pub mod liveness;
 pub mod register_allocator;
 
