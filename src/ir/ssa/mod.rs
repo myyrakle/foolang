@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 pub mod cfg_builder;
 pub mod liveness;
+pub mod phi_insertion;
 pub mod register_allocator;
 
 /// SSA 값의 고유 식별자
