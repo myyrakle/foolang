@@ -60,17 +60,14 @@ impl CFGBuilder {
     fn find_block_boundaries(&mut self, statements: &[LocalStatement]) -> Vec<usize> {
         let mut boundaries = vec![0]; // 함수 시작은 항상 블록 시작
 
+        // 1단계: 블록 경계 수집
         for (i, stmt) in statements.iter().enumerate() {
             match stmt {
                 // Label은 새 블록의 시작
-                LocalStatement::Label(label_def) => {
+                LocalStatement::Label(_) => {
                     if !boundaries.contains(&i) {
                         boundaries.push(i);
                     }
-                    // Label 이름 등록
-                    let block_id = BasicBlockId::new(boundaries.len() - 1);
-                    self.label_to_block
-                        .insert(label_def.name.name.clone(), block_id);
                 }
                 // Branch/Jump 다음은 새 블록의 시작
                 LocalStatement::Instruction(InstructionStatement::Branch(_))
@@ -84,7 +81,21 @@ impl CFGBuilder {
             }
         }
 
+        // 2단계: 정렬
         boundaries.sort_unstable();
+
+        // 3단계: 라벨 매핑 (정렬 후)
+        for (i, stmt) in statements.iter().enumerate() {
+            if let LocalStatement::Label(label_def) = stmt {
+                // 정렬된 boundaries에서 이 라벨의 블록 인덱스 찾기
+                if let Some(block_idx) = boundaries.iter().position(|&b| b == i) {
+                    let block_id = BasicBlockId::new(block_idx);
+                    self.label_to_block
+                        .insert(label_def.name.name.clone(), block_id);
+                }
+            }
+        }
+
         boundaries
     }
 
