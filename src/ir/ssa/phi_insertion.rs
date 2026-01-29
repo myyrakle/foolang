@@ -32,12 +32,12 @@ impl PhiInserter {
     /// 3. Join point에 Phi 노드 삽입
     pub fn insert_phi_nodes(
         blocks: &mut [BasicBlock],
-        statements: &[LocalStatement],
+        _statements: &[LocalStatement],
     ) -> HashMap<BasicBlockId, Vec<String>> {
         let mut inserter = PhiInserter::new();
 
-        // 1단계: 변수 정의 위치 수집
-        inserter.collect_variable_definitions(statements);
+        // 1단계: 변수 정의 위치 수집 (CFG 블록 정보 활용)
+        inserter.collect_variable_definitions(blocks);
 
         // 2단계: Dominance frontier 계산 (간소화)
         inserter.compute_dominance_frontiers(blocks);
@@ -47,18 +47,21 @@ impl PhiInserter {
     }
 
     /// 각 변수가 어느 블록에서 정의되는지 수집
-    fn collect_variable_definitions(&mut self, statements: &[LocalStatement]) {
-        // 간소화: 모든 statement를 첫 번째 블록에 있다고 가정
-        // 실제로는 CFG의 블록 경계를 고려해야 함
-        let block_id = BasicBlockId::new(0);
+    ///
+    /// CFG의 실제 블록 경계를 반영하여 각 블록별로 정의되는 변수를 추적
+    fn collect_variable_definitions(&mut self, blocks: &[BasicBlock]) {
+        for block in blocks {
+            let block_id = block.id;
 
-        for stmt in statements {
-            if let LocalStatement::Assignment(assignment) = stmt {
-                let var_name = assignment.name.name.clone();
-                self.var_defs
-                    .entry(var_name)
-                    .or_insert_with(HashSet::new)
-                    .insert(block_id);
+            // 각 블록의 statement를 순회하며 Assignment 찾기
+            for stmt in &block.statements {
+                if let LocalStatement::Assignment(assignment) = stmt {
+                    let var_name = assignment.name.name.clone();
+                    self.var_defs
+                        .entry(var_name)
+                        .or_insert_with(HashSet::new)
+                        .insert(block_id);
+                }
             }
         }
     }
@@ -203,20 +206,30 @@ mod tests {
     fn test_collect_variable_definitions() {
         let mut inserter = PhiInserter::new();
 
-        let statements = vec![LocalStatement::Assignment(AssignmentStatement {
-            name: Identifier {
-                type_: IRType::None,
-                name: "x".to_string(),
+        // BasicBlock에 statement 추가
+        let mut block = BasicBlock::new(BasicBlockId::new(0));
+        block.statements.push(LocalStatement::Assignment(
+            AssignmentStatement {
+                name: Identifier {
+                    type_: IRType::None,
+                    name: "x".to_string(),
+                },
+                value: crate::ir::ast::local::assignment::AssignmentStatementValue::Literal(
+                    crate::ir::ast::common::literal::LiteralValue::Int32(42),
+                ),
             },
-            value: crate::ir::ast::local::assignment::AssignmentStatementValue::Literal(
-                crate::ir::ast::common::literal::LiteralValue::Int32(42),
-            ),
-        })];
+        ));
 
-        inserter.collect_variable_definitions(&statements);
+        let blocks = vec![block];
+        inserter.collect_variable_definitions(&blocks);
 
         assert!(inserter.var_defs.contains_key("x"));
         assert_eq!(inserter.var_defs.get("x").unwrap().len(), 1);
+        assert!(inserter
+            .var_defs
+            .get("x")
+            .unwrap()
+            .contains(&BasicBlockId::new(0)));
     }
 
     #[test]
