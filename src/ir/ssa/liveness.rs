@@ -1,4 +1,8 @@
 use super::{BasicBlock, BasicBlockId, SSAValueId};
+use crate::ir::ast::{
+    common::Operand,
+    local::{instruction::InstructionStatement, LocalStatement},
+};
 use std::collections::{HashMap, HashSet};
 
 /// SSA 값의 생명 주기 정보
@@ -78,6 +82,127 @@ impl LivenessInfo {
     }
 }
 
+/// Statement에서 사용되는 변수명 추출
+fn extract_used_variables(stmt: &LocalStatement) -> Vec<String> {
+    let mut vars = Vec::new();
+
+    match stmt {
+        LocalStatement::Assignment(assignment) => {
+            // Assignment의 value에서 사용되는 변수
+            if let crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(
+                instr,
+            ) = &assignment.value
+            {
+                vars.extend(extract_used_variables_from_instruction(instr));
+            }
+        }
+        LocalStatement::Instruction(instr) => {
+            vars.extend(extract_used_variables_from_instruction(instr));
+        }
+        LocalStatement::Label(_) => {
+            // Label은 변수 사용 없음
+        }
+    }
+
+    vars
+}
+
+/// Instruction에서 사용되는 변수명 추출
+fn extract_used_variables_from_instruction(instr: &InstructionStatement) -> Vec<String> {
+    let mut vars = Vec::new();
+
+    match instr {
+        InstructionStatement::Add(add) => {
+            if let Operand::Identifier(id) = &add.left {
+                vars.push(id.name.clone());
+            }
+            if let Operand::Identifier(id) = &add.right {
+                vars.push(id.name.clone());
+            }
+        }
+        InstructionStatement::Sub(sub) => {
+            if let Operand::Identifier(id) = &sub.left {
+                vars.push(id.name.clone());
+            }
+            if let Operand::Identifier(id) = &sub.right {
+                vars.push(id.name.clone());
+            }
+        }
+        InstructionStatement::Mul(mul) => {
+            if let Operand::Identifier(id) = &mul.left {
+                vars.push(id.name.clone());
+            }
+            if let Operand::Identifier(id) = &mul.right {
+                vars.push(id.name.clone());
+            }
+        }
+        InstructionStatement::Div(div) => {
+            if let Operand::Identifier(id) = &div.left {
+                vars.push(id.name.clone());
+            }
+            if let Operand::Identifier(id) = &div.right {
+                vars.push(id.name.clone());
+            }
+        }
+        InstructionStatement::Rem(rem) => {
+            if let Operand::Identifier(id) = &rem.left {
+                vars.push(id.name.clone());
+            }
+            if let Operand::Identifier(id) = &rem.right {
+                vars.push(id.name.clone());
+            }
+        }
+        InstructionStatement::Compare(cmp) => {
+            if let Operand::Identifier(id) = &cmp.left {
+                vars.push(id.name.clone());
+            }
+            if let Operand::Identifier(id) = &cmp.right {
+                vars.push(id.name.clone());
+            }
+        }
+        InstructionStatement::Branch(branch) => {
+            // Branch의 condition은 Identifier 타입
+            vars.push(branch.condition.name.clone());
+        }
+        InstructionStatement::Return(ret) => {
+            if let Some(Operand::Identifier(id)) = &ret.return_value {
+                vars.push(id.name.clone());
+            }
+        }
+        InstructionStatement::Call(call) => {
+            for arg in &call.parameters {
+                if let Operand::Identifier(id) = arg {
+                    vars.push(id.name.clone());
+                }
+            }
+        }
+        InstructionStatement::Store(store) => {
+            // Store의 ptr은 Identifier 타입
+            vars.push(store.ptr.name.clone());
+            if let Operand::Identifier(id) = &store.value {
+                vars.push(id.name.clone());
+            }
+        }
+        InstructionStatement::Load(load) => {
+            // Load의 ptr은 Identifier 타입
+            vars.push(load.ptr.name.clone());
+        }
+        InstructionStatement::Jump(_) | InstructionStatement::Alloca(_) => {
+            // Jump와 Alloca는 변수 사용 없음
+        }
+    }
+
+    vars
+}
+
+/// Statement에서 정의되는 변수명 추출
+fn extract_defined_variable(stmt: &LocalStatement) -> Option<String> {
+    match stmt {
+        LocalStatement::Assignment(assignment) => Some(assignment.name.name.clone()),
+        _ => None,
+    }
+}
+
 impl LivenessAnalysis {
     pub fn new() -> Self {
         Self {
@@ -116,8 +241,24 @@ impl LivenessAnalysis {
                 }
             }
 
-            // Statement 처리 (현재는 간단히 처리, 나중에 확장 필요)
-            // TODO: 실제 statement에서 사용되는 SSA 값 추출
+            // Statement 처리: 변수명 -> SSA 값 매핑 사용
+            for stmt in &block.statements {
+                // 사용되는 변수들을 SSA 값으로 변환
+                for var_name in extract_used_variables(stmt) {
+                    if let Some(&ssa_id) = block.defined_variables.get(&var_name) {
+                        if !defs.contains(&ssa_id) {
+                            uses.insert(ssa_id);
+                        }
+                    }
+                }
+
+                // 정의되는 변수를 SSA 값으로 변환
+                if let Some(var_name) = extract_defined_variable(stmt) {
+                    if let Some(&ssa_id) = block.defined_variables.get(&var_name) {
+                        defs.insert(ssa_id);
+                    }
+                }
+            }
 
             use_sets.insert(block.id, uses);
             def_sets.insert(block.id, defs);
@@ -169,7 +310,50 @@ impl LivenessAnalysis {
         }
 
         // 3단계: 각 SSA 값의 상세 liveness 정보 수집
-        // TODO: 실제 사용 지점을 statement 레벨에서 추적
+        for block in blocks {
+            let block_id = block.id;
+
+            // Phi 노드의 result 값 정의
+            for (phi_idx, phi) in block.phi_nodes.iter().enumerate() {
+                let liveness_info = LivenessInfo::new((block_id, phi_idx));
+
+                // Phi 노드의 입력은 predecessor 블록에서 사용됨
+                // 여기서는 단순화하여 현재 블록에서 사용된 것으로 표시
+                for (pred_block_id, input_value) in &phi.inputs {
+                    if let Some(existing_info) = analysis.value_liveness.get_mut(input_value) {
+                        existing_info.add_use((*pred_block_id, 0));
+                    }
+                }
+
+                analysis.value_liveness.insert(phi.result, liveness_info);
+            }
+
+            // Statement의 정의와 사용 추적
+            for (stmt_idx, stmt) in block.statements.iter().enumerate() {
+                // 사용되는 변수들 추적
+                for var_name in extract_used_variables(stmt) {
+                    if let Some(&ssa_id) = block.defined_variables.get(&var_name) {
+                        if let Some(liveness_info) = analysis.value_liveness.get_mut(&ssa_id) {
+                            liveness_info.add_use((block_id, stmt_idx));
+                        }
+                    }
+                }
+
+                // 정의되는 변수 추적
+                if let Some(var_name) = extract_defined_variable(stmt) {
+                    if let Some(&ssa_id) = block.defined_variables.get(&var_name) {
+                        let liveness_info = LivenessInfo::new((block_id, stmt_idx));
+                        analysis.value_liveness.insert(ssa_id, liveness_info);
+                    }
+                }
+            }
+        }
+
+        // 4단계: 각 SSA 값의 last_use 업데이트 및 range_length 계산
+        for liveness_info in analysis.value_liveness.values_mut() {
+            liveness_info.update_last_use();
+            liveness_info.calculate_range_length();
+        }
 
         analysis
     }

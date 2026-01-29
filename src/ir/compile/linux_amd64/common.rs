@@ -80,6 +80,10 @@ fn is_integer_operand(operand: &Operand, _context: &FunctionContext) -> Result<b
                 "Arithmetic instructions require primitive numeric type, not custom type",
             )),
         },
+        Operand::SSAValue(_ssa_id) => {
+            // Phase 7: SSA 값 타입 확인 (Phase 8에서 구현 예정)
+            todo!("SSA value type checking not yet implemented")
+        }
     }
 }
 
@@ -217,6 +221,10 @@ pub fn load_operand_to_register(
         }
         Operand::Identifier(id) => {
             load_identifier_to_register(&id.name, target_reg, context, object)?;
+        }
+        Operand::SSAValue(_ssa_id) => {
+            // Phase 7: SSA 값 로딩 (Phase 8에서 구현 예정)
+            todo!("SSA value loading not yet implemented")
         }
     }
     Ok(())

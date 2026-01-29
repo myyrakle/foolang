@@ -259,6 +259,10 @@ pub fn compile_store_instruction(
                 }
             }
         }
+        Operand::SSAValue(_ssa_id) => {
+            // Phase 7: SSA 값 로딩 (Phase 8에서 구현 예정)
+            todo!("SSA value loading not yet implemented")
+        }
     }
 
     // Step 2: Look up the pointer variable
