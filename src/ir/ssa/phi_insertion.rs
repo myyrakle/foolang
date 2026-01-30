@@ -127,8 +127,8 @@ impl PhiInserter {
 
         // 실제 Phi 노드 생성 및 블록에 추가
         for (block_id, var_names) in &phi_locations {
-            let block_idx = block_id.as_usize();
-            if block_idx < blocks.len() {
+            // 블록 ID로 검색하여 안전하게 접근
+            if let Some(block) = blocks.iter_mut().find(|b| b.id == *block_id) {
                 for var_name in var_names {
                     // 임시 SSA value ID 생성 (나중에 renaming 단계에서 재할당)
                     let result_id = SSAValueId::new(0);
@@ -139,7 +139,7 @@ impl PhiInserter {
                         var_name.clone(),
                     );
 
-                    blocks[block_idx].add_phi_node(phi);
+                    block.add_phi_node(phi);
                 }
             }
         }
