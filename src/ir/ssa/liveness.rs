@@ -349,8 +349,12 @@ impl LivenessAnalysis {
                 // 정의되는 변수 추적
                 if let Some(var_name) = extract_defined_variable(stmt) {
                     if let Some(&ssa_id) = block.defined_variables.get(&var_name) {
-                        let liveness_info = LivenessInfo::new((block_id, stmt_idx));
-                        analysis.value_liveness.insert(ssa_id, liveness_info);
+                        // 기존 정보가 있으면 def_point만 업데이트, 없으면 새로 생성
+                        analysis
+                            .value_liveness
+                            .entry(ssa_id)
+                            .or_insert_with(|| LivenessInfo::new((block_id, stmt_idx)))
+                            .def_point = (block_id, stmt_idx);
                     }
                 }
             }
