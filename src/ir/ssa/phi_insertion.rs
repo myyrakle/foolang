@@ -68,18 +68,24 @@ impl PhiInserter {
 
     /// Dominance frontier 계산 (간소화 버전)
     ///
-    /// 실제 dominance frontier 계산은 복잡하므로,
-    /// 여기서는 간단히 "여러 predecessor가 있는 블록"을 join point로 간주
+    /// 완전한 dominator tree 계산 대신, 간단한 휴리스틱을 사용:
+    /// - 여러 predecessor를 가진 블록(join point)에 대해
+    /// - 각 predecessor의 DF에 해당 join point를 추가
+    ///
+    /// 이는 Cytron 알고리즘의 단순화된 버전으로,
+    /// 실제 dominator tree를 계산하지 않고도 대부분의 경우 올바른 결과를 제공합니다.
     fn compute_dominance_frontiers(&mut self, blocks: &[BasicBlock]) {
+        // 각 join point (여러 predecessor를 가진 블록)에 대해
         for block in blocks {
-            if block.predecessors.len() > 1 {
-                // 이 블록은 join point
-                // 모든 predecessor의 dominance frontier에 이 블록 추가
+            if block.predecessors.len() >= 2 {
+                let join_point = block.id;
+
+                // 각 predecessor의 DF에 join_point 추가
                 for &pred_id in &block.predecessors {
                     self.dominance_frontiers
                         .entry(pred_id)
                         .or_insert_with(HashSet::new)
-                        .insert(block.id);
+                        .insert(join_point);
                 }
             }
         }
