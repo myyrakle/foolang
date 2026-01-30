@@ -1,7 +1,5 @@
 use super::{BasicBlock, BasicBlockId};
-use crate::ir::ast::local::{
-    instruction::InstructionStatement, label::LabelDefinition, LocalStatement,
-};
+use crate::ir::ast::local::{instruction::InstructionStatement, LocalStatement};
 use std::collections::HashMap;
 
 /// CFG (Control Flow Graph) 구축기

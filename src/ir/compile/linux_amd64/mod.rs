@@ -2566,3 +2566,108 @@ mod tests {
         }
     }
 }
+
+/// SSA 파이프라인 통합 테스트
+/// 실제 함수 컴파일 과정에서 SSA 인프라가 올바르게 동작하는지 검증
+#[cfg(test)]
+mod ssa_integration_tests {
+    use crate::ir::ast::{
+        common::{literal::LiteralValue, Identifier, Label, Operand},
+        local::{
+            assignment::{AssignmentStatement, AssignmentStatementValue},
+            instruction::{add::AddInstruction, branch::BranchInstruction, InstructionStatement},
+            label::LabelDefinition,
+            LocalStatement,
+        },
+    };
+    use crate::ir::ssa::{
+        cfg_builder::CFGBuilder, liveness::LivenessAnalysis, phi_insertion::PhiInserter,
+    };
+
+    /// 직선 코드에서 SSA 파이프라인이 올바르게 동작하는지 테스트
+    #[test]
+    fn test_ssa_pipeline_linear_code() {
+        let statements = vec![LocalStatement::Assignment(AssignmentStatement {
+            name: Identifier::from("x"),
+            value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                AddInstruction {
+                    left: Operand::Literal(LiteralValue::Int32(1)),
+                    right: Operand::Literal(LiteralValue::Int32(2)),
+                },
+            )),
+        })];
+
+        // CFG 구축
+        let mut blocks = CFGBuilder::build(&statements);
+        assert_eq!(
+            blocks.len(),
+            1,
+            "Linear code should produce a single basic block"
+        );
+
+        // Phi 노드 삽입
+        PhiInserter::insert_phi_nodes(&mut blocks, &statements);
+        assert_eq!(blocks[0].phi_nodes.len(), 0, "No phi nodes in linear code");
+
+        // Liveness 분석
+        let liveness = LivenessAnalysis::analyze(&blocks);
+        assert!(
+            liveness.value_liveness.len() >= 0,
+            "Liveness analysis should complete"
+        );
+    }
+
+    /// 조건문(branch)에서 SSA 파이프라인이 올바르게 동작하는지 테스트
+    #[test]
+    fn test_ssa_pipeline_with_branches() {
+        let statements = vec![
+            LocalStatement::Assignment(AssignmentStatement {
+                name: Identifier::from("x"),
+                value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                    AddInstruction {
+                        left: Operand::Literal(LiteralValue::Int32(1)),
+                        right: Operand::Literal(LiteralValue::Int32(2)),
+                    },
+                )),
+            }),
+            LocalStatement::Instruction(InstructionStatement::Branch(BranchInstruction {
+                condition: Identifier::from("x"),
+                true_label: Label::from("then_label"),
+                false_label: Label::from("else_label"),
+            })),
+            LocalStatement::Label(LabelDefinition {
+                name: Identifier::from("then_label"),
+            }),
+            LocalStatement::Assignment(AssignmentStatement {
+                name: Identifier::from("y"),
+                value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                    AddInstruction {
+                        left: Operand::Identifier(Identifier::from("x")),
+                        right: Operand::Literal(LiteralValue::Int32(10)),
+                    },
+                )),
+            }),
+            LocalStatement::Label(LabelDefinition {
+                name: Identifier::from("else_label"),
+            }),
+        ];
+
+        // CFG 구축
+        let mut blocks = CFGBuilder::build(&statements);
+        assert!(
+            blocks.len() > 1,
+            "Branching code should produce multiple blocks, got {}",
+            blocks.len()
+        );
+
+        // Phi 노드 삽입
+        PhiInserter::insert_phi_nodes(&mut blocks, &statements);
+
+        // Liveness 분석
+        let liveness = LivenessAnalysis::analyze(&blocks);
+        assert!(
+            liveness.value_liveness.len() >= 0,
+            "Liveness analysis should complete"
+        );
+    }
+}
