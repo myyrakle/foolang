@@ -487,6 +487,14 @@ mod tests {
         let value2 = SSAValueId::new(2);
         let result = SSAValueId::new(3);
 
+        // value1은 block0에서, value2는 block1에서 정의되도록 설정
+        block0
+            .defined_variables
+            .insert("x".to_string(), value1);
+        block1
+            .defined_variables
+            .insert("x".to_string(), value2);
+
         let mut phi = PhiNode::new(
             result,
             IRType::Primitive(IRPrimitiveType::Int32),
