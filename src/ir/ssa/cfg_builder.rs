@@ -99,15 +99,26 @@ impl CFGBuilder {
         boundaries
     }
 
-    /// Basic blocks 생성 (statement 인덱스 범위만 저장)
-    fn create_blocks(&mut self, _statements: &[LocalStatement], boundaries: &[usize]) {
-        for (block_idx, _start) in boundaries.iter().enumerate() {
-            let block_id = BasicBlockId::new(block_idx);
-            let block = BasicBlock::new(block_id);
+    /// Basic blocks 생성 및 statement 인덱스 범위 저장
+    fn create_blocks(&mut self, statements: &[LocalStatement], boundaries: &[usize]) {
+        for (block_idx, &start) in boundaries.iter().enumerate() {
+            let end = boundaries
+                .get(block_idx + 1)
+                .copied()
+                .unwrap_or(statements.len());
 
-            // NOTE: 실제 statement들은 PhiInserter가 필요로 하지 않음
-            // PhiInserter는 CFG 구조(predecessor/successor)만 사용
-            // 변수 정의는 별도로 추적됨
+            let block_id = BasicBlockId::new(block_idx);
+            let mut block = BasicBlock::new(block_id);
+
+            // Phi 노드 삽입을 위해 이 블록의 변수 정의를 수집
+            for stmt in &statements[start..end] {
+                if let LocalStatement::Assignment(assignment) = stmt {
+                    let var_name = assignment.name.name.clone();
+                    // 임시로 SSAValueId를 생성 (나중에 renaming 단계에서 재할당)
+                    let ssa_id = crate::ir::ssa::SSAValueId::new(0);
+                    block.defined_variables.insert(var_name, ssa_id);
+                }
+            }
 
             self.blocks.push(block);
         }

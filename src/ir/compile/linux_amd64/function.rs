@@ -347,6 +347,20 @@ pub fn compile_function(
     let mut context = FunctionContext::new();
     prescan_statements(&function.function_body.statements, &mut context);
 
+    // Phase 9: SSA 파이프라인 구축
+    use crate::ir::ssa::{cfg_builder::CFGBuilder, phi_insertion::PhiInserter, liveness::LivenessAnalysis};
+
+    // 1. CFG 구축
+    let mut blocks = CFGBuilder::build(&function.function_body.statements);
+
+    // 2. Phi 노드 삽입
+    PhiInserter::insert_phi_nodes(&mut blocks, &function.function_body.statements);
+
+    // 3. Liveness 분석
+    let liveness = LivenessAnalysis::analyze(&blocks);
+    context.liveness = Some(liveness);
+    context.basic_blocks = blocks;
+
     // Function prologue 생성
     // push rbp (스택 프레임 저장)
     object
