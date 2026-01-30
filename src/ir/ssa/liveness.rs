@@ -50,9 +50,16 @@ impl LivenessInfo {
     }
 
     /// 마지막 사용 지점 업데이트
+    ///
+    /// 블록 ID와 statement index를 기준으로 정렬하여 실제 실행 순서에서의 마지막 사용을 찾습니다.
     pub fn update_last_use(&mut self) {
-        if let Some(&last) = self.use_points.last() {
-            self.last_use = Some(last);
+        // 블록 ID와 statement index를 기준으로 정렬하여 실제 마지막 사용 찾기
+        if !self.use_points.is_empty() {
+            let last = self.use_points
+                .iter()
+                .max_by_key(|(block_id, stmt_idx)| (block_id.as_usize(), *stmt_idx))
+                .copied();
+            self.last_use = last;
         }
     }
 
