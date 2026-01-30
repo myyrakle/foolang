@@ -19,7 +19,7 @@ impl Identifier {
         context
             .get_current_version(&self.name)
             .ok_or_else(|| crate::ir::error::IRError {
-                kind: crate::ir::error::IRErrorKind::NotImplemented,
+                kind: crate::ir::error::IRErrorKind::VariableNotFound,
                 message: format!("Variable '{}' not found in SSA context", self.name),
             })
     }
