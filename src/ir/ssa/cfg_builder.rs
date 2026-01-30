@@ -105,8 +105,9 @@ impl CFGBuilder {
             let block_id = BasicBlockId::new(block_idx);
             let block = BasicBlock::new(block_id);
 
-            // NOTE: 실제 statement들은 나중에 필요할 때 범위로 접근
-            // 지금은 빈 블록만 생성
+            // NOTE: 실제 statement들은 PhiInserter가 필요로 하지 않음
+            // PhiInserter는 CFG 구조(predecessor/successor)만 사용
+            // 변수 정의는 별도로 추적됨
 
             self.blocks.push(block);
         }
@@ -197,13 +198,52 @@ mod tests {
 
     #[test]
     fn test_linear_blocks() {
-        // Label 없는 직선 코드: 단일 블록
+        // Label 없는 직선 코드: 여러 assignment가 하나의 블록으로 병합
         let statements = vec![
-            // Assignment나 다른 statement들
+            LocalStatement::Assignment(
+                crate::ir::ast::local::assignment::AssignmentStatement {
+                    name: Identifier {
+                        type_: crate::ir::ast::types::IRType::None,
+                        name: "x".to_string(),
+                    },
+                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Literal(
+                        crate::ir::ast::common::literal::LiteralValue::Int32(1),
+                    ),
+                },
+            ),
+            LocalStatement::Assignment(
+                crate::ir::ast::local::assignment::AssignmentStatement {
+                    name: Identifier {
+                        type_: crate::ir::ast::types::IRType::None,
+                        name: "y".to_string(),
+                    },
+                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Literal(
+                        crate::ir::ast::common::literal::LiteralValue::Int32(2),
+                    ),
+                },
+            ),
+            LocalStatement::Assignment(
+                crate::ir::ast::local::assignment::AssignmentStatement {
+                    name: Identifier {
+                        type_: crate::ir::ast::types::IRType::None,
+                        name: "z".to_string(),
+                    },
+                    value: crate::ir::ast::local::assignment::AssignmentStatementValue::Literal(
+                        crate::ir::ast::common::literal::LiteralValue::Int32(3),
+                    ),
+                },
+            ),
         ];
 
         let blocks = CFGBuilder::build(&statements);
+
+        // Label이나 분기가 없으므로 단일 블록으로 병합되어야 함
         assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].id.as_usize(), 0);
+
+        // Predecessor/Successor 없음 (직선 코드, 분기 없음)
+        assert!(blocks[0].predecessors.is_empty());
+        assert!(blocks[0].successors.is_empty());
     }
 
     #[test]
