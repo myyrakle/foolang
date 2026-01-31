@@ -45,7 +45,7 @@ pub fn validate_operand_types(
 }
 
 /// Operand가 정수 타입인지 확인
-fn is_integer_operand(operand: &Operand, _context: &FunctionContext) -> Result<bool, IRError> {
+fn is_integer_operand(operand: &Operand, context: &FunctionContext) -> Result<bool, IRError> {
     match operand {
         Operand::Literal(lit) => match lit {
             LiteralValue::Int8(_)
@@ -80,9 +80,37 @@ fn is_integer_operand(operand: &Operand, _context: &FunctionContext) -> Result<b
                 "Arithmetic instructions require primitive numeric type, not custom type",
             )),
         },
-        Operand::SSAValue(_ssa_id) => {
-            // Phase 7: SSA 값 타입 확인 (Phase 8에서 구현 예정)
-            todo!("SSA value type checking not yet implemented")
+        Operand::SSAValue(ssa_id) => {
+            // Phase 12: SSA 값 타입 확인
+            if let Some(ssa_value) = context.ssa_values.get(ssa_id) {
+                match &ssa_value.type_ {
+                    IRType::Primitive(prim_type) => {
+                        if prim_type.is_integer() {
+                            Ok(true)
+                        } else if prim_type.is_float() {
+                            Ok(false)
+                        } else {
+                            Err(IRError::new(
+                                IRErrorKind::TypeError,
+                                &format!(
+                                    "Unsupported type for arithmetic instruction: {:?}",
+                                    prim_type
+                                ),
+                            ))
+                        }
+                    }
+                    IRType::None => Ok(true), // 기본값: 정수로 간주
+                    IRType::Custom(_) => Err(IRError::new(
+                        IRErrorKind::TypeError,
+                        "Arithmetic instructions require primitive numeric type, not custom type",
+                    )),
+                }
+            } else {
+                Err(IRError::new(
+                    IRErrorKind::VariableNotFound,
+                    &format!("SSA value {:?} not found", ssa_id),
+                ))
+            }
         }
     }
 }
@@ -220,12 +248,92 @@ pub fn load_operand_to_register(
             load_literal_to_register(lit, target_reg, object)?;
         }
         Operand::Identifier(id) => {
-            load_identifier_to_register(&id.name, target_reg, context, object)?;
+            // Phase 12: SSA 기반 또는 변수명 기반 로딩
+            if context.liveness.is_some() {
+                // SSA 기반: 변수명 -> SSA 값 -> 위치
+                load_identifier_via_ssa(&id.name, target_reg, context, object)?;
+            } else {
+                // 기존 방식: 변수명 -> 위치
+                load_identifier_to_register(&id.name, target_reg, context, object)?;
+            }
         }
-        Operand::SSAValue(_ssa_id) => {
-            // Phase 7: SSA 값 로딩 (Phase 8에서 구현 예정)
-            todo!("SSA value loading not yet implemented")
+        Operand::SSAValue(ssa_id) => {
+            // Phase 12: SSA 값 직접 로딩
+            load_ssa_value_to_register(*ssa_id, target_reg, context, object)?;
         }
     }
     Ok(())
+}
+
+/// SSA 값을 레지스터에 로드 (Phase 12)
+fn load_ssa_value_to_register(
+    ssa_id: crate::ir::ssa::SSAValueId,
+    target_reg: Register,
+    context: &FunctionContext,
+    object: &mut ELFObject,
+) -> Result<(), IRError> {
+    use crate::ir::ssa::register_allocator::ValueLocation as SSAValueLocation;
+
+    let ssa_loc = context.get_ssa_value_location(ssa_id).ok_or_else(|| {
+        IRError::new(
+            IRErrorKind::VariableNotFound,
+            &format!("SSA value {:?} not found", ssa_id),
+        )
+    })?;
+
+    match ssa_loc {
+        SSAValueLocation::Register(src_reg) => {
+            if *src_reg != target_reg {
+                // MOV target_reg, src_reg
+                emit_rex_prefix(object, Some(target_reg), Some(*src_reg));
+                object.text_section.data.push(Instruction::MovLoad as u8);
+                object
+                    .text_section
+                    .data
+                    .push(modrm_reg_reg(target_reg, *src_reg));
+            }
+            // 같은 레지스터면 아무것도 안 함
+        }
+        SSAValueLocation::Spilled(offset) => {
+            // MOV target_reg, [rbp + offset]
+            emit_rex_prefix(object, Some(target_reg), None);
+            object.text_section.data.push(Instruction::MovLoad as u8);
+            object
+                .text_section
+                .data
+                .push(modrm_rbp_disp32(target_reg.number()));
+            object.text_section.data.push(sib_rbp_no_index());
+            object
+                .text_section
+                .data
+                .extend_from_slice(&offset.to_le_bytes());
+        }
+        SSAValueLocation::Unassigned => {
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                &format!("SSA value {:?} is unassigned", ssa_id),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+/// 변수명을 SSA를 통해 레지스터에 로드 (Phase 12)
+fn load_identifier_via_ssa(
+    var_name: &str,
+    target_reg: Register,
+    context: &FunctionContext,
+    object: &mut ELFObject,
+) -> Result<(), IRError> {
+    // 변수명 -> 현재 SSA 값
+    let ssa_id = context.get_current_version(var_name).ok_or_else(|| {
+        IRError::new(
+            IRErrorKind::VariableNotFound,
+            &format!("Variable '{}' not found in SSA context", var_name),
+        )
+    })?;
+
+    // SSA 값 -> 위치로 로드
+    load_ssa_value_to_register(ssa_id, target_reg, context, object)
 }
