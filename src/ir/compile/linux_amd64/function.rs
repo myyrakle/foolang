@@ -257,12 +257,26 @@ impl FunctionContext {
             )
         })?;
 
-        self.register_allocator.allocate(
+        let location = self.register_allocator.allocate(
             value_id,
             self.current_block,
             self.current_statement_index,
             liveness,
-        )
+        )?;
+
+        // Phase 14: callee-saved 레지스터를 used_callee_saved에 추가하여 prologue/epilogue에서 보존되도록 함
+        if let SSAValueLocation::Register(reg) = location {
+            if matches!(
+                reg,
+                Register::RBX | Register::R12 | Register::R13 | Register::R14 | Register::R15
+            ) {
+                if !self.used_callee_saved.contains(&reg) {
+                    self.used_callee_saved.push(reg);
+                }
+            }
+        }
+
+        Ok(location)
     }
 
     /// SSA 값의 위치 조회 (레지스터 또는 스택)
