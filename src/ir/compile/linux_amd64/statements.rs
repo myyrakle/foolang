@@ -35,7 +35,9 @@ pub fn compile_statements(
     context: &mut FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
-    for statement in statements {
+    // Phase 13: statement 인덱스 업데이트하여 liveness 기반 레지스터 해제 활성화
+    for (stmt_idx, statement) in statements.iter().enumerate() {
+        context.current_statement_index = stmt_idx;
         compile_statement(statement, context, object)?;
     }
 

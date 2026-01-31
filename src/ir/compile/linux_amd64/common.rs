@@ -240,7 +240,7 @@ pub fn load_identifier_to_register(
 pub fn load_operand_to_register(
     operand: &Operand,
     target_reg: Register,
-    context: &FunctionContext,
+    context: &mut FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
     match operand {
@@ -251,7 +251,17 @@ pub fn load_operand_to_register(
             // Phase 12: SSA 기반 또는 변수명 기반 로딩
             if context.liveness.is_some() {
                 // SSA 기반: 변수명 -> SSA 값 -> 위치
-                load_identifier_via_ssa(&id.name, target_reg, context, object)?;
+                let ssa_id = context.get_current_version(&id.name).ok_or_else(|| {
+                    IRError::new(
+                        IRErrorKind::VariableNotFound,
+                        &format!("Variable '{}' not found in SSA context", id.name),
+                    )
+                })?;
+
+                load_ssa_value_to_register(ssa_id, target_reg, context, object)?;
+
+                // Phase 13: 마지막 사용 후 레지스터 해제
+                context.free_ssa_value_if_last_use(ssa_id);
             } else {
                 // 기존 방식: 변수명 -> 위치
                 load_identifier_to_register(&id.name, target_reg, context, object)?;
@@ -260,6 +270,9 @@ pub fn load_operand_to_register(
         Operand::SSAValue(ssa_id) => {
             // Phase 12: SSA 값 직접 로딩
             load_ssa_value_to_register(*ssa_id, target_reg, context, object)?;
+
+            // Phase 13: 마지막 사용 후 레지스터 해제
+            context.free_ssa_value_if_last_use(*ssa_id);
         }
     }
     Ok(())
@@ -319,21 +332,3 @@ fn load_ssa_value_to_register(
     Ok(())
 }
 
-/// 변수명을 SSA를 통해 레지스터에 로드 (Phase 12)
-fn load_identifier_via_ssa(
-    var_name: &str,
-    target_reg: Register,
-    context: &FunctionContext,
-    object: &mut ELFObject,
-) -> Result<(), IRError> {
-    // 변수명 -> 현재 SSA 값
-    let ssa_id = context.get_current_version(var_name).ok_or_else(|| {
-        IRError::new(
-            IRErrorKind::VariableNotFound,
-            &format!("Variable '{}' not found in SSA context", var_name),
-        )
-    })?;
-
-    // SSA 값 -> 위치로 로드
-    load_ssa_value_to_register(ssa_id, target_reg, context, object)
-}
