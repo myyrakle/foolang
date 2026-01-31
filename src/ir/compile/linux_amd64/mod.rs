@@ -2611,12 +2611,9 @@ mod ssa_integration_tests {
         PhiInserter::insert_phi_nodes(&mut blocks, &statements);
         assert_eq!(blocks[0].phi_nodes.len(), 0, "No phi nodes in linear code");
 
-        // Liveness 분석
-        let liveness = LivenessAnalysis::analyze(&blocks);
-        assert!(
-            liveness.value_liveness.len() >= 0,
-            "Liveness analysis should complete"
-        );
+        // Liveness 분석 (SSA 변환 전이므로 결과가 비어있을 수 있음)
+        let _liveness = LivenessAnalysis::analyze(&blocks);
+        // Liveness 분석이 panic 없이 완료되면 성공
     }
 
     /// 조건문(branch)에서 SSA 파이프라인이 올바르게 동작하는지 테스트
@@ -2665,12 +2662,9 @@ mod ssa_integration_tests {
         // Phi 노드 삽입
         PhiInserter::insert_phi_nodes(&mut blocks, &statements);
 
-        // Liveness 분석
-        let liveness = LivenessAnalysis::analyze(&blocks);
-        assert!(
-            liveness.value_liveness.len() >= 0,
-            "Liveness analysis should complete"
-        );
+        // Liveness 분석 (SSA 변환 전이므로 결과가 비어있을 수 있음)
+        let _liveness = LivenessAnalysis::analyze(&blocks);
+        // Liveness 분석이 panic 없이 완료되면 성공
     }
 
     /// SSA 값 생성 및 할당이 올바르게 동작하는지 테스트
