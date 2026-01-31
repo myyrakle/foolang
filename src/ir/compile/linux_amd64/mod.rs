@@ -2571,6 +2571,7 @@ mod tests {
 /// 실제 함수 컴파일 과정에서 SSA 인프라가 올바르게 동작하는지 검증
 #[cfg(test)]
 mod ssa_integration_tests {
+    use super::function;
     use crate::ir::ast::{
         common::{literal::LiteralValue, Identifier, Label, Operand},
         local::{
@@ -2583,6 +2584,7 @@ mod ssa_integration_tests {
     use crate::ir::ssa::{
         cfg_builder::CFGBuilder, liveness::LivenessAnalysis, phi_insertion::PhiInserter,
     };
+    use crate::platforms::linux::elf::object::ELFObject;
 
     /// 직선 코드에서 SSA 파이프라인이 올바르게 동작하는지 테스트
     #[test]
@@ -2668,6 +2670,76 @@ mod ssa_integration_tests {
         assert!(
             liveness.value_liveness.len() >= 0,
             "Liveness analysis should complete"
+        );
+    }
+
+    /// SSA 값 생성 및 할당이 올바르게 동작하는지 테스트
+    #[test]
+    fn test_ssa_value_creation_and_allocation() {
+        use crate::ir::ast::{
+            global::function::FunctionDefinition,
+            local::{
+                assignment::{AssignmentStatement, AssignmentStatementValue},
+                instruction::{add::AddInstruction, InstructionStatement},
+                LocalStatement, LocalStatements,
+            },
+            types::IRType,
+        };
+        use crate::platforms::linux::elf::object::ELFObject;
+
+        // 여러 변수를 사용하는 함수 생성
+        let function = FunctionDefinition {
+            function_name: "test_ssa_allocation".to_string(),
+            arguments: vec![],
+            return_type: IRType::Primitive(crate::ir::ast::types::IRPrimitiveType::Int32),
+            function_body: LocalStatements {
+                statements: vec![
+                    LocalStatement::Assignment(AssignmentStatement {
+                        name: Identifier::from("a"),
+                        value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                            AddInstruction {
+                                left: Operand::Literal(LiteralValue::Int32(1)),
+                                right: Operand::Literal(LiteralValue::Int32(2)),
+                            },
+                        )),
+                    }),
+                    LocalStatement::Assignment(AssignmentStatement {
+                        name: Identifier::from("b"),
+                        value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                            AddInstruction {
+                                left: Operand::Literal(LiteralValue::Int32(3)),
+                                right: Operand::Literal(LiteralValue::Int32(4)),
+                            },
+                        )),
+                    }),
+                    LocalStatement::Assignment(AssignmentStatement {
+                        name: Identifier::from("c"),
+                        value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                            AddInstruction {
+                                left: Operand::Identifier(Identifier::from("a")),
+                                right: Operand::Identifier(Identifier::from("b")),
+                            },
+                        )),
+                    }),
+                ],
+            },
+        };
+
+        let mut object = ELFObject::new();
+
+        // 함수 컴파일 (SSA 파이프라인 활성화됨)
+        let result = function::compile_function(&function, &mut object);
+
+        // 컴파일 성공 검증
+        assert!(
+            result.is_ok(),
+            "Function compilation with SSA should succeed"
+        );
+
+        // 생성된 코드가 있는지 확인
+        assert!(
+            !object.text_section.data.is_empty(),
+            "Compiled code should be generated"
         );
     }
 }
