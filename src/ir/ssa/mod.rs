@@ -31,7 +31,7 @@ pub struct SSAValue {
 pub struct BasicBlockId(pub usize);
 
 /// Basic Block 정의
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BasicBlock {
     /// Block ID
     pub id: BasicBlockId,

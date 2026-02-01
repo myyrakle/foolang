@@ -35,10 +35,22 @@ pub fn compile_statements(
     context: &mut FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
-    // Phase 13: statement 인덱스 업데이트하여 liveness 기반 레지스터 해제 활성화
-    for (stmt_idx, statement) in statements.iter().enumerate() {
-        context.current_statement_index = stmt_idx;
-        compile_statement(statement, context, object)?;
+    // SSA 모드: basic block 단위로 순회하며 current_block도 갱신
+    if context.liveness.is_some() && !context.basic_blocks.is_empty() {
+        for block in context.basic_blocks.clone() {
+            context.current_block = block.id;
+
+            for (stmt_idx, statement) in block.statements.iter().enumerate() {
+                context.current_statement_index = stmt_idx;
+                compile_statement(statement, context, object)?;
+            }
+        }
+    } else {
+        // 기존 모드: 단순 statement 순회
+        for (stmt_idx, statement) in statements.iter().enumerate() {
+            context.current_statement_index = stmt_idx;
+            compile_statement(statement, context, object)?;
+        }
     }
 
     Ok(())
