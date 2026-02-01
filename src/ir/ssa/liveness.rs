@@ -114,7 +114,103 @@ fn extract_used_variables(stmt: &LocalStatement) -> Vec<String> {
     vars
 }
 
-/// Instruction에서 사용되는 변수명 추출
+/// Operand에서 SSA ID 추출 (직접 사용하는 경우)
+fn extract_ssa_id_from_operand(operand: &Operand) -> Option<SSAValueId> {
+    match operand {
+        Operand::SSAValue(id) => Some(*id),
+        _ => None,
+    }
+}
+
+/// Instruction에서 사용되는 SSA ID 직접 추출
+fn extract_used_ssa_ids_from_instruction(instr: &InstructionStatement) -> Vec<SSAValueId> {
+    let mut ids = Vec::new();
+
+    match instr {
+        InstructionStatement::Add(add) => {
+            if let Some(id) = extract_ssa_id_from_operand(&add.left) {
+                ids.push(id);
+            }
+            if let Some(id) = extract_ssa_id_from_operand(&add.right) {
+                ids.push(id);
+            }
+        }
+        InstructionStatement::Sub(sub) => {
+            if let Some(id) = extract_ssa_id_from_operand(&sub.left) {
+                ids.push(id);
+            }
+            if let Some(id) = extract_ssa_id_from_operand(&sub.right) {
+                ids.push(id);
+            }
+        }
+        InstructionStatement::Mul(mul) => {
+            if let Some(id) = extract_ssa_id_from_operand(&mul.left) {
+                ids.push(id);
+            }
+            if let Some(id) = extract_ssa_id_from_operand(&mul.right) {
+                ids.push(id);
+            }
+        }
+        InstructionStatement::Div(div) => {
+            if let Some(id) = extract_ssa_id_from_operand(&div.left) {
+                ids.push(id);
+            }
+            if let Some(id) = extract_ssa_id_from_operand(&div.right) {
+                ids.push(id);
+            }
+        }
+        InstructionStatement::Rem(rem) => {
+            if let Some(id) = extract_ssa_id_from_operand(&rem.left) {
+                ids.push(id);
+            }
+            if let Some(id) = extract_ssa_id_from_operand(&rem.right) {
+                ids.push(id);
+            }
+        }
+        InstructionStatement::Compare(cmp) => {
+            if let Some(id) = extract_ssa_id_from_operand(&cmp.left) {
+                ids.push(id);
+            }
+            if let Some(id) = extract_ssa_id_from_operand(&cmp.right) {
+                ids.push(id);
+            }
+        }
+        InstructionStatement::Branch(_branch) => {
+            // Branch의 condition은 Identifier 타입 (SSAValue 아님)
+            // 변수명 기반 추적에서 처리됨
+        }
+        InstructionStatement::Return(ret) => {
+            if let Some(ref operand) = ret.return_value {
+                if let Some(id) = extract_ssa_id_from_operand(operand) {
+                    ids.push(id);
+                }
+            }
+        }
+        InstructionStatement::Call(call) => {
+            for arg in &call.parameters {
+                if let Some(id) = extract_ssa_id_from_operand(arg) {
+                    ids.push(id);
+                }
+            }
+        }
+        InstructionStatement::Store(store) => {
+            // Store의 ptr은 Identifier 타입
+            if let Some(id) = extract_ssa_id_from_operand(&store.value) {
+                ids.push(id);
+            }
+        }
+        InstructionStatement::Load(_load) => {
+            // Load의 ptr은 Identifier 타입 (SSAValue 아님)
+        }
+        InstructionStatement::Jump(_) | InstructionStatement::Alloca(_) => {
+            // Jump와 Alloca는 변수 사용 없음
+        }
+    }
+
+    ids
+}
+
+/// Instruction에서 사용되는 변수명 추출 (Identifier 기반)
 fn extract_used_variables_from_instruction(instr: &InstructionStatement) -> Vec<String> {
     let mut vars = Vec::new();
 
@@ -341,7 +437,7 @@ impl LivenessAnalysis {
 
             // Statement의 정의와 사용 추적
             for (stmt_idx, stmt) in block.statements.iter().enumerate() {
-                // 사용되는 변수들 추적
+                // 1. 사용되는 변수들 추적 (Identifier 기반)
                 for var_name in extract_used_variables(stmt) {
                     if let Some(&ssa_id) = block.defined_variables.get(&var_name) {
                         if let Some(liveness_info) = analysis.value_liveness.get_mut(&ssa_id) {
@@ -350,7 +446,24 @@ impl LivenessAnalysis {
                     }
                 }
 
-                // 정의되는 변수 추적
+                // 2. SSA ID 직접 사용 추적 (Operand::SSAValue)
+                if let LocalStatement::Assignment(assignment) = stmt {
+                    if let crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(instr) = &assignment.value {
+                        for ssa_id in extract_used_ssa_ids_from_instruction(instr) {
+                            if let Some(liveness_info) = analysis.value_liveness.get_mut(&ssa_id) {
+                                liveness_info.add_use((block_id, stmt_idx));
+                            }
+                        }
+                    }
+                } else if let LocalStatement::Instruction(instr) = stmt {
+                    for ssa_id in extract_used_ssa_ids_from_instruction(instr) {
+                        if let Some(liveness_info) = analysis.value_liveness.get_mut(&ssa_id) {
+                            liveness_info.add_use((block_id, stmt_idx));
+                        }
+                    }
+                }
+
+                // 3. 정의되는 변수 추적
                 if let Some(var_name) = extract_defined_variable(stmt) {
                     if let Some(&ssa_id) = block.defined_variables.get(&var_name) {
                         // 기존 정보가 있으면 def_point만 업데이트, 없으면 새로 생성
