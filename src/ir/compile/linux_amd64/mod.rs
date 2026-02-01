@@ -2667,9 +2667,10 @@ mod ssa_integration_tests {
         // Liveness 분석이 panic 없이 완료되면 성공
     }
 
-    /// SSA 값 생성 및 할당이 올바르게 동작하는지 테스트
+    /// 여러 변수를 사용하는 함수 컴파일 테스트
+    /// (SSA 파이프라인은 아직 비활성화 상태)
     #[test]
-    fn test_ssa_value_creation_and_allocation() {
+    fn test_multiple_variable_function_compilation() {
         use crate::ir::ast::{
             global::function::FunctionDefinition,
             local::{
@@ -2721,13 +2722,13 @@ mod ssa_integration_tests {
 
         let mut object = ELFObject::new();
 
-        // 함수 컴파일 (SSA 파이프라인 활성화됨)
+        // 함수 컴파일 (현재는 기존 변수명 기반 방식 사용)
         let result = function::compile_function(&function, &mut object);
 
         // 컴파일 성공 검증
         assert!(
             result.is_ok(),
-            "Function compilation with SSA should succeed"
+            "Function compilation should succeed"
         );
 
         // 생성된 코드가 있는지 확인
