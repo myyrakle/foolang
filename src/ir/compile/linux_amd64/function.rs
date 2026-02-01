@@ -129,7 +129,7 @@ impl FunctionContext {
             current_block: initial_block_id,
             current_statement_index: 0,
             liveness: None,
-            register_allocator: RegisterAllocator::new(),
+            register_allocator: RegisterAllocator::new(0), // 초기에는 0에서 시작
         }
     }
 
@@ -389,6 +389,11 @@ pub fn compile_function(
         let liveness = LivenessAnalysis::analyze(&blocks);
         context.liveness = Some(liveness);
         context.basic_blocks = blocks;
+
+        // 4.5. RegisterAllocator를 현재 스택 오프셋으로 재초기화
+        // FunctionContext의 stack_offset은 이미 로컬 변수 등으로 사용된 공간
+        // RegisterAllocator는 이후부터 spill 공간을 할당해야 함
+        context.register_allocator = RegisterAllocator::new(context.stack_offset);
 
         // 5. Spill 스택 공간 예약 (중요!)
         // 문제: prologue의 `sub rsp` 명령이 생성된 후, statement 컴파일 중에

@@ -83,7 +83,12 @@ impl LiveInterval {
 }
 
 impl RegisterAllocator {
-    pub fn new() -> Self {
+    /// 새 레지스터 할당자 생성
+    ///
+    /// # Arguments
+    /// * `initial_stack_offset` - 스택 오프셋의 시작 지점 (FunctionContext의 현재 stack_offset)
+    ///                            이미 사용된 스택 공간을 피하기 위해 필요
+    pub fn new(initial_stack_offset: i32) -> Self {
         Self {
             available_registers: vec![
                 Register::RBX,
@@ -94,7 +99,7 @@ impl RegisterAllocator {
             ],
             active_intervals: Vec::new(),
             allocation_map: HashMap::new(),
-            stack_offset: 0,
+            stack_offset: initial_stack_offset,
             spilled_values: Vec::new(),
         }
     }
@@ -248,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_register_allocator_creation() {
-        let allocator = RegisterAllocator::new();
+        let allocator = RegisterAllocator::new(0);
 
         assert_eq!(allocator.available_registers.len(), 5);
         assert!(allocator.active_intervals.is_empty());
@@ -258,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_allocate_register() {
-        let mut allocator = RegisterAllocator::new();
+        let mut allocator = RegisterAllocator::new(0);
         let mut liveness = LivenessAnalysis::new();
 
         let value_id = SSAValueId::new(1);
@@ -279,7 +284,7 @@ mod tests {
 
     #[test]
     fn test_allocate_multiple_values() {
-        let mut allocator = RegisterAllocator::new();
+        let mut allocator = RegisterAllocator::new(0);
         let mut liveness = LivenessAnalysis::new();
 
         let block = BasicBlockId::new(0);
@@ -302,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_spill_when_no_registers() {
-        let mut allocator = RegisterAllocator::new();
+        let mut allocator = RegisterAllocator::new(0);
         let mut liveness = LivenessAnalysis::new();
 
         let block = BasicBlockId::new(0);
@@ -333,7 +338,7 @@ mod tests {
 
     #[test]
     fn test_free_if_last_use() {
-        let mut allocator = RegisterAllocator::new();
+        let mut allocator = RegisterAllocator::new(0);
         let mut liveness = LivenessAnalysis::new();
 
         let value_id = SSAValueId::new(1);
