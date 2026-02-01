@@ -276,14 +276,11 @@ impl LivenessAnalysis {
             def_sets.insert(block.id, defs);
         }
 
-        // 2단계: Backward dataflow iteration
+        // 2단계: Backward dataflow iteration (수렴할 때까지 반복)
         let mut changed = true;
-        let max_iterations = blocks.len() * 2; // 수렴 보장
-        let mut iteration_count = 0;
 
-        while changed && iteration_count < max_iterations {
+        while changed {
             changed = false;
-            iteration_count += 1;
 
             // Reverse postorder로 순회 (간단히 역순으로 처리)
             for block in blocks.iter().rev() {
