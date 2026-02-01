@@ -242,14 +242,15 @@ impl FunctionContext {
 
     /// SSA 값에 레지스터 또는 스택 할당
     ///
-    /// Liveness 분석 결과를 기반으로 적절한 저장 위치 결정
+    /// Liveness 분석 결과를 기반으로 적절한 저장 위치 결정 (필수 요구사항)
+    /// Liveness 분석이 수행되지 않았으면 오류 반환
     pub fn allocate_ssa_value(&mut self, value_id: SSAValueId) -> Result<SSAValueLocation, IRError> {
         // 이미 할당되어 있으면 기존 위치 반환
         if let Some(existing) = self.register_allocator.get_location(value_id) {
             return Ok(existing.clone());
         }
 
-        // Liveness 분석이 있으면 사용, 없으면 단순 할당
+        // Liveness 분석이 반드시 필요하며, 없으면 오류 반환
         let liveness = self.liveness.as_ref().ok_or_else(|| {
             IRError::new(
                 IRErrorKind::NotImplemented,
