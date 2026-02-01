@@ -1,6 +1,6 @@
 use super::{liveness::LivenessAnalysis, BasicBlockId, SSAValueId};
 use crate::{ir::error::IRError, platforms::amd64::register::Register};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// SSA 값의 저장 위치
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,6 +48,10 @@ pub struct RegisterAllocator {
 
     /// spill된 값들의 목록 (복원용)
     pub spilled_values: Vec<SSAValueId>,
+
+    /// 한 번이라도 사용된 callee-saved 레지스터들
+    /// prologue/epilogue에서 저장/복원해야 하는 레지스터 추적
+    pub ever_used_callee_saved: HashSet<Register>,
 }
 
 impl LiveInterval {
@@ -101,6 +105,7 @@ impl RegisterAllocator {
             allocation_map: HashMap::new(),
             stack_offset: initial_stack_offset,
             spilled_values: Vec::new(),
+            ever_used_callee_saved: HashSet::new(),
         }
     }
 
@@ -156,6 +161,9 @@ impl RegisterAllocator {
         if let Some(reg) = self.available_registers.pop() {
             let location = ValueLocation::Register(reg);
             self.allocation_map.insert(value_id, location.clone());
+
+            // 한 번이라도 사용된 레지스터로 기록 (prologue/epilogue용)
+            self.ever_used_callee_saved.insert(reg);
 
             // Live interval 생성 및 추가
             if let Some(liveness_info) = liveness.value_liveness.get(&value_id) {
@@ -220,19 +228,11 @@ impl RegisterAllocator {
     }
 
     /// 사용된 callee-saved 레지스터 목록 반환
+    ///
+    /// 한 번이라도 할당된 적이 있는 레지스터를 반환합니다.
+    /// prologue/epilogue에서 저장/복원할 레지스터를 결정하는 데 사용됩니다.
     pub fn used_callee_saved_registers(&self) -> Vec<Register> {
-        let all_callee_saved = vec![
-            Register::RBX,
-            Register::R12,
-            Register::R13,
-            Register::R14,
-            Register::R15,
-        ];
-
-        all_callee_saved
-            .into_iter()
-            .filter(|reg| !self.available_registers.contains(reg))
-            .collect()
+        self.ever_used_callee_saved.iter().copied().collect()
     }
 
     /// spill된 값들이 사용하는 총 스택 크기 반환
