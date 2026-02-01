@@ -136,11 +136,10 @@ fn compile_assignment_statement(
 
     let var_loc = if context.liveness.is_some() {
         // SSA 기반 할당
-        use crate::ir::ast::types::IRType;
         use crate::ir::ssa::register_allocator::ValueLocation as SSAValueLocation;
 
-        // 1. 새 SSA 값 생성
-        let ssa_id = context.new_ssa_value(Some(var_name.clone()), IRType::None);
+        // 1. 새 SSA 값 생성 (실제 타입 정보 사용)
+        let ssa_id = context.new_ssa_value(Some(var_name.clone()), assignment_statement.name.type_.clone());
 
         // 2. SSA 값에 레지스터/스택 할당 (liveness 기반)
         let ssa_loc = context.allocate_ssa_value(ssa_id)?;
