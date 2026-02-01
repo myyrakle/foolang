@@ -366,7 +366,12 @@ pub fn compile_function(
     let _ssa_pipeline_enabled = true;
 
     if _ssa_pipeline_enabled {
-        use crate::ir::ssa::{cfg_builder::CFGBuilder, phi_insertion::PhiInserter, liveness::LivenessAnalysis};
+        use crate::ir::ssa::{
+            cfg_builder::CFGBuilder,
+            phi_insertion::PhiInserter,
+            liveness::LivenessAnalysis,
+            renaming::SSARenamer,
+        };
 
         // 1. CFG 구축
         let mut blocks = CFGBuilder::build(&function.function_body.statements);
@@ -374,12 +379,17 @@ pub fn compile_function(
         // 2. Phi 노드 삽입
         PhiInserter::insert_phi_nodes(&mut blocks, &function.function_body.statements);
 
-        // 3. Liveness 분석
+        // 3. SSA Renaming
+        // 변수명을 고유한 SSA 값으로 변환
+        // 현재는 기본 구현만 (블록 간 참조 미지원)
+        SSARenamer::rename(&mut blocks);
+
+        // 4. Liveness 분석
         let liveness = LivenessAnalysis::analyze(&blocks);
         context.liveness = Some(liveness);
         context.basic_blocks = blocks;
 
-        // 4. Spill 스택 공간 예약 (중요!)
+        // 5. Spill 스택 공간 예약 (중요!)
         // 문제: prologue의 `sub rsp` 명령이 생성된 후, statement 컴파일 중에
         //       RegisterAllocator.allocate()가 spill을 수행하면서 추가 스택 공간 사용
         // 결과: prologue에서 예약한 스택보다 더 많은 공간을 사용하여 스택 손상 발생

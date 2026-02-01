@@ -5,6 +5,7 @@ pub mod cfg_builder;
 pub mod liveness;
 pub mod phi_insertion;
 pub mod register_allocator;
+pub mod renaming;
 
 /// SSA 값의 고유 식별자
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
