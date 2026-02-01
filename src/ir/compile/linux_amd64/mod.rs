@@ -2726,10 +2726,7 @@ mod ssa_integration_tests {
         let result = function::compile_function(&function, &mut object);
 
         // 컴파일 성공 검증
-        assert!(
-            result.is_ok(),
-            "Function compilation should succeed"
-        );
+        assert!(result.is_ok(), "Function compilation should succeed");
 
         // 생성된 코드가 있는지 확인
         assert!(
