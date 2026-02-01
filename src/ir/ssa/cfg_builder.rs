@@ -114,10 +114,13 @@ impl CFGBuilder {
                 .extend(statements[start..end].iter().cloned());
 
             // Phi 노드 삽입을 위해 이 블록의 변수 정의를 수집
+            // TODO: 현재는 임시 SSAValueId(0)를 사용하며, SSA renaming 단계 미구현
+            // 문제: liveness 분석 시 이전 블록 변수 참조 불가
+            // 해결책: SSA renaming 구현 (변수 버전 관리, 전역 SSA 값 매핑)
             for stmt in &statements[start..end] {
                 if let LocalStatement::Assignment(assignment) = stmt {
                     let var_name = assignment.name.name.clone();
-                    // 임시로 SSAValueId를 생성 (나중에 renaming 단계에서 재할당)
+                    // 임시로 SSAValueId를 생성 (TODO: renaming 단계에서 재할당 필요)
                     let ssa_id = crate::ir::ssa::SSAValueId::new(0);
                     block.defined_variables.insert(var_name, ssa_id);
                 }

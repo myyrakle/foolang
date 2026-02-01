@@ -249,6 +249,9 @@ impl LivenessAnalysis {
             }
 
             // Statement 처리: 변수명 -> SSA 값 매핑 사용
+            // TODO: 현재 block.defined_variables는 현재 블록에서만 정의된 변수를 추적
+            // 이전 블록에서 정의된 변수를 참조하면 조회 실패
+            // 해결책: SSA renaming 단계 구현 또는 함수 레벨 variable_versions 참조
             for stmt in &block.statements {
                 // 사용되는 변수들을 SSA 값으로 변환
                 for var_name in extract_used_variables(stmt) {
@@ -257,6 +260,8 @@ impl LivenessAnalysis {
                             uses.insert(ssa_id);
                         }
                     }
+                    // TODO: block.defined_variables에서 찾지 못한 변수는
+                    // predecessor 블록이나 함수 레벨 매핑에서 조회 필요
                 }
 
                 // 정의되는 변수를 SSA 값으로 변환
