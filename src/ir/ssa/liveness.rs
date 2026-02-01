@@ -329,9 +329,11 @@ impl LivenessAnalysis {
                 // Phi 노드의 입력은 predecessor 블록에서 사용됨
                 // 여기서는 단순화하여 현재 블록에서 사용된 것으로 표시
                 for (pred_block_id, input_value) in &phi.inputs {
-                    if let Some(existing_info) = analysis.value_liveness.get_mut(input_value) {
-                        existing_info.add_use((*pred_block_id, 0));
-                    }
+                    let info = analysis
+                        .value_liveness
+                        .entry(*input_value)
+                        .or_insert_with(|| LivenessInfo::new((*pred_block_id, 0)));
+                    info.add_use((*pred_block_id, 0));
                 }
 
                 analysis.value_liveness.insert(phi.result, liveness_info);
