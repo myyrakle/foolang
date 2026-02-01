@@ -12,6 +12,9 @@ pub struct CFGBuilder {
 
     /// 다음 basic block ID
     next_block_id: usize,
+
+    /// 다음 SSA 값 ID (임시: renaming 전에 고유 ID 부여용)
+    next_ssa_id: usize,
 }
 
 impl CFGBuilder {
@@ -20,6 +23,7 @@ impl CFGBuilder {
             blocks: Vec::new(),
             label_to_block: HashMap::new(),
             next_block_id: 0,
+            next_ssa_id: 0,
         }
     }
 
@@ -114,14 +118,17 @@ impl CFGBuilder {
                 .extend(statements[start..end].iter().cloned());
 
             // Phi 노드 삽입을 위해 이 블록의 변수 정의를 수집
-            // TODO: 현재는 임시 SSAValueId(0)를 사용하며, SSA renaming 단계 미구현
+            // TODO: SSA renaming 단계 미구현 (블록 간 변수 버전 관리 필요)
             // 문제: liveness 분석 시 이전 블록 변수 참조 불가
             // 해결책: SSA renaming 구현 (변수 버전 관리, 전역 SSA 값 매핑)
+            //
+            // 현재: 각 assignment에 고유 SSA ID 부여 (블록 내에서만 유효)
             for stmt in &statements[start..end] {
                 if let LocalStatement::Assignment(assignment) = stmt {
                     let var_name = assignment.name.name.clone();
-                    // 임시로 SSAValueId를 생성 (TODO: renaming 단계에서 재할당 필요)
-                    let ssa_id = crate::ir::ssa::SSAValueId::new(0);
+                    // 고유한 SSAValueId 생성
+                    let ssa_id = crate::ir::ssa::SSAValueId::new(self.next_ssa_id);
+                    self.next_ssa_id += 1;
                     block.defined_variables.insert(var_name, ssa_id);
                 }
             }
