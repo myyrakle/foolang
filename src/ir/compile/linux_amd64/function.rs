@@ -362,18 +362,25 @@ pub fn compile_function(
     prescan_statements(&function.function_body.statements, &mut context);
 
     // Phase 9: SSA 파이프라인 구축
-    use crate::ir::ssa::{cfg_builder::CFGBuilder, phi_insertion::PhiInserter, liveness::LivenessAnalysis};
+    // TODO Phase 15: 현재 함수 호출 매개변수 로딩 중 레지스터 해제 문제로 인해 일시 비활성화
+    // 문제: free_ssa_value_if_last_use가 매개변수 로딩 중 호출되어 다른 변수 레지스터 해제
+    // 해결책: 함수 호출 컨텍스트에서 레지스터 해제 지연 또는 liveness 분석 개선 필요
+    let _ssa_pipeline_enabled = false;
 
-    // 1. CFG 구축
-    let mut blocks = CFGBuilder::build(&function.function_body.statements);
+    if _ssa_pipeline_enabled {
+        use crate::ir::ssa::{cfg_builder::CFGBuilder, phi_insertion::PhiInserter, liveness::LivenessAnalysis};
 
-    // 2. Phi 노드 삽입
-    PhiInserter::insert_phi_nodes(&mut blocks, &function.function_body.statements);
+        // 1. CFG 구축
+        let mut blocks = CFGBuilder::build(&function.function_body.statements);
 
-    // 3. Liveness 분석
-    let liveness = LivenessAnalysis::analyze(&blocks);
-    context.liveness = Some(liveness);
-    context.basic_blocks = blocks;
+        // 2. Phi 노드 삽입
+        PhiInserter::insert_phi_nodes(&mut blocks, &function.function_body.statements);
+
+        // 3. Liveness 분석
+        let liveness = LivenessAnalysis::analyze(&blocks);
+        context.liveness = Some(liveness);
+        context.basic_blocks = blocks;
+    }
 
     // Function prologue 생성
     // push rbp (스택 프레임 저장)

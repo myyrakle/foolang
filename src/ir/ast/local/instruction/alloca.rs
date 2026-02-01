@@ -5,17 +5,17 @@ use crate::ir::ast::{
 
 /// Stack Allocation Instruction (memory allocation on the stack)
 /// return pointer to the allocated memory
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AllocaInstruction {
     pub type_: IRPrimitiveType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LoadInstruction {
     pub ptr: Identifier,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StoreInstruction {
     pub ptr: Identifier,
     pub value: Operand,

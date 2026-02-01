@@ -2,7 +2,7 @@ use crate::ir::ast::types::IRType;
 
 pub mod literal;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Identifier {
     pub type_: IRType,
     pub name: String,
@@ -34,7 +34,7 @@ impl From<&str> for Identifier {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Operand {
     Identifier(Identifier),
     Literal(literal::LiteralValue),
@@ -42,7 +42,7 @@ pub enum Operand {
     SSAValue(crate::ir::ssa::SSAValueId),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Label {
     pub name: String,
 }

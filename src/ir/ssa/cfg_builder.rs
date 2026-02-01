@@ -108,6 +108,11 @@ impl CFGBuilder {
             let block_id = BasicBlockId::new(block_idx);
             let mut block = BasicBlock::new(block_id);
 
+            // 블록의 statement 저장 (Phase 15: SSA/liveness 분석을 위해 필수)
+            block
+                .statements
+                .extend(statements[start..end].iter().cloned());
+
             // Phi 노드 삽입을 위해 이 블록의 변수 정의를 수집
             for stmt in &statements[start..end] {
                 if let LocalStatement::Assignment(assignment) = stmt {

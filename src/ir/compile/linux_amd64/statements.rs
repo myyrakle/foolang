@@ -191,6 +191,11 @@ fn compile_assignment_statement(
         }
     }
 
+    // Phase 15: SSA 모드에서도 variables HashMap 업데이트 (legacy 변수 조회 지원)
+    if context.liveness.is_some() {
+        context.variables.insert(var_name, var_loc);
+    }
+
     Ok(())
 }
 
