@@ -362,10 +362,8 @@ pub fn compile_function(
     prescan_statements(&function.function_body.statements, &mut context);
 
     // Phase 9: SSA 파이프라인 구축
-    // TODO Phase 15: 현재 함수 호출 매개변수 로딩 중 레지스터 해제 문제로 인해 일시 비활성화
-    // 문제: free_ssa_value_if_last_use가 매개변수 로딩 중 호출되어 다른 변수 레지스터 해제
-    // 해결책: 함수 호출 컨텍스트에서 레지스터 해제 지연 또는 liveness 분석 개선 필요
-    let _ssa_pipeline_enabled = false;
+    // 활성화하여 실제 문제들을 확인하고 해결
+    let _ssa_pipeline_enabled = true;
 
     if _ssa_pipeline_enabled {
         use crate::ir::ssa::{cfg_builder::CFGBuilder, phi_insertion::PhiInserter, liveness::LivenessAnalysis};
