@@ -32,6 +32,10 @@ pub struct LivenessAnalysis {
 
     /// 각 basic block 종료 시점에서 live한 값들
     pub live_out: HashMap<BasicBlockId, HashSet<SSAValueId>>,
+
+    /// Basic block의 선형화된 순서 (CFG 순서를 반영)
+    /// BasicBlockId -> 순서 인덱스 (0, 1, 2, ...)
+    pub block_order: HashMap<BasicBlockId, usize>,
 }
 
 impl LivenessInfo {
@@ -312,6 +316,7 @@ impl LivenessAnalysis {
             value_liveness: HashMap::new(),
             live_in: HashMap::new(),
             live_out: HashMap::new(),
+            block_order: HashMap::new(),
         }
     }
 
@@ -326,6 +331,13 @@ impl LivenessAnalysis {
 
         if blocks.is_empty() {
             return analysis;
+        }
+
+        // 0단계: 블록 순서 맵 구축 (CFG 순서 반영)
+        // 단순 구현: 블록 ID 순서를 그대로 사용
+        // TODO: 실제 CFG에서는 RPO(Reverse Post-Order) 등을 사용해야 함
+        for (idx, block) in blocks.iter().enumerate() {
+            analysis.block_order.insert(block.id, idx);
         }
 
         // 1단계: 각 블록의 use/def 정보 수집
@@ -499,6 +511,22 @@ impl LivenessAnalysis {
             }
         }
         false
+    }
+
+    /// CFG 순서를 고려하여 두 지점을 비교
+    /// Returns: -1 if point1 < point2, 0 if equal, 1 if point1 > point2
+    pub fn compare_points(
+        &self,
+        point1: (BasicBlockId, usize),
+        point2: (BasicBlockId, usize),
+    ) -> std::cmp::Ordering {
+        let block1_order = self.block_order.get(&point1.0).copied().unwrap_or(point1.0.as_usize());
+        let block2_order = self.block_order.get(&point2.0).copied().unwrap_or(point2.0.as_usize());
+
+        match block1_order.cmp(&block2_order) {
+            std::cmp::Ordering::Equal => point1.1.cmp(&point2.1),
+            other => other,
+        }
     }
 
     /// 특정 SSA 값이 주어진 지점에서 live한지 확인

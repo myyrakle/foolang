@@ -65,16 +65,18 @@ impl LiveInterval {
     }
 
     /// 이 interval이 주어진 지점에서 active한지 확인
-    pub fn is_active_at(&self, block: BasicBlockId, statement_index: usize) -> bool {
+    /// CFG 순서를 고려한 비교를 위해 LivenessAnalysis를 사용
+    pub fn is_active_at(
+        &self,
+        block: BasicBlockId,
+        statement_index: usize,
+        liveness: &LivenessAnalysis,
+    ) -> bool {
         let point = (block, statement_index);
 
-        // 간단한 비교 (블록 순서 기반)
-        // 실제로는 더 정교한 CFG 순서 비교가 필요할 수 있음
-        let after_start = point.0.as_usize() > self.start.0.as_usize()
-            || (point.0 == self.start.0 && point.1 >= self.start.1);
-
-        let before_end = point.0.as_usize() < self.end.0.as_usize()
-            || (point.0 == self.end.0 && point.1 <= self.end.1);
+        // CFG 순서를 고려한 비교
+        let after_start = liveness.compare_points(point, self.start) >= std::cmp::Ordering::Equal;
+        let before_end = liveness.compare_points(point, self.end) <= std::cmp::Ordering::Equal;
 
         after_start && before_end
     }
@@ -101,12 +103,17 @@ impl RegisterAllocator {
     ///
     /// 주어진 시점에서 더 이상 활성화되지 않은 interval들을 제거하고
     /// 그들의 레지스터를 available_registers에 반환
-    pub fn expire_old_intervals(&mut self, block: BasicBlockId, statement_index: usize) {
+    pub fn expire_old_intervals(
+        &mut self,
+        block: BasicBlockId,
+        statement_index: usize,
+        liveness: &LivenessAnalysis,
+    ) {
         // 종료된 interval들 찾기
         let mut expired = Vec::new();
 
         for (idx, interval) in self.active_intervals.iter().enumerate() {
-            if !interval.is_active_at(block, statement_index) {
+            if !interval.is_active_at(block, statement_index, liveness) {
                 expired.push(idx);
             }
         }
@@ -138,7 +145,7 @@ impl RegisterAllocator {
         }
 
         // 만료된 interval 회수
-        self.expire_old_intervals(block, statement_index);
+        self.expire_old_intervals(block, statement_index, liveness);
 
         // 사용 가능한 레지스터가 있으면 할당
         if let Some(reg) = self.available_registers.pop() {
@@ -350,16 +357,23 @@ mod tests {
 
     #[test]
     fn test_live_interval_is_active() {
+        use crate::ir::ssa::liveness::LivenessAnalysis;
+        use crate::ir::ssa::BasicBlock;
+
+        // 간단한 liveness 분석 객체 생성
+        let blocks = vec![BasicBlock::new(BasicBlockId::new(0))];
+        let liveness = LivenessAnalysis::analyze(&blocks);
+
         let interval = LiveInterval::new(
             SSAValueId::new(1),
             (BasicBlockId::new(0), 5),
             (BasicBlockId::new(0), 10),
         );
 
-        assert!(!interval.is_active_at(BasicBlockId::new(0), 4)); // 시작 전
-        assert!(interval.is_active_at(BasicBlockId::new(0), 5)); // 시작 지점
-        assert!(interval.is_active_at(BasicBlockId::new(0), 7)); // 중간
-        assert!(interval.is_active_at(BasicBlockId::new(0), 10)); // 종료 지점
-        assert!(!interval.is_active_at(BasicBlockId::new(0), 11)); // 종료 후
+        assert!(!interval.is_active_at(BasicBlockId::new(0), 4, &liveness)); // 시작 전
+        assert!(interval.is_active_at(BasicBlockId::new(0), 5, &liveness)); // 시작 지점
+        assert!(interval.is_active_at(BasicBlockId::new(0), 7, &liveness)); // 중간
+        assert!(interval.is_active_at(BasicBlockId::new(0), 10, &liveness)); // 종료 지점
+        assert!(!interval.is_active_at(BasicBlockId::new(0), 11, &liveness)); // 종료 후
     }
 }
