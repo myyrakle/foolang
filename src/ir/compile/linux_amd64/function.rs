@@ -380,6 +380,22 @@ pub fn compile_function(
         let liveness = LivenessAnalysis::analyze(&blocks);
         context.liveness = Some(liveness);
         context.basic_blocks = blocks;
+
+        // 4. Spill 스택 공간 예약 (중요!)
+        // 문제: prologue의 `sub rsp` 명령이 생성된 후, statement 컴파일 중에
+        //       RegisterAllocator.allocate()가 spill을 수행하면서 추가 스택 공간 사용
+        // 결과: prologue에서 예약한 스택보다 더 많은 공간을 사용하여 스택 손상 발생
+        //
+        // 해결 방안:
+        // 1) [이상적] 레지스터 할당을 prescan으로 수행하여 정확한 spill 크기 계산
+        //    → register_allocator.get_spill_stack_size()를 prologue 전에 반영
+        // 2) [현재] 보수적 추정으로 최대 spill 크기 미리 예약
+        // 3) [대안] Prologue를 나중에 패치하거나 statement 컴파일 후 검증
+        //
+        // TODO: 방안 1로 개선 필요 (현재는 방안 2 적용 중)
+        let max_spill_slots = 32; // 보수적: 최대 32개 값 spill 가능 (5개 레지스터로는 부족할 경우)
+        let spill_size = max_spill_slots * 8; // 8바이트/슬롯
+        context.pending_alloca_size += spill_size;
     }
 
     // Function prologue 생성

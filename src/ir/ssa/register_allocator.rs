@@ -222,6 +222,16 @@ impl RegisterAllocator {
             .filter(|reg| !self.available_registers.contains(reg))
             .collect()
     }
+
+    /// spill된 값들이 사용하는 총 스택 크기 반환
+    /// stack_offset이 음수이므로 절댓값을 반환
+    pub fn get_spill_stack_size(&self) -> i32 {
+        if self.stack_offset >= 0 {
+            0
+        } else {
+            -self.stack_offset
+        }
+    }
 }
 
 #[cfg(test)]
