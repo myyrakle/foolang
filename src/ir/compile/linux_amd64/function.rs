@@ -365,6 +365,7 @@ pub fn compile_function(
     // Phase 9: SSA 파이프라인 구축
     // 활성화하여 실제 문제들을 확인하고 해결
     let _ssa_pipeline_enabled = true;
+    let mut reserved_spill_size = 0i32; // spill 크기 검증용
 
     if _ssa_pipeline_enabled {
         use crate::ir::ssa::{
@@ -396,20 +397,35 @@ pub fn compile_function(
         context.register_allocator = RegisterAllocator::new(context.stack_offset);
 
         // 5. Spill 스택 공간 예약 (중요!)
-        // 문제: prologue의 `sub rsp` 명령이 생성된 후, statement 컴파일 중에
-        //       RegisterAllocator.allocate()가 spill을 수행하면서 추가 스택 공간 사용
-        // 결과: prologue에서 예약한 스택보다 더 많은 공간을 사용하여 스택 손상 발생
+        // Liveness 분석 결과를 기반으로 필요한 spill 크기 추정
         //
-        // 해결 방안:
-        // 1) [이상적] 레지스터 할당을 prescan으로 수행하여 정확한 spill 크기 계산
-        //    → register_allocator.get_spill_stack_size()를 prologue 전에 반영
-        // 2) [현재] 보수적 추정으로 최대 spill 크기 미리 예약
-        // 3) [대안] Prologue를 나중에 패치하거나 statement 컴파일 후 검증
+        // 배경:
+        // - prologue의 `sub rsp` 명령이 생성된 후, statement 컴파일 중에
+        //   RegisterAllocator.allocate()가 spill을 수행하면서 추가 스택 공간 사용
+        // - prologue에서 예약한 스택보다 더 많은 공간을 사용하면 스택 손상 발생
         //
-        // TODO: 방안 1로 개선 필요 (현재는 방안 2 적용 중)
-        let max_spill_slots = 32; // 보수적: 최대 32개 값 spill 가능 (5개 레지스터로는 부족할 경우)
-        let spill_size = max_spill_slots * 8; // 8바이트/슬롯
-        context.pending_alloca_size += spill_size;
+        // 현재 접근:
+        // - Liveness 분석의 SSA 값 개수 기반으로 추정
+        // - 사용 가능한 레지스터: 5개 (RBX, R12-R15)
+        // - 최대 spill 가능 개수: max(0, total_ssa_values - available_registers)
+        // - 안전 여유분: 1.5배 (동시 live 값이 더 많을 수 있음)
+        let total_ssa_values = context.liveness.as_ref()
+            .map(|l| l.value_liveness.len())
+            .unwrap_or(0);
+        let available_registers = 5; // RBX, R12-R15
+        let estimated_spills = if total_ssa_values > available_registers {
+            ((total_ssa_values - available_registers) as f32 * 1.5) as usize
+        } else {
+            0
+        };
+
+        // 최소 8개는 예약 (작은 함수에서도 안전성 확보)
+        let max_spill_slots = estimated_spills.max(8);
+        reserved_spill_size = (max_spill_slots * 8) as i32; // 8바이트/슬롯
+        context.pending_alloca_size += reserved_spill_size;
+
+        // TODO: 더 정확한 방법은 prescan으로 실제 레지스터 할당을 수행하여
+        //       register_allocator.get_spill_stack_size()를 사용하는 것
     }
 
     // Function prologue 생성
@@ -465,6 +481,22 @@ pub fn compile_function(
 
     // 2단계: LocalStatements 컴파일 (변수 할당은 이미 결정됨)
     statements::compile_statements(&function.function_body.statements, &mut context, object)?;
+
+    // 2.5단계: Spill 크기 검증 (SSA 모드인 경우)
+    if _ssa_pipeline_enabled {
+        let actual_spill_size = context.register_allocator.get_spill_stack_size();
+
+        if actual_spill_size > reserved_spill_size {
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                &format!(
+                    "Spill stack overflow: reserved {} bytes but used {} bytes. \
+                     Increase max_spill_slots estimation.",
+                    reserved_spill_size, actual_spill_size
+                ),
+            ));
+        }
+    }
 
     // 3단계: 미정의 라벨 검증
     for (label_name, location) in &context.labels {
