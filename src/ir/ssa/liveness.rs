@@ -663,8 +663,9 @@ mod tests {
         let blocks = vec![block0, block1, block2];
         let analysis = LivenessAnalysis::analyze(&blocks);
 
-        // Phi 입력 값들이 predecessor 블록의 live_out에 있어야 함
+        // Phi 입력 값들이 모두 블록의 live_in에 있어야 함
         let block2_live_in = analysis.live_in.get(&BasicBlockId::new(2)).unwrap();
-        assert!(block2_live_in.contains(&value1) || block2_live_in.contains(&value2));
+        assert!(block2_live_in.contains(&value1), "value1 should be live-in at block2");
+        assert!(block2_live_in.contains(&value2), "value2 should be live-in at block2");
     }
 }
