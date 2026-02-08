@@ -63,27 +63,26 @@ impl SSARenamer {
         }
 
         // 2. 현재 블록의 statement 처리
-        let statements_clone = blocks[block_idx].statements.clone();
-        for stmt in &statements_clone {
-            match stmt {
-                LocalStatement::Assignment(assignment) => {
-                    let var_name = assignment.name.name.clone();
+        let num_statements = blocks[block_idx].statements.len();
+        for stmt_idx in 0..num_statements {
+            if let LocalStatement::Assignment(ref mut assignment) =
+                blocks[block_idx].statements[stmt_idx]
+            {
+                let var_name = assignment.name.name.clone();
 
-                    // 우측(값)의 변수 참조 rename
-                    // TODO: assignment.value 내부의 Identifier를 SSAValueId로 변환
+                // 우측(값)의 변수 참조 rename
+                // RHS의 Identifier를 현재 버전의 SSAValue로 변환
+                self.rename_operands_in_assignment(&mut assignment.value);
 
-                    // 좌측(정의): 새 버전 생성
-                    let new_ssa_id = self.new_version(&var_name);
+                // 좌측(정의): 새 버전 생성
+                let new_ssa_id = self.new_version(&var_name);
 
-                    // defined_variables 업데이트
-                    blocks[block_idx]
-                        .defined_variables
-                        .insert(var_name, new_ssa_id);
-                }
-                _ => {
-                    // Label, Instruction은 변수 정의 없음
-                }
+                // defined_variables 업데이트
+                blocks[block_idx]
+                    .defined_variables
+                    .insert(var_name, new_ssa_id);
             }
+            // Label, Instruction은 변수 정의 없음
         }
 
         // 3. Successor 블록의 Phi 노드 operand 업데이트
@@ -115,14 +114,17 @@ impl SSARenamer {
         }
 
         // 5. 블록을 나갈 때 스택 복원 (push했던 버전들 pop)
+        // Phi 노드로 생성한 버전들 pop
         for (_old_id, var_name) in phi_results {
             if let Some(stack) = self.version_stacks.get_mut(&var_name) {
                 stack.pop();
             }
         }
 
-        for stmt in &statements_clone {
-            if let LocalStatement::Assignment(assignment) = stmt {
+        // Statement로 생성한 버전들 pop
+        for stmt_idx in 0..num_statements {
+            if let LocalStatement::Assignment(assignment) = &blocks[block_idx].statements[stmt_idx]
+            {
                 let var_name = &assignment.name.name;
                 if let Some(stack) = self.version_stacks.get_mut(var_name) {
                     stack.pop();
@@ -155,6 +157,95 @@ impl SSARenamer {
         self.version_stacks
             .get(var_name)
             .and_then(|stack| stack.last().copied())
+    }
+
+    /// AssignmentStatementValue 내부의 Operand들을 rename
+    fn rename_operands_in_assignment(
+        &self,
+        value: &mut crate::ir::ast::local::assignment::AssignmentStatementValue,
+    ) {
+        use crate::ir::ast::local::assignment::AssignmentStatementValue;
+
+        match value {
+            AssignmentStatementValue::Literal(_) => {
+                // Literal은 renaming 불필요
+            }
+            AssignmentStatementValue::Instruction(instr) => {
+                self.rename_operands_in_instruction(instr);
+            }
+        }
+    }
+
+    /// InstructionStatement 내부의 Operand들을 rename
+    fn rename_operands_in_instruction(
+        &self,
+        instr: &mut crate::ir::ast::local::instruction::InstructionStatement,
+    ) {
+        use crate::ir::ast::common::Operand;
+        use crate::ir::ast::local::instruction::InstructionStatement;
+
+        // 각 Operand를 rename하는 헬퍼 클로저
+        let rename_operand = |operand: &mut Operand, renamer: &SSARenamer| {
+            if let Operand::Identifier(ref ident) = operand {
+                if let Some(ssa_id) = renamer.current_version(&ident.name) {
+                    // Identifier를 SSAValue로 변환
+                    *operand = Operand::SSAValue(ssa_id);
+                }
+            }
+        };
+
+        match instr {
+            InstructionStatement::Add(add) => {
+                rename_operand(&mut add.left, self);
+                rename_operand(&mut add.right, self);
+            }
+            InstructionStatement::Sub(sub) => {
+                rename_operand(&mut sub.left, self);
+                rename_operand(&mut sub.right, self);
+            }
+            InstructionStatement::Mul(mul) => {
+                rename_operand(&mut mul.left, self);
+                rename_operand(&mut mul.right, self);
+            }
+            InstructionStatement::Div(div) => {
+                rename_operand(&mut div.left, self);
+                rename_operand(&mut div.right, self);
+            }
+            InstructionStatement::Rem(rem) => {
+                rename_operand(&mut rem.left, self);
+                rename_operand(&mut rem.right, self);
+            }
+            InstructionStatement::Compare(cmp) => {
+                rename_operand(&mut cmp.left, self);
+                rename_operand(&mut cmp.right, self);
+            }
+            InstructionStatement::Return(ret) => {
+                if let Some(ref mut operand) = ret.return_value {
+                    rename_operand(operand, self);
+                }
+            }
+            InstructionStatement::Call(call) => {
+                for arg in &mut call.parameters {
+                    rename_operand(arg, self);
+                }
+            }
+            InstructionStatement::Load(_) => {
+                // Load는 Operand를 포함하지 않음
+            }
+            InstructionStatement::Store(store) => {
+                rename_operand(&mut store.value, self);
+            }
+            InstructionStatement::Jump(_) => {
+                // Jump는 Operand를 포함하지 않음
+            }
+            InstructionStatement::Branch(_branch) => {
+                // Branch는 Identifier를 직접 사용하므로, 현재 구조에서는 renaming 어려움
+                // TODO: Branch가 Operand를 사용하도록 AST 구조 변경 필요
+            }
+            InstructionStatement::Alloca(_) => {
+                // Alloca는 Operand를 포함하지 않음
+            }
+        }
     }
 }
 
