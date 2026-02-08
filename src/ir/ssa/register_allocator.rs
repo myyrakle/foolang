@@ -164,21 +164,33 @@ impl RegisterAllocator {
 
         // 사용 가능한 레지스터가 있으면 할당
         if let Some(reg) = self.available_registers.pop() {
+            // Liveness 정보 확인 (필수)
+            let liveness_info = liveness.value_liveness.get(&value_id).ok_or_else(|| {
+                // 레지스터 반환 (누수 방지)
+                self.available_registers.push(reg);
+                IRError::new(
+                    crate::ir::error::IRErrorKind::NotImplemented,
+                    &format!(
+                        "SSA value {:?} has no liveness information. \
+                         Cannot allocate register without liveness data.",
+                        value_id
+                    ),
+                )
+            })?;
+
             let location = ValueLocation::Register(reg);
             self.allocation_map.insert(value_id, location.clone());
 
             // 한 번이라도 사용된 레지스터로 기록 (prologue/epilogue용)
             self.ever_used_callee_saved.insert(reg);
 
-            // Live interval 생성 및 추가
-            if let Some(liveness_info) = liveness.value_liveness.get(&value_id) {
-                let start = liveness_info.def_point;
-                let end = liveness_info.last_use.unwrap_or(start);
+            // Live interval 생성 및 추가 (회수 가능하도록)
+            let start = liveness_info.def_point;
+            let end = liveness_info.last_use.unwrap_or(start);
 
-                let mut interval = LiveInterval::new(value_id, start, end);
-                interval.assigned_register = Some(reg);
-                self.active_intervals.push(interval);
-            }
+            let mut interval = LiveInterval::new(value_id, start, end);
+            interval.assigned_register = Some(reg);
+            self.active_intervals.push(interval);
 
             return Ok(location);
         }
