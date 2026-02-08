@@ -75,7 +75,7 @@ mod tests {
     use crate::{
         ir::{
             ast::{
-                common::literal::LiteralValue,
+                common::{literal::LiteralValue, Identifier, Operand},
                 global::{
                     constant::ConstantDefinition, function::FunctionDefinition, GlobalStatement,
                 },
@@ -374,7 +374,7 @@ mod tests {
                             function_body: LocalStatements {
                                 statements: vec![
                                     LocalStatement::Instruction(BranchInstruction{
-                                        condition: "FLAG".into(),
+                                        condition: Operand::Identifier(Identifier::from("FLAG")),
                                         true_label: "true_point".into(),
                                         false_label: "false_point".into(),
                                     }.into()),
@@ -450,7 +450,7 @@ mod tests {
                             function_body: LocalStatements {
                                 statements: vec![
                                     LocalStatement::Instruction(BranchInstruction{
-                                        condition: "FLAG".into(),
+                                        condition: Operand::Identifier(Identifier::from("FLAG")),
                                         true_label: "true_point".into(),
                                         false_label: "false_point".into(),
                                     }.into()),
@@ -597,7 +597,7 @@ mod tests {
                                 statements: vec![
                                     LocalStatement::Instruction(
                                         BranchInstruction {
-                                            condition: "UNDEFINED_VAR".into(),
+                                            condition: Operand::Identifier(Identifier::from("UNDEFINED_VAR")),
                                             true_label: "true_point".into(),
                                             false_label: "false_point".into(),
                                         }
@@ -2369,7 +2369,7 @@ mod tests {
                                     // branch result, equal_label, not_equal_label
                                     LocalStatement::Instruction(InstructionStatement::Branch(
                                         crate::ir::ast::local::instruction::branch::BranchInstruction {
-                                            condition: "result".into(),
+                                            condition: Operand::Identifier(Identifier::from("result")),
                                             true_label: "equal_label".into(),
                                             false_label: "not_equal_label".into(),
                                         },
@@ -2457,7 +2457,7 @@ mod tests {
                                     // branch result, equal_label, not_equal_label
                                     LocalStatement::Instruction(InstructionStatement::Branch(
                                         crate::ir::ast::local::instruction::branch::BranchInstruction {
-                                            condition: "result".into(),
+                                            condition: Operand::Identifier(Identifier::from("result")),
                                             true_label: "equal_label".into(),
                                             false_label: "not_equal_label".into(),
                                         },
@@ -2630,7 +2630,7 @@ mod ssa_integration_tests {
                 )),
             }),
             LocalStatement::Instruction(InstructionStatement::Branch(BranchInstruction {
-                condition: Identifier::from("x"),
+                condition: Operand::Identifier(Identifier::from("x")),
                 true_label: Label::from("then_label"),
                 false_label: Label::from("else_label"),
             })),

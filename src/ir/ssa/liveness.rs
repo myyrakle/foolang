@@ -268,8 +268,10 @@ fn extract_used_variables_from_instruction(instr: &InstructionStatement) -> Vec<
             }
         }
         InstructionStatement::Branch(branch) => {
-            // Branch의 condition은 Identifier 타입
-            vars.push(branch.condition.name.clone());
+            // Branch의 condition은 Operand 타입
+            if let Operand::Identifier(id) = &branch.condition {
+                vars.push(id.name.clone());
+            }
         }
         InstructionStatement::Return(ret) => {
             if let Some(Operand::Identifier(id)) = &ret.return_value {

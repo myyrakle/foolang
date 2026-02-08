@@ -1,8 +1,8 @@
-use crate::ir::ast::common::{Identifier, Label};
+use crate::ir::ast::common::{Label, Operand};
 
 #[derive(Debug, Clone)]
 pub struct BranchInstruction {
-    pub condition: Identifier,
+    pub condition: Operand,
     pub true_label: Label,
     pub false_label: Label,
 }

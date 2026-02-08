@@ -252,9 +252,8 @@ impl SSARenamer {
             InstructionStatement::Jump(_) => {
                 // Jump는 Operand를 포함하지 않음
             }
-            InstructionStatement::Branch(_branch) => {
-                // Branch는 Identifier를 직접 사용하므로, 현재 구조에서는 renaming 어려움
-                // TODO: Branch가 Operand를 사용하도록 AST 구조 변경 필요
+            InstructionStatement::Branch(branch) => {
+                rename_operand(&mut branch.condition, self);
             }
             InstructionStatement::Alloca(_) => {
                 // Alloca는 Operand를 포함하지 않음

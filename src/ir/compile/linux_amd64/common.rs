@@ -197,40 +197,73 @@ pub fn load_identifier_to_register(
     context: &FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
-    let var_loc = context.get_variable(var_name).ok_or_else(|| {
-        IRError::new(
-            IRErrorKind::VariableNotFound,
-            &format!("Variable '{}' not found", var_name),
-        )
-    })?;
-
-    match var_loc {
-        VariableLocation::Register(src_reg) => {
-            if *src_reg != target_reg {
-                // MOV target_reg, src_reg
-                emit_rex_prefix(object, Some(target_reg), Some(*src_reg));
+    // 먼저 로컬 변수 확인
+    if let Some(var_loc) = context.get_variable(var_name) {
+        match var_loc {
+            VariableLocation::Register(src_reg) => {
+                if *src_reg != target_reg {
+                    // MOV target_reg, src_reg
+                    emit_rex_prefix(object, Some(target_reg), Some(*src_reg));
+                    object.text_section.data.push(Instruction::MovLoad as u8);
+                    object
+                        .text_section
+                        .data
+                        .push(modrm_reg_reg(target_reg, *src_reg));
+                }
+                // 같은 레지스터면 아무것도 안 함
+            }
+            VariableLocation::Stack(offset) => {
+                // MOV target_reg, [rbp + offset]
+                emit_rex_prefix(object, Some(target_reg), None);
                 object.text_section.data.push(Instruction::MovLoad as u8);
                 object
                     .text_section
                     .data
-                    .push(modrm_reg_reg(target_reg, *src_reg));
+                    .push(modrm_rbp_disp32(target_reg.number()));
+                object.text_section.data.push(sib_rbp_no_index());
+                object
+                    .text_section
+                    .data
+                    .extend_from_slice(&offset.to_le_bytes());
             }
-            // 같은 레지스터면 아무것도 안 함
         }
-        VariableLocation::Stack(offset) => {
-            // MOV target_reg, [rbp + offset]
-            emit_rex_prefix(object, Some(target_reg), None);
-            object.text_section.data.push(Instruction::MovLoad as u8);
-            object
-                .text_section
-                .data
-                .push(modrm_rbp_disp32(target_reg.number()));
-            object.text_section.data.push(sib_rbp_no_index());
-            object
-                .text_section
-                .data
-                .extend_from_slice(&offset.to_le_bytes());
-        }
+    } else if let Some(symbol) = object.symbol_table.find_symbol(var_name) {
+        // 전역 상수/변수: RIP-relative addressing으로 로드
+        use crate::platforms::amd64::addressing::modrm_rip_relative;
+        use crate::platforms::linux::elf::relocation::{Relocation, RelocationType};
+        use crate::platforms::linux::elf::section::SectionType;
+
+        // Borrow checker를 위해 symbol name을 먼저 clone
+        let symbol_name = symbol.name.clone();
+        let load_offset = object.text_section.data.len();
+
+        emit_rex_prefix(object, Some(target_reg), None);
+        object.text_section.data.push(Instruction::MovLoad as u8);
+        object
+            .text_section
+            .data
+            .push(modrm_rip_relative(target_reg.number()));
+
+        // placeholder for displacement
+        object
+            .text_section
+            .data
+            .extend_from_slice(&[0x00; Instruction::DISPLACEMENT_32_SIZE]);
+
+        // relocation 추가
+        const REX_MOV_TO_DISP_OFFSET: usize = 3;
+        object.relocations.push(Relocation {
+            section: SectionType::Text,
+            offset: load_offset + REX_MOV_TO_DISP_OFFSET,
+            symbol: symbol_name,
+            reloc_type: RelocationType::PcRel32,
+            addend: Instruction::CALL_ADDEND,
+        });
+    } else {
+        return Err(IRError::new(
+            IRErrorKind::VariableNotFound,
+            &format!("Variable '{}' not found (neither local nor global)", var_name),
+        ));
     }
 
     Ok(())
@@ -251,17 +284,16 @@ pub fn load_operand_to_register(
             // Phase 12: SSA 기반 또는 변수명 기반 로딩
             if context.liveness.is_some() {
                 // SSA 기반: 변수명 -> SSA 값 -> 위치
-                let ssa_id = context.get_current_version(&id.name).ok_or_else(|| {
-                    IRError::new(
-                        IRErrorKind::VariableNotFound,
-                        &format!("Variable '{}' not found in SSA context", id.name),
-                    )
-                })?;
+                // 로컬 변수가 아니면 (전역 상수 등) 기존 방식으로 폴백
+                if let Some(ssa_id) = context.get_current_version(&id.name) {
+                    load_ssa_value_to_register(ssa_id, target_reg, context, object)?;
 
-                load_ssa_value_to_register(ssa_id, target_reg, context, object)?;
-
-                // Phase 13: 마지막 사용 후 레지스터 해제
-                context.free_ssa_value_if_last_use(ssa_id);
+                    // Phase 13: 마지막 사용 후 레지스터 해제
+                    context.free_ssa_value_if_last_use(ssa_id);
+                } else {
+                    // SSA context에 없으면 전역 상수/변수일 수 있음
+                    load_identifier_to_register(&id.name, target_reg, context, object)?;
+                }
             } else {
                 // 기존 방식: 변수명 -> 위치
                 load_identifier_to_register(&id.name, target_reg, context, object)?;
