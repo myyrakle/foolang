@@ -97,6 +97,7 @@ impl SSARenamer {
         }
 
         // 3. Successor 블록의 Phi 노드 operand 업데이트
+        // 현재 블록에서 successor로 전달되는 SSA 값들을 Phi 노드에 추가
         let successors: Vec<BasicBlockId> = blocks[block_idx].successors.clone();
         for succ_id in successors {
             let succ_idx = succ_id.as_usize();
@@ -104,13 +105,15 @@ impl SSARenamer {
                 continue;
             }
 
-            // Successor의 각 Phi 노드에 대해
-            for _phi_idx in 0..blocks[succ_idx].phi_nodes.len() {
-                // 현재 블록에서 사용 가능한 버전 찾기
-                // TODO: Phi 노드의 변수명 추출 및 매칭
+            // Successor의 각 Phi 노드에 현재 블록의 버전 추가
+            for phi in &mut blocks[succ_idx].phi_nodes {
+                let var_name = &phi.original_name;
 
-                // 임시: phi.inputs에서 (block_id, ssa_id) 쌍 업데이트
-                // 실제로는 변수명을 알아야 현재 버전을 찾을 수 있음
+                // 현재 블록에서 이 변수의 최신 버전 조회
+                if let Some(ssa_id) = self.current_version(var_name) {
+                    // Phi 노드의 inputs에 (현재 블록 ID, SSA 값) 추가
+                    phi.inputs.push((block_id, ssa_id));
+                }
             }
         }
 
