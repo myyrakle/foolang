@@ -43,6 +43,10 @@ pub struct RegisterAllocator {
     /// SSA value -> 할당된 위치
     pub allocation_map: HashMap<SSAValueId, ValueLocation>,
 
+    /// 초기 스택 오프셋 (RegisterAllocator 생성 시점의 offset)
+    /// 이미 사용된 로컬 변수 공간
+    initial_stack_offset: i32,
+
     /// 스택 오프셋 (spill용, RBP 기준 음수)
     pub stack_offset: i32,
 
@@ -103,6 +107,7 @@ impl RegisterAllocator {
             ],
             active_intervals: Vec::new(),
             allocation_map: HashMap::new(),
+            initial_stack_offset,
             stack_offset: initial_stack_offset,
             spilled_values: Vec::new(),
             ever_used_callee_saved: HashSet::new(),
@@ -236,12 +241,16 @@ impl RegisterAllocator {
     }
 
     /// spill된 값들이 사용하는 총 스택 크기 반환
-    /// stack_offset이 음수이므로 절댓값을 반환
+    ///
+    /// initial_stack_offset과의 차이를 계산하여 spill 전용 크기만 반환
+    /// (로컬 변수 공간은 제외)
     pub fn get_spill_stack_size(&self) -> i32 {
-        if self.stack_offset >= 0 {
+        if self.stack_offset >= self.initial_stack_offset {
+            // spill이 없으면 0
             0
         } else {
-            -self.stack_offset
+            // initial에서 현재까지 증가한 크기 (음수 방향이므로 차이의 절댓값)
+            self.initial_stack_offset - self.stack_offset
         }
     }
 }
