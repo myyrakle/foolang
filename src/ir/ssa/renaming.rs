@@ -31,6 +31,9 @@ impl SSARenamer {
 
     /// SSA renaming 수행
     pub fn rename(blocks: &mut [BasicBlock]) {
+        // Dominator tree 구축
+        super::build_dominator_tree(blocks);
+
         let mut renamer = SSARenamer::new();
 
         // 루트 블록(entry block)부터 시작
@@ -118,8 +121,8 @@ impl SSARenamer {
         }
 
         // 4. 지배당하는 자식 블록들 재귀 처리
-        // visited set으로 순환 방지 (back-edge 자동 차단)
-        let children: Vec<BasicBlockId> = blocks[block_idx].successors.clone();
+        // Dominator tree의 children을 따라 순회
+        let children: Vec<BasicBlockId> = blocks[block_idx].dom_children.clone();
         for child_id in children {
             self.rename_block(child_id, blocks, visited);
         }

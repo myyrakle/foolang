@@ -49,6 +49,9 @@ pub struct BasicBlock {
     /// Successor blocks
     pub successors: Vec<BasicBlockId>,
 
+    /// Dominated children (dominator tree)
+    pub dom_children: Vec<BasicBlockId>,
+
     /// 이 블록에서 정의된 변수들 (변수명 -> SSA value ID)
     pub defined_variables: HashMap<String, SSAValueId>,
 }
@@ -97,6 +100,7 @@ impl BasicBlock {
             statements: Vec::new(),
             predecessors: Vec::new(),
             successors: Vec::new(),
+            dom_children: Vec::new(),
             defined_variables: HashMap::new(),
         }
     }
@@ -222,5 +226,123 @@ mod tests {
         assert_eq!(phi.inputs.len(), 2);
         assert_eq!(phi.inputs[0], (block1, value1));
         assert_eq!(phi.inputs[1], (block2, value2));
+    }
+}
+
+/// Dominator 계산 (iterative dataflow)
+/// 반환: 각 블록의 dominator set (블록 ID -> dominator 블록 ID들)
+pub fn compute_dominators(blocks: &[BasicBlock]) -> HashMap<BasicBlockId, Vec<BasicBlockId>> {
+    use std::collections::HashSet;
+
+    if blocks.is_empty() {
+        return HashMap::new();
+    }
+
+    let entry_id = blocks[0].id;
+    let all_blocks: Vec<BasicBlockId> = blocks.iter().map(|b| b.id).collect();
+
+    // 초기화: entry는 자기 자신만, 나머지는 모든 블록
+    let mut dominators: HashMap<BasicBlockId, HashSet<BasicBlockId>> = HashMap::new();
+    for block in blocks {
+        if block.id == entry_id {
+            let mut set = HashSet::new();
+            set.insert(entry_id);
+            dominators.insert(block.id, set);
+        } else {
+            dominators.insert(block.id, all_blocks.iter().copied().collect());
+        }
+    }
+
+    // 불변점까지 반복
+    let mut changed = true;
+    while changed {
+        changed = false;
+
+        for block in blocks {
+            if block.id == entry_id {
+                continue;
+            }
+
+            // 새 dominator set = {자기 자신} ∪ (모든 predecessor의 dominator 교집합)
+            let mut new_doms: Option<HashSet<BasicBlockId>> = None;
+
+            for pred_id in &block.predecessors {
+                if let Some(pred_doms) = dominators.get(pred_id) {
+                    if let Some(ref mut current) = new_doms {
+                        *current = current.intersection(pred_doms).copied().collect();
+                    } else {
+                        new_doms = Some(pred_doms.clone());
+                    }
+                }
+            }
+
+            if let Some(mut new_doms_set) = new_doms {
+                new_doms_set.insert(block.id);
+
+                if new_doms_set != *dominators.get(&block.id).unwrap() {
+                    dominators.insert(block.id, new_doms_set);
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    // HashSet을 Vec로 변환
+    dominators
+        .into_iter()
+        .map(|(k, v)| (k, v.into_iter().collect()))
+        .collect()
+}
+
+/// Dominator tree 구축 (dom_children 필드 업데이트)
+pub fn build_dominator_tree(blocks: &mut [BasicBlock]) {
+    let dominators = compute_dominators(blocks);
+
+    // Immediate dominator 계산
+    let mut idom: HashMap<BasicBlockId, BasicBlockId> = HashMap::new();
+
+    for block in blocks.iter() {
+        if let Some(doms) = dominators.get(&block.id) {
+            // 자기 자신을 제외한 dominator 중에서 가장 가까운 것이 immediate dominator
+            let candidates: Vec<BasicBlockId> = doms
+                .iter()
+                .filter(|&&d| d != block.id)
+                .copied()
+                .collect();
+
+            if candidates.is_empty() {
+                continue; // entry block
+            }
+
+            // 다른 dominator들에 의해 dominated되지 않는 것이 immediate dominator
+            let mut immediate = None;
+            for &cand in &candidates {
+                let is_dominated_by_other = candidates.iter().any(|&other| {
+                    other != cand
+                        && dominators
+                            .get(&other)
+                            .map(|d| d.contains(&cand))
+                            .unwrap_or(false)
+                });
+
+                if !is_dominated_by_other {
+                    immediate = Some(cand);
+                    break;
+                }
+            }
+
+            if let Some(imm_dom) = immediate {
+                idom.insert(block.id, imm_dom);
+            }
+        }
+    }
+
+    // dom_children 구축
+    for (child_id, parent_id) in idom {
+        if let Some(parent_block) = blocks.iter_mut().find(|b| b.id == parent_id) {
+            if !parent_block.dom_children.contains(&child_id) {
+                parent_block.dom_children.push(child_id);
+            }
+        }
     }
 }
