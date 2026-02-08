@@ -1,6 +1,6 @@
 use super::{BasicBlock, BasicBlockId, SSAValueId};
 use crate::ir::ast::local::LocalStatement;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// SSA Renaming: 변수명을 SSA 값으로 변환
 ///
@@ -35,12 +35,23 @@ impl SSARenamer {
 
         // 루트 블록(entry block)부터 시작
         if !blocks.is_empty() {
-            renamer.rename_block(BasicBlockId::new(0), blocks);
+            let mut visited = HashSet::new();
+            renamer.rename_block(BasicBlockId::new(0), blocks, &mut visited);
         }
     }
 
     /// 특정 블록과 그 지배당하는 블록들을 재귀적으로 rename
-    fn rename_block(&mut self, block_id: BasicBlockId, blocks: &mut [BasicBlock]) {
+    fn rename_block(
+        &mut self,
+        block_id: BasicBlockId,
+        blocks: &mut [BasicBlock],
+        visited: &mut HashSet<BasicBlockId>,
+    ) {
+        // 이미 방문한 블록은 건너뜀 (순환 방지)
+        if !visited.insert(block_id) {
+            return;
+        }
+
         let block_idx = block_id.as_usize();
         if block_idx >= blocks.len() {
             return;
@@ -104,13 +115,10 @@ impl SSARenamer {
         }
 
         // 4. 지배당하는 자식 블록들 재귀 처리
-        // 간단한 구현: 직접 successor들을 처리 (실제로는 dominator tree 필요)
+        // visited set으로 순환 방지 (back-edge 자동 차단)
         let children: Vec<BasicBlockId> = blocks[block_idx].successors.clone();
         for child_id in children {
-            if child_id.as_usize() > block_idx {
-                // 앞으로만 진행 (back-edge 방지)
-                self.rename_block(child_id, blocks);
-            }
+            self.rename_block(child_id, blocks, visited);
         }
 
         // 5. 블록을 나갈 때 스택 복원 (push했던 버전들 pop)
