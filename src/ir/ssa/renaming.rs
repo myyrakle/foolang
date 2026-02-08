@@ -46,21 +46,21 @@ impl SSARenamer {
             return;
         }
 
-        // 1. 현재 블록의 Phi 노드 처리 (새 버전 생성)
-        let phi_results: Vec<(SSAValueId, String)> = blocks[block_idx]
-            .phi_nodes
-            .iter()
-            .map(|phi| {
-                // Phi 결과에 대한 변수명 추출 (임시: 첫 입력의 변수명 사용)
-                // TODO: 실제로는 모든 입력이 같은 변수명이어야 함
-                let var_name = format!("phi_{}", phi.result.as_usize());
-                let new_ssa_id = self.new_version(&var_name);
-                (phi.result, var_name)
-            })
-            .collect();
+        // 1. 현재 블록의 Phi 노드 처리 (새 버전 생성 및 반영)
+        let mut phi_results: Vec<(SSAValueId, String)> = Vec::new();
+        for phi in &mut blocks[block_idx].phi_nodes {
+            // Phi 노드의 원래 변수명 사용 (모든 입력이 같은 변수를 나타냄)
+            let var_name = phi.original_name.clone();
 
-        // Phi 결과를 스택에 push (이미 new_version에서 수행됨)
-        let _ = phi_results.len(); // 컴파일 경고 방지
+            // 새 SSA ID 생성 및 버전 스택에 push
+            let new_ssa_id = self.new_version(&var_name);
+
+            // Phi 노드의 result를 새 SSA ID로 업데이트
+            phi.result = new_ssa_id;
+
+            // 스택 복원을 위해 기록
+            phi_results.push((new_ssa_id, var_name));
+        }
 
         // 2. 현재 블록의 statement 처리
         let statements_clone = blocks[block_idx].statements.clone();
