@@ -452,9 +452,12 @@ impl LivenessAnalysis {
                 // 1. 사용되는 변수들 추적 (Identifier 기반)
                 for var_name in extract_used_variables(stmt) {
                     if let Some(&ssa_id) = block.defined_variables.get(&var_name) {
-                        if let Some(liveness_info) = analysis.value_liveness.get_mut(&ssa_id) {
-                            liveness_info.add_use((block_id, stmt_idx));
-                        }
+                        // Entry가 없으면 생성 (def가 나중에 나올 수 있음)
+                        let liveness_info = analysis
+                            .value_liveness
+                            .entry(ssa_id)
+                            .or_insert_with(|| LivenessInfo::new((block_id, stmt_idx)));
+                        liveness_info.add_use((block_id, stmt_idx));
                     }
                 }
 
@@ -462,16 +465,22 @@ impl LivenessAnalysis {
                 if let LocalStatement::Assignment(assignment) = stmt {
                     if let crate::ir::ast::local::assignment::AssignmentStatementValue::Instruction(instr) = &assignment.value {
                         for ssa_id in extract_used_ssa_ids_from_instruction(instr) {
-                            if let Some(liveness_info) = analysis.value_liveness.get_mut(&ssa_id) {
-                                liveness_info.add_use((block_id, stmt_idx));
-                            }
+                            // Entry가 없으면 생성 (def가 나중에 나올 수 있음)
+                            let liveness_info = analysis
+                                .value_liveness
+                                .entry(ssa_id)
+                                .or_insert_with(|| LivenessInfo::new((block_id, stmt_idx)));
+                            liveness_info.add_use((block_id, stmt_idx));
                         }
                     }
                 } else if let LocalStatement::Instruction(instr) = stmt {
                     for ssa_id in extract_used_ssa_ids_from_instruction(instr) {
-                        if let Some(liveness_info) = analysis.value_liveness.get_mut(&ssa_id) {
-                            liveness_info.add_use((block_id, stmt_idx));
-                        }
+                        // Entry가 없으면 생성 (def가 나중에 나올 수 있음)
+                        let liveness_info = analysis
+                            .value_liveness
+                            .entry(ssa_id)
+                            .or_insert_with(|| LivenessInfo::new((block_id, stmt_idx)));
+                        liveness_info.add_use((block_id, stmt_idx));
                     }
                 }
 
