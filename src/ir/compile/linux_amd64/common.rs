@@ -163,6 +163,11 @@ pub fn load_literal_to_register(
     target_reg: Register,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
+    use crate::platforms::amd64::addressing::modrm_rip_relative;
+    use crate::platforms::linux::elf::relocation::{Relocation, RelocationType};
+    use crate::platforms::linux::elf::section::SectionType;
+    use crate::platforms::linux::elf::symbol::{Symbol, SymbolBinding, SymbolType};
+
     match lit {
         LiteralValue::Int8(value) => {
             // MOV reg, imm64 (sign-extended)
@@ -180,10 +185,60 @@ pub fn load_literal_to_register(
             // MOV reg, imm64
             emit_mov_imm64(object, target_reg, *value);
         }
-        _ => {
+        LiteralValue::Boolean(b) => {
+            // Boolean을 0 또는 1로 변환
+            let value = if *b { 1i64 } else { 0i64 };
+            emit_mov_imm64(object, target_reg, value);
+        }
+        LiteralValue::String(s) => {
+            // 문자열은 .rodata 섹션에 저장하고 주소를 레지스터에 로드
+            let string_const_name = format!("__str_const_{}", object.rodata_section.data.len());
+
+            // .rodata에 문자열 추가 (null terminator 포함)
+            let string_offset = object.rodata_section.data.len();
+            object.rodata_section.data.extend_from_slice(s.as_bytes());
+            object.rodata_section.data.push(0); // null terminator
+
+            // symbol table에 문자열 상수 추가
+            object.symbol_table.add_symbol(Symbol {
+                name: string_const_name.clone(),
+                section: SectionType::RoData,
+                offset: string_offset,
+                size: s.len() + 1,
+                symbol_type: SymbolType::Object,
+                binding: SymbolBinding::Local,
+            });
+
+            // lea target_reg, [rip + offset]
+            let lea_offset = object.text_section.data.len();
+
+            emit_rex_prefix(object, Some(target_reg), None);
+            object.text_section.data.push(Instruction::Lea as u8);
+            object
+                .text_section
+                .data
+                .push(modrm_rip_relative(target_reg.number()));
+
+            // placeholder for displacement
+            object
+                .text_section
+                .data
+                .extend_from_slice(&[0x00; Instruction::DISPLACEMENT_32_SIZE]);
+
+            // relocation 추가
+            const REX_LEA_TO_DISP_OFFSET: usize = 3;
+            object.relocations.push(Relocation {
+                section: SectionType::Text,
+                offset: lea_offset + REX_LEA_TO_DISP_OFFSET,
+                symbol: string_const_name,
+                reloc_type: RelocationType::PcRel32,
+                addend: Instruction::CALL_ADDEND,
+            });
+        }
+        LiteralValue::Float64(_) => {
             return Err(IRError::new(
-                IRErrorKind::TypeError,
-                &format!("Unsupported literal type for register load: {:?}", lit),
+                IRErrorKind::NotImplemented,
+                "Float64 literals not yet implemented",
             ));
         }
     }
