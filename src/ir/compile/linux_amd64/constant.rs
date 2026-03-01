@@ -11,61 +11,64 @@ pub fn compile_constant(
 ) -> Result<(), crate::ir::error::IRError> {
     use crate::ir::ast::common::literal::LiteralValue;
 
-    // 상수는 .rodata 섹션에 배치
-    let offset = object.rodata_section.data.len();
-    let size_before = object.rodata_section.data.len();
-
-    // 리틀 엔디안으로 바이너리 데이터 추가
-    match &constant.value {
+    // 상수 타입에 따라 섹션 선택
+    // - 문자열: .rodata (주소 참조용)
+    // - 정수/부울: .data (값 로드용)
+    let (section_type, offset, size) = match &constant.value {
         LiteralValue::Int8(val) => {
-            // 8비트 정수를 1바이트로 저장
-            object.rodata_section.data.push(*val as u8);
+            let offset = object.data_section.data.len();
+            object.data_section.data.push(*val as u8);
+            (SectionType::Data, offset, 1)
         }
         LiteralValue::Int16(val) => {
-            // 16비트 정수를 2바이트 리틀 엔디안으로 변환
+            let offset = object.data_section.data.len();
             object
-                .rodata_section
+                .data_section
                 .data
                 .extend_from_slice(&val.to_le_bytes());
+            (SectionType::Data, offset, 2)
         }
         LiteralValue::Int32(val) => {
-            // 32비트 정수를 4바이트 리틀 엔디안으로 변환
+            let offset = object.data_section.data.len();
             object
-                .rodata_section
+                .data_section
                 .data
                 .extend_from_slice(&val.to_le_bytes());
+            (SectionType::Data, offset, 4)
         }
         LiteralValue::Int64(val) => {
-            // 64비트 정수를 8바이트 리틀 엔디안으로 변환
+            let offset = object.data_section.data.len();
             object
-                .rodata_section
+                .data_section
                 .data
                 .extend_from_slice(&val.to_le_bytes());
+            (SectionType::Data, offset, 8)
         }
         LiteralValue::Float64(val) => {
-            // 64비트 부동소수점을 8바이트 리틀 엔디안으로 변환
+            let offset = object.data_section.data.len();
             object
-                .rodata_section
+                .data_section
                 .data
                 .extend_from_slice(&val.to_le_bytes());
+            (SectionType::Data, offset, 8)
         }
         LiteralValue::Boolean(val) => {
-            // 불리언을 1바이트로 저장 (0 또는 1)
-            object.rodata_section.data.push(if *val { 1 } else { 0 });
+            let offset = object.data_section.data.len();
+            object.data_section.data.push(if *val { 1 } else { 0 });
+            (SectionType::Data, offset, 1)
         }
         LiteralValue::String(s) => {
-            // 문자열을 UTF-8 바이트로 저장 (null-terminated)
+            let offset = object.rodata_section.data.len();
             object.rodata_section.data.extend_from_slice(s.as_bytes());
             object.rodata_section.data.push(0); // null terminator
+            (SectionType::RoData, offset, s.len() + 1)
         }
-    }
-
-    let size = object.rodata_section.data.len() - size_before;
+    };
 
     // 심볼 테이블에 등록
     object.symbol_table.add_symbol(Symbol {
         name: constant.constant_name.name.clone(),
-        section: SectionType::RoData,
+        section: section_type,
         offset,
         size,
         symbol_type: SymbolType::Object,

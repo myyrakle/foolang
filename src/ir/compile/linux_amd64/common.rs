@@ -283,17 +283,31 @@ pub fn load_identifier_to_register(
             }
         }
     } else if let Some(symbol) = object.symbol_table.find_symbol(var_name) {
-        // 전역 상수/변수: RIP-relative addressing으로 로드
+        // 전역 상수/변수 처리
         use crate::platforms::amd64::addressing::modrm_rip_relative;
         use crate::platforms::linux::elf::relocation::{Relocation, RelocationType};
         use crate::platforms::linux::elf::section::SectionType;
 
-        // Borrow checker를 위해 symbol name을 먼저 clone
+        // Borrow checker를 위해 symbol name과 section을 먼저 clone
         let symbol_name = symbol.name.clone();
+        let symbol_section = symbol.section.clone();
         let load_offset = object.text_section.data.len();
 
         emit_rex_prefix(object, Some(target_reg), None);
-        object.text_section.data.push(Instruction::MovLoad as u8);
+
+        // RoData 섹션 (문자열 상수 등): 주소를 로드 (LEA)
+        // 그 외 섹션 (정수 상수 등): 값을 로드 (MOV)
+        match symbol_section {
+            SectionType::RoData => {
+                // 문자열 상수 등: 주소를 로드
+                object.text_section.data.push(Instruction::Lea as u8);
+            }
+            _ => {
+                // 정수 상수 등: 값을 로드
+                object.text_section.data.push(Instruction::MovLoad as u8);
+            }
+        }
+
         object
             .text_section
             .data
@@ -306,10 +320,10 @@ pub fn load_identifier_to_register(
             .extend_from_slice(&[0x00; Instruction::DISPLACEMENT_32_SIZE]);
 
         // relocation 추가
-        const REX_MOV_TO_DISP_OFFSET: usize = 3;
+        const REX_LOAD_TO_DISP_OFFSET: usize = 3;
         object.relocations.push(Relocation {
             section: SectionType::Text,
-            offset: load_offset + REX_MOV_TO_DISP_OFFSET,
+            offset: load_offset + REX_LOAD_TO_DISP_OFFSET,
             symbol: symbol_name,
             reloc_type: RelocationType::PcRel32,
             addend: Instruction::CALL_ADDEND,
