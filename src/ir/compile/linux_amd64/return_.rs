@@ -20,7 +20,7 @@ use crate::{
 
 pub fn compile_return_instruction(
     instruction: &crate::ir::ast::local::instruction::return_::ReturnInstruction,
-    context: &FunctionContext,
+    context: &mut FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
     // x86-64 System V ABI에 따라:
@@ -40,6 +40,20 @@ pub fn compile_return_instruction(
 
 /// 값을 특정 레지스터로 로드하는 함수
 fn load_value_to_register(
+    operand: &crate::ir::ast::common::Operand,
+    target_reg: Register,
+    context: &mut FunctionContext,
+    object: &mut ELFObject,
+) -> Result<(), IRError> {
+    // Phase 7: load_operand_to_register 사용
+    use crate::ir::compile::linux_amd64::common::load_operand_to_register;
+    load_operand_to_register(operand, target_reg, context, object)?;
+    Ok(())
+}
+
+// 아래 코드는 삭제됨 (load_operand_to_register로 대체)
+/*
+fn load_value_to_register_old(
     operand: &crate::ir::ast::common::Operand,
     target_reg: Register,
     context: &FunctionContext,
@@ -284,7 +298,12 @@ fn load_value_to_register(
                 ));
             }
         }
+        Operand::SSAValue(_ssa_id) => {
+            // Phase 7: SSA 값 로딩 (Phase 8에서 구현 예정)
+            todo!("SSA value loading not yet implemented")
+        }
     }
 
     Ok(())
 }
+*/

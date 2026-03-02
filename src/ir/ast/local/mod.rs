@@ -6,12 +6,12 @@ pub mod assignment;
 pub mod instruction;
 pub mod label;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LocalStatements {
     pub statements: Vec<LocalStatement>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LocalStatement {
     Assignment(AssignmentStatement),
     Instruction(InstructionStatement),

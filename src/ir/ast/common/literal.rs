@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LiteralValue {
     Int8(i8),
     Int16(i16),

@@ -109,6 +109,20 @@ pub fn compile_call_instruction(
 fn compile_parameter_to_register(
     param: &crate::ir::ast::common::Operand,
     target_reg: Register,
+    context: &mut FunctionContext,
+    object: &mut ELFObject,
+) -> Result<(), IRError> {
+    // Phase 7: load_operand_to_register 사용
+    use crate::ir::compile::linux_amd64::common::load_operand_to_register;
+    load_operand_to_register(param, target_reg, context, object)?;
+    Ok(())
+}
+
+// 아래 코드는 삭제됨 (load_operand_to_register로 대체)
+/*
+fn compile_parameter_to_register_old(
+    param: &crate::ir::ast::common::Operand,
+    target_reg: Register,
     context: &FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
@@ -363,7 +377,12 @@ fn compile_parameter_to_register(
                 ));
             }
         }
+        Operand::SSAValue(_ssa_id) => {
+            // Phase 7: SSA 값 로딩 (Phase 8에서 구현 예정)
+            todo!("SSA value loading not yet implemented")
+        }
     }
 
     Ok(())
 }
+*/

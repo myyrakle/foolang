@@ -5,7 +5,7 @@
 ///
 /// Register numbers 0-7 are the original x86 registers (RAX-RDI).
 /// Register numbers 8-15 are the extended registers (R8-R15) that require REX prefix.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum Register {
     // 64-bit General Purpose Registers (register numbers 0-7)

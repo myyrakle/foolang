@@ -7,6 +7,7 @@ pub mod ast;
 pub mod compile;
 pub mod data;
 pub mod error;
+pub mod ssa;
 
 #[derive(Debug)]
 pub struct IRCompiler {}

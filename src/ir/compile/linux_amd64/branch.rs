@@ -152,98 +152,20 @@ pub fn compile_branch_instruction(
     context: &mut FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
-    use crate::ir::compile::linux_amd64::function::VariableLocation;
+    use crate::ir::compile::linux_amd64::common::load_operand_to_register;
     use crate::platforms::amd64::{
         instruction::Instruction,
-        register::{modrm_reg_reg, Register},
-        rex::RexPrefix,
+        register::Register,
     };
 
-    let condition_name = &instruction.condition.name;
-
-    // 1. condition 값을 RAX 레지스터에 로드
-    // 먼저 로컬 변수 확인
-    if let Some(var_location) = context.get_variable(condition_name) {
-        match var_location {
-            VariableLocation::Register(src_reg) => {
-                // 레지스터에 저장된 로컬 변수
-                if *src_reg != Register::RAX {
-                    // mov rax, src_reg
-                    let needs_rex_b = src_reg.requires_rex();
-                    if needs_rex_b {
-                        object.text_section.data.push(RexPrefix::REX_WB);
-                    } else {
-                        object.text_section.data.push(RexPrefix::RexW as u8);
-                    }
-                    object.text_section.data.push(Instruction::MovLoad as u8);
-                    object
-                        .text_section
-                        .data
-                        .push(modrm_reg_reg(Register::RAX, *src_reg));
-                }
-            }
-            VariableLocation::Stack(offset) => {
-                // 스택에 저장된 로컬 변수
-                use crate::platforms::amd64::addressing::{modrm_rbp_disp32, sib_rbp_no_index};
-
-                object.text_section.data.push(RexPrefix::RexW as u8);
-                object.text_section.data.push(Instruction::MovLoad as u8);
-                object
-                    .text_section
-                    .data
-                    .push(modrm_rbp_disp32(Register::RAX.number()));
-                object.text_section.data.push(sib_rbp_no_index());
-                object
-                    .text_section
-                    .data
-                    .extend_from_slice(&offset.to_le_bytes());
-            }
-        }
-    } else if let Some(symbol) = object.symbol_table.find_symbol(condition_name) {
-        // 전역 상수/변수: 값을 레지스터에 로드
-        use crate::platforms::amd64::addressing::modrm_rip_relative;
-
-        // 전역 상수가 정수면 직접 값을 로드
-        // 일단 주소를 로드하고 그 값을 읽어옴
-        // mov rax, [rip + offset]
-        let load_offset = object.text_section.data.len();
-
-        object.text_section.data.push(RexPrefix::RexW as u8);
-        object.text_section.data.push(Instruction::MovLoad as u8);
-        object
-            .text_section
-            .data
-            .push(modrm_rip_relative(Register::RAX.number()));
-
-        // placeholder for displacement
-        object
-            .text_section
-            .data
-            .extend_from_slice(&[0x00; Instruction::DISPLACEMENT_32_SIZE]);
-
-        // relocation 추가
-        use crate::platforms::linux::elf::{
-            relocation::{Relocation, RelocationType},
-            section::SectionType,
-        };
-        object.relocations.push(Relocation {
-            section: SectionType::Text,
-            offset: load_offset + REX_MOV_TO_DISP_OFFSET, // MOV 명령어의 disp32 위치
-            symbol: symbol.name.clone(),
-            reloc_type: RelocationType::PcRel32,
-            addend: Instruction::CALL_ADDEND,
-        });
-    } else {
-        return Err(IRError::new(
-            IRErrorKind::VariableNotFound,
-            &format!(
-                "Condition variable '{}' not found (neither local nor global)",
-                condition_name
-            ),
-        ));
-    }
+    // 1. condition 값을 RAX 레지스터에 로드 (Operand 사용)
+    load_operand_to_register(&instruction.condition, Register::RAX, context, object)?;
 
     // 2. test rax, rax (RAX가 0인지 체크)
+    use crate::platforms::amd64::{
+        register::modrm_reg_reg,
+        rex::RexPrefix,
+    };
     object.text_section.data.push(RexPrefix::RexW as u8);
     object.text_section.data.push(Instruction::Test as u8);
     object

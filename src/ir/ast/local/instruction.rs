@@ -9,7 +9,7 @@ pub mod rem;
 pub mod return_;
 pub mod sub;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum InstructionStatement {
     Call(call::CallInstruction),
     Return(return_::ReturnInstruction),

@@ -75,7 +75,7 @@ mod tests {
     use crate::{
         ir::{
             ast::{
-                common::literal::LiteralValue,
+                common::{literal::LiteralValue, Identifier, Operand},
                 global::{
                     constant::ConstantDefinition, function::FunctionDefinition, GlobalStatement,
                 },
@@ -374,7 +374,7 @@ mod tests {
                             function_body: LocalStatements {
                                 statements: vec![
                                     LocalStatement::Instruction(BranchInstruction{
-                                        condition: "FLAG".into(),
+                                        condition: Operand::Identifier(Identifier::from("FLAG")),
                                         true_label: "true_point".into(),
                                         false_label: "false_point".into(),
                                     }.into()),
@@ -450,7 +450,7 @@ mod tests {
                             function_body: LocalStatements {
                                 statements: vec![
                                     LocalStatement::Instruction(BranchInstruction{
-                                        condition: "FLAG".into(),
+                                        condition: Operand::Identifier(Identifier::from("FLAG")),
                                         true_label: "true_point".into(),
                                         false_label: "false_point".into(),
                                     }.into()),
@@ -597,7 +597,7 @@ mod tests {
                                 statements: vec![
                                     LocalStatement::Instruction(
                                         BranchInstruction {
-                                            condition: "UNDEFINED_VAR".into(),
+                                            condition: Operand::Identifier(Identifier::from("UNDEFINED_VAR")),
                                             true_label: "true_point".into(),
                                             false_label: "false_point".into(),
                                         }
@@ -2369,7 +2369,7 @@ mod tests {
                                     // branch result, equal_label, not_equal_label
                                     LocalStatement::Instruction(InstructionStatement::Branch(
                                         crate::ir::ast::local::instruction::branch::BranchInstruction {
-                                            condition: "result".into(),
+                                            condition: Operand::Identifier(Identifier::from("result")),
                                             true_label: "equal_label".into(),
                                             false_label: "not_equal_label".into(),
                                         },
@@ -2457,7 +2457,7 @@ mod tests {
                                     // branch result, equal_label, not_equal_label
                                     LocalStatement::Instruction(InstructionStatement::Branch(
                                         crate::ir::ast::local::instruction::branch::BranchInstruction {
-                                            condition: "result".into(),
+                                            condition: Operand::Identifier(Identifier::from("result")),
                                             true_label: "equal_label".into(),
                                             false_label: "not_equal_label".into(),
                                         },
@@ -2564,5 +2564,245 @@ mod tests {
                 test_case.name
             );
         }
+    }
+}
+
+/// SSA 파이프라인 통합 테스트
+/// 실제 함수 컴파일 과정에서 SSA 인프라가 올바르게 동작하는지 검증
+#[cfg(test)]
+mod ssa_integration_tests {
+    use super::function;
+    use crate::ir::ast::{
+        common::{literal::LiteralValue, Identifier, Label, Operand},
+        local::{
+            assignment::{AssignmentStatement, AssignmentStatementValue},
+            instruction::{add::AddInstruction, branch::BranchInstruction, InstructionStatement},
+            label::LabelDefinition,
+            LocalStatement,
+        },
+    };
+    use crate::ir::ssa::{
+        cfg_builder::CFGBuilder, liveness::LivenessAnalysis, phi_insertion::PhiInserter,
+    };
+    use crate::platforms::linux::elf::object::ELFObject;
+
+    /// 직선 코드에서 SSA 파이프라인이 올바르게 동작하는지 테스트
+    #[test]
+    fn test_ssa_pipeline_linear_code() {
+        let statements = vec![LocalStatement::Assignment(AssignmentStatement {
+            name: Identifier::from("x"),
+            value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                AddInstruction {
+                    left: Operand::Literal(LiteralValue::Int32(1)),
+                    right: Operand::Literal(LiteralValue::Int32(2)),
+                },
+            )),
+        })];
+
+        // CFG 구축
+        let mut blocks = CFGBuilder::build(&statements);
+        assert_eq!(
+            blocks.len(),
+            1,
+            "Linear code should produce a single basic block"
+        );
+
+        // Phi 노드 삽입
+        PhiInserter::insert_phi_nodes(&mut blocks, &statements);
+        assert_eq!(blocks[0].phi_nodes.len(), 0, "No phi nodes in linear code");
+
+        // Liveness 분석 (SSA 변환 전이므로 결과가 비어있을 수 있음)
+        let _liveness = LivenessAnalysis::analyze(&blocks);
+        // Liveness 분석이 panic 없이 완료되면 성공
+    }
+
+    /// 조건문(branch)에서 SSA 파이프라인이 올바르게 동작하는지 테스트
+    #[test]
+    fn test_ssa_pipeline_with_branches() {
+        let statements = vec![
+            LocalStatement::Assignment(AssignmentStatement {
+                name: Identifier::from("x"),
+                value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                    AddInstruction {
+                        left: Operand::Literal(LiteralValue::Int32(1)),
+                        right: Operand::Literal(LiteralValue::Int32(2)),
+                    },
+                )),
+            }),
+            LocalStatement::Instruction(InstructionStatement::Branch(BranchInstruction {
+                condition: Operand::Identifier(Identifier::from("x")),
+                true_label: Label::from("then_label"),
+                false_label: Label::from("else_label"),
+            })),
+            LocalStatement::Label(LabelDefinition {
+                name: Identifier::from("then_label"),
+            }),
+            LocalStatement::Assignment(AssignmentStatement {
+                name: Identifier::from("y"),
+                value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                    AddInstruction {
+                        left: Operand::Identifier(Identifier::from("x")),
+                        right: Operand::Literal(LiteralValue::Int32(10)),
+                    },
+                )),
+            }),
+            LocalStatement::Label(LabelDefinition {
+                name: Identifier::from("else_label"),
+            }),
+        ];
+
+        // CFG 구축
+        let mut blocks = CFGBuilder::build(&statements);
+        assert!(
+            blocks.len() > 1,
+            "Branching code should produce multiple blocks, got {}",
+            blocks.len()
+        );
+
+        // Phi 노드 삽입
+        PhiInserter::insert_phi_nodes(&mut blocks, &statements);
+
+        // Liveness 분석 (SSA 변환 전이므로 결과가 비어있을 수 있음)
+        let _liveness = LivenessAnalysis::analyze(&blocks);
+        // Liveness 분석이 panic 없이 완료되면 성공
+    }
+
+    /// 여러 변수를 사용하는 함수 컴파일 테스트
+    /// SSA 파이프라인 활성화 상태에서 테스트
+    #[test]
+    fn test_multiple_variable_function_compilation() {
+        use crate::ir::ast::{
+            global::function::FunctionDefinition,
+            local::{
+                assignment::{AssignmentStatement, AssignmentStatementValue},
+                instruction::{add::AddInstruction, InstructionStatement},
+                LocalStatement, LocalStatements,
+            },
+            types::IRType,
+        };
+        use crate::platforms::linux::elf::object::ELFObject;
+
+        // 여러 변수를 사용하는 함수 생성
+        let function = FunctionDefinition {
+            function_name: "test_ssa_allocation".to_string(),
+            arguments: vec![],
+            return_type: IRType::Primitive(crate::ir::ast::types::IRPrimitiveType::Int32),
+            function_body: LocalStatements {
+                statements: vec![
+                    LocalStatement::Assignment(AssignmentStatement {
+                        name: Identifier::from("a"),
+                        value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                            AddInstruction {
+                                left: Operand::Literal(LiteralValue::Int32(1)),
+                                right: Operand::Literal(LiteralValue::Int32(2)),
+                            },
+                        )),
+                    }),
+                    LocalStatement::Assignment(AssignmentStatement {
+                        name: Identifier::from("b"),
+                        value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                            AddInstruction {
+                                left: Operand::Literal(LiteralValue::Int32(3)),
+                                right: Operand::Literal(LiteralValue::Int32(4)),
+                            },
+                        )),
+                    }),
+                    LocalStatement::Assignment(AssignmentStatement {
+                        name: Identifier::from("c"),
+                        value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                            AddInstruction {
+                                left: Operand::Identifier(Identifier::from("a")),
+                                right: Operand::Identifier(Identifier::from("b")),
+                            },
+                        )),
+                    }),
+                ],
+            },
+        };
+
+        let mut object = ELFObject::new();
+
+        // 함수 컴파일 (SSA 파이프라인 활성화)
+        let result = function::compile_function(&function, &mut object);
+
+        // 컴파일 성공 검증
+        assert!(result.is_ok(), "Function compilation with SSA should succeed");
+
+        // 생성된 코드가 있는지 확인
+        assert!(
+            !object.text_section.data.is_empty(),
+            "Compiled code should be generated"
+        );
+    }
+
+    /// SSA 파이프라인이 많은 변수를 처리하는지 테스트
+    /// 레지스터 재사용 및 spill 동작 검증
+    #[test]
+    fn test_ssa_with_many_variables() {
+        use crate::ir::ast::{
+            common::{Identifier, Operand},
+            global::function::FunctionDefinition,
+            local::{
+                assignment::{AssignmentStatement, AssignmentStatementValue},
+                instruction::{add::AddInstruction, InstructionStatement},
+                LocalStatement, LocalStatements,
+            },
+            types::IRType,
+        };
+        use crate::platforms::linux::elf::object::ELFObject;
+
+        // 10개 변수를 사용하는 함수 (5개 레지스터 이상 필요)
+        let mut statements = vec![];
+
+        // 10개 변수 생성: v0 = 1+2, v1 = 3+4, ..., v9 = 19+20
+        for i in 0..10 {
+            let var_name = format!("v{}", i);
+            statements.push(LocalStatement::Assignment(AssignmentStatement {
+                name: Identifier::from(var_name.as_str()),
+                value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                    AddInstruction {
+                        left: Operand::Literal(crate::ir::ast::common::literal::LiteralValue::Int32(i * 2 + 1)),
+                        right: Operand::Literal(crate::ir::ast::common::literal::LiteralValue::Int32(i * 2 + 2)),
+                    },
+                )),
+            }));
+        }
+
+        // 마지막에 모든 변수를 사용하는 연산: result = v0 + v1 + ... + v9
+        let mut current = "v0".to_string();
+        for i in 1..10 {
+            let next_name = format!("tmp{}", i);
+            statements.push(LocalStatement::Assignment(AssignmentStatement {
+                name: Identifier::from(next_name.as_str()),
+                value: AssignmentStatementValue::Instruction(InstructionStatement::Add(
+                    AddInstruction {
+                        left: Operand::Identifier(Identifier::from(current.as_str())),
+                        right: Operand::Identifier(Identifier::from(format!("v{}", i).as_str())),
+                    },
+                )),
+            }));
+            current = next_name;
+        }
+
+        let function = FunctionDefinition {
+            function_name: "test_many_vars".to_string(),
+            arguments: vec![],
+            return_type: IRType::Primitive(crate::ir::ast::types::IRPrimitiveType::Int32),
+            function_body: LocalStatements { statements },
+        };
+
+        let mut object = ELFObject::new();
+
+        // SSA 파이프라인으로 컴파일
+        let result = function::compile_function(&function, &mut object);
+
+        // 컴파일 성공 검증 (레지스터 부족 시 spill 처리)
+        assert!(
+            result.is_ok(),
+            "Should handle many variables with SSA register allocation and spilling"
+        );
+
+        // 생성된 코드 확인
+        assert!(!object.text_section.data.is_empty());
     }
 }

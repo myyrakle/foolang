@@ -45,7 +45,7 @@ pub fn validate_operand_types(
 }
 
 /// Operand가 정수 타입인지 확인
-fn is_integer_operand(operand: &Operand, _context: &FunctionContext) -> Result<bool, IRError> {
+fn is_integer_operand(operand: &Operand, context: &FunctionContext) -> Result<bool, IRError> {
     match operand {
         Operand::Literal(lit) => match lit {
             LiteralValue::Int8(_)
@@ -80,6 +80,38 @@ fn is_integer_operand(operand: &Operand, _context: &FunctionContext) -> Result<b
                 "Arithmetic instructions require primitive numeric type, not custom type",
             )),
         },
+        Operand::SSAValue(ssa_id) => {
+            // Phase 12: SSA 값 타입 확인
+            if let Some(ssa_value) = context.ssa_values.get(ssa_id) {
+                match &ssa_value.type_ {
+                    IRType::Primitive(prim_type) => {
+                        if prim_type.is_integer() {
+                            Ok(true)
+                        } else if prim_type.is_float() {
+                            Ok(false)
+                        } else {
+                            Err(IRError::new(
+                                IRErrorKind::TypeError,
+                                &format!(
+                                    "Unsupported type for arithmetic instruction: {:?}",
+                                    prim_type
+                                ),
+                            ))
+                        }
+                    }
+                    IRType::None => Ok(true), // 기본값: 정수로 간주
+                    IRType::Custom(_) => Err(IRError::new(
+                        IRErrorKind::TypeError,
+                        "Arithmetic instructions require primitive numeric type, not custom type",
+                    )),
+                }
+            } else {
+                Err(IRError::new(
+                    IRErrorKind::VariableNotFound,
+                    &format!("SSA value {:?} not found", ssa_id),
+                ))
+            }
+        }
     }
 }
 
@@ -131,6 +163,11 @@ pub fn load_literal_to_register(
     target_reg: Register,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
+    use crate::platforms::amd64::addressing::modrm_rip_relative;
+    use crate::platforms::linux::elf::relocation::{Relocation, RelocationType};
+    use crate::platforms::linux::elf::section::SectionType;
+    use crate::platforms::linux::elf::symbol::{Symbol, SymbolBinding, SymbolType};
+
     match lit {
         LiteralValue::Int8(value) => {
             // MOV reg, imm64 (sign-extended)
@@ -148,10 +185,60 @@ pub fn load_literal_to_register(
             // MOV reg, imm64
             emit_mov_imm64(object, target_reg, *value);
         }
-        _ => {
+        LiteralValue::Boolean(b) => {
+            // Boolean을 0 또는 1로 변환
+            let value = if *b { 1i64 } else { 0i64 };
+            emit_mov_imm64(object, target_reg, value);
+        }
+        LiteralValue::String(s) => {
+            // 문자열은 .rodata 섹션에 저장하고 주소를 레지스터에 로드
+            let string_const_name = format!("__str_const_{}", object.rodata_section.data.len());
+
+            // .rodata에 문자열 추가 (null terminator 포함)
+            let string_offset = object.rodata_section.data.len();
+            object.rodata_section.data.extend_from_slice(s.as_bytes());
+            object.rodata_section.data.push(0); // null terminator
+
+            // symbol table에 문자열 상수 추가
+            object.symbol_table.add_symbol(Symbol {
+                name: string_const_name.clone(),
+                section: SectionType::RoData,
+                offset: string_offset,
+                size: s.len() + 1,
+                symbol_type: SymbolType::Object,
+                binding: SymbolBinding::Local,
+            });
+
+            // lea target_reg, [rip + offset]
+            let lea_offset = object.text_section.data.len();
+
+            emit_rex_prefix(object, Some(target_reg), None);
+            object.text_section.data.push(Instruction::Lea as u8);
+            object
+                .text_section
+                .data
+                .push(modrm_rip_relative(target_reg.number()));
+
+            // placeholder for displacement
+            object
+                .text_section
+                .data
+                .extend_from_slice(&[0x00; Instruction::DISPLACEMENT_32_SIZE]);
+
+            // relocation 추가
+            const REX_LEA_TO_DISP_OFFSET: usize = 3;
+            object.relocations.push(Relocation {
+                section: SectionType::Text,
+                offset: lea_offset + REX_LEA_TO_DISP_OFFSET,
+                symbol: string_const_name,
+                reloc_type: RelocationType::PcRel32,
+                addend: Instruction::CALL_ADDEND,
+            });
+        }
+        LiteralValue::Float64(_) => {
             return Err(IRError::new(
-                IRErrorKind::TypeError,
-                &format!("Unsupported literal type for register load: {:?}", lit),
+                IRErrorKind::NotImplemented,
+                "Float64 literals not yet implemented",
             ));
         }
     }
@@ -165,15 +252,151 @@ pub fn load_identifier_to_register(
     context: &FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
-    let var_loc = context.get_variable(var_name).ok_or_else(|| {
+    // 먼저 로컬 변수 확인
+    if let Some(var_loc) = context.get_variable(var_name) {
+        match var_loc {
+            VariableLocation::Register(src_reg) => {
+                if *src_reg != target_reg {
+                    // MOV target_reg, src_reg
+                    emit_rex_prefix(object, Some(target_reg), Some(*src_reg));
+                    object.text_section.data.push(Instruction::MovLoad as u8);
+                    object
+                        .text_section
+                        .data
+                        .push(modrm_reg_reg(target_reg, *src_reg));
+                }
+                // 같은 레지스터면 아무것도 안 함
+            }
+            VariableLocation::Stack(offset) => {
+                // MOV target_reg, [rbp + offset]
+                emit_rex_prefix(object, Some(target_reg), None);
+                object.text_section.data.push(Instruction::MovLoad as u8);
+                object
+                    .text_section
+                    .data
+                    .push(modrm_rbp_disp32(target_reg.number()));
+                object.text_section.data.push(sib_rbp_no_index());
+                object
+                    .text_section
+                    .data
+                    .extend_from_slice(&offset.to_le_bytes());
+            }
+        }
+    } else if let Some(symbol) = object.symbol_table.find_symbol(var_name) {
+        // 전역 상수/변수 처리
+        use crate::platforms::amd64::addressing::modrm_rip_relative;
+        use crate::platforms::linux::elf::relocation::{Relocation, RelocationType};
+        use crate::platforms::linux::elf::section::SectionType;
+
+        // Borrow checker를 위해 symbol name과 section을 먼저 clone
+        let symbol_name = symbol.name.clone();
+        let symbol_section = symbol.section.clone();
+        let load_offset = object.text_section.data.len();
+
+        emit_rex_prefix(object, Some(target_reg), None);
+
+        // RoData 섹션 (문자열 상수 등): 주소를 로드 (LEA)
+        // 그 외 섹션 (정수 상수 등): 값을 로드 (MOV)
+        match symbol_section {
+            SectionType::RoData => {
+                // 문자열 상수 등: 주소를 로드
+                object.text_section.data.push(Instruction::Lea as u8);
+            }
+            _ => {
+                // 정수 상수 등: 값을 로드
+                object.text_section.data.push(Instruction::MovLoad as u8);
+            }
+        }
+
+        object
+            .text_section
+            .data
+            .push(modrm_rip_relative(target_reg.number()));
+
+        // placeholder for displacement
+        object
+            .text_section
+            .data
+            .extend_from_slice(&[0x00; Instruction::DISPLACEMENT_32_SIZE]);
+
+        // relocation 추가
+        const REX_LOAD_TO_DISP_OFFSET: usize = 3;
+        object.relocations.push(Relocation {
+            section: SectionType::Text,
+            offset: load_offset + REX_LOAD_TO_DISP_OFFSET,
+            symbol: symbol_name,
+            reloc_type: RelocationType::PcRel32,
+            addend: Instruction::CALL_ADDEND,
+        });
+    } else {
+        return Err(IRError::new(
+            IRErrorKind::VariableNotFound,
+            &format!("Variable '{}' not found (neither local nor global)", var_name),
+        ));
+    }
+
+    Ok(())
+}
+
+/// Operand를 지정된 레지스터에 로드
+pub fn load_operand_to_register(
+    operand: &Operand,
+    target_reg: Register,
+    context: &mut FunctionContext,
+    object: &mut ELFObject,
+) -> Result<(), IRError> {
+    match operand {
+        Operand::Literal(lit) => {
+            load_literal_to_register(lit, target_reg, object)?;
+        }
+        Operand::Identifier(id) => {
+            // Phase 12: SSA 기반 또는 변수명 기반 로딩
+            if context.liveness.is_some() {
+                // SSA 기반: 변수명 -> SSA 값 -> 위치
+                // 로컬 변수가 아니면 (전역 상수 등) 기존 방식으로 폴백
+                if let Some(ssa_id) = context.get_current_version(&id.name) {
+                    load_ssa_value_to_register(ssa_id, target_reg, context, object)?;
+
+                    // Phase 13: 마지막 사용 후 레지스터 해제
+                    context.free_ssa_value_if_last_use(ssa_id);
+                } else {
+                    // SSA context에 없으면 전역 상수/변수일 수 있음
+                    load_identifier_to_register(&id.name, target_reg, context, object)?;
+                }
+            } else {
+                // 기존 방식: 변수명 -> 위치
+                load_identifier_to_register(&id.name, target_reg, context, object)?;
+            }
+        }
+        Operand::SSAValue(ssa_id) => {
+            // Phase 12: SSA 값 직접 로딩
+            load_ssa_value_to_register(*ssa_id, target_reg, context, object)?;
+
+            // Phase 13: 마지막 사용 후 레지스터 해제
+            context.free_ssa_value_if_last_use(*ssa_id);
+        }
+    }
+    Ok(())
+}
+
+/// SSA 값을 레지스터에 로드 (Phase 12)
+fn load_ssa_value_to_register(
+    ssa_id: crate::ir::ssa::SSAValueId,
+    target_reg: Register,
+    context: &FunctionContext,
+    object: &mut ELFObject,
+) -> Result<(), IRError> {
+    use crate::ir::ssa::register_allocator::ValueLocation as SSAValueLocation;
+
+    let ssa_loc = context.get_ssa_value_location(ssa_id).ok_or_else(|| {
         IRError::new(
             IRErrorKind::VariableNotFound,
-            &format!("Variable '{}' not found", var_name),
+            &format!("SSA value {:?} not found", ssa_id),
         )
     })?;
 
-    match var_loc {
-        VariableLocation::Register(src_reg) => {
+    match ssa_loc {
+        SSAValueLocation::Register(src_reg) => {
             if *src_reg != target_reg {
                 // MOV target_reg, src_reg
                 emit_rex_prefix(object, Some(target_reg), Some(*src_reg));
@@ -185,7 +408,7 @@ pub fn load_identifier_to_register(
             }
             // 같은 레지스터면 아무것도 안 함
         }
-        VariableLocation::Stack(offset) => {
+        SSAValueLocation::Spilled(offset) => {
             // MOV target_reg, [rbp + offset]
             emit_rex_prefix(object, Some(target_reg), None);
             object.text_section.data.push(Instruction::MovLoad as u8);
@@ -199,25 +422,14 @@ pub fn load_identifier_to_register(
                 .data
                 .extend_from_slice(&offset.to_le_bytes());
         }
+        SSAValueLocation::Unassigned => {
+            return Err(IRError::new(
+                IRErrorKind::NotImplemented,
+                &format!("SSA value {:?} is unassigned", ssa_id),
+            ));
+        }
     }
 
     Ok(())
 }
 
-/// Operand를 지정된 레지스터에 로드
-pub fn load_operand_to_register(
-    operand: &Operand,
-    target_reg: Register,
-    context: &FunctionContext,
-    object: &mut ELFObject,
-) -> Result<(), IRError> {
-    match operand {
-        Operand::Literal(lit) => {
-            load_literal_to_register(lit, target_reg, object)?;
-        }
-        Operand::Identifier(id) => {
-            load_identifier_to_register(&id.name, target_reg, context, object)?;
-        }
-    }
-    Ok(())
-}

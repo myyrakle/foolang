@@ -35,8 +35,22 @@ pub fn compile_statements(
     context: &mut FunctionContext,
     object: &mut ELFObject,
 ) -> Result<(), IRError> {
-    for statement in statements {
-        compile_statement(statement, context, object)?;
+    // SSA 모드: basic block 단위로 순회하며 current_block도 갱신
+    if context.liveness.is_some() && !context.basic_blocks.is_empty() {
+        for block in context.basic_blocks.clone() {
+            context.current_block = block.id;
+
+            for (stmt_idx, statement) in block.statements.iter().enumerate() {
+                context.current_statement_index = stmt_idx;
+                compile_statement(statement, context, object)?;
+            }
+        }
+    } else {
+        // 기존 모드: 단순 statement 순회
+        for (stmt_idx, statement) in statements.iter().enumerate() {
+            context.current_statement_index = stmt_idx;
+            compile_statement(statement, context, object)?;
+        }
     }
 
     Ok(())
@@ -116,9 +130,35 @@ fn compile_assignment_statement(
         }
     }
 
-    // 변수 할당 (레지스터 우선, 부족하면 스택)
+    // Phase 11: SSA 기반 변수 할당
+    // SSA가 활성화된 경우 새로운 할당 방식 사용, 아니면 기존 방식 사용
     let var_name = assignment_statement.name.name.clone();
-    let var_loc = context.allocate_variable(var_name);
+
+    let var_loc = if context.liveness.is_some() {
+        // SSA 기반 할당
+        use crate::ir::ssa::register_allocator::ValueLocation as SSAValueLocation;
+
+        // 1. 새 SSA 값 생성 (실제 타입 정보 사용)
+        let ssa_id = context.new_ssa_value(Some(var_name.clone()), assignment_statement.name.type_.clone());
+
+        // 2. SSA 값에 레지스터/스택 할당 (liveness 기반)
+        let ssa_loc = context.allocate_ssa_value(ssa_id)?;
+
+        // 3. SSAValueLocation을 VariableLocation으로 변환
+        match ssa_loc {
+            SSAValueLocation::Register(reg) => VariableLocation::Register(reg),
+            SSAValueLocation::Spilled(offset) => VariableLocation::Stack(offset),
+            SSAValueLocation::Unassigned => {
+                return Err(IRError::new(
+                    IRErrorKind::NotImplemented,
+                    "SSA value unassigned",
+                ));
+            }
+        }
+    } else {
+        // 기존 방식: 변수명 기반 할당
+        context.allocate_variable(var_name.clone())
+    };
 
     // RAX의 값을 변수 위치에 저장
     match var_loc {
@@ -160,6 +200,11 @@ fn compile_assignment_statement(
                 .data
                 .extend_from_slice(&offset.to_le_bytes());
         }
+    }
+
+    // Phase 15: SSA 모드에서도 variables HashMap 업데이트 (legacy 변수 조회 지원)
+    if context.liveness.is_some() {
+        context.variables.insert(var_name, var_loc);
     }
 
     Ok(())

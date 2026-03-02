@@ -3,13 +3,13 @@ use crate::ir::ast::{
     local::instruction::InstructionStatement,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AssignmentStatement {
     pub name: Identifier,
     pub value: AssignmentStatementValue,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AssignmentStatementValue {
     Literal(LiteralValue),
     Instruction(InstructionStatement),
